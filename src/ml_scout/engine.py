@@ -221,6 +221,15 @@ class MLScoutEngine:
         except Exception as diag_err:
             diagnostics = {"error": str(diag_err)}
 
+        # 5. Decoupled XAI Explanation (Zero-Lockin Global & Local Analysis)
+        xai_summary = {}
+        try:
+            from src.ml_scout.xai_explainer import get_model_explainer
+            explainer = get_model_explainer()
+            xai_summary = explainer.explain(best_instance, X_train, task_type=task_type)
+        except Exception as xai_err:
+            xai_summary = {"error": str(xai_err)}
+
         return {
             "task_type": task_type,
             "primary_metric": primary_metric,
@@ -228,5 +237,6 @@ class MLScoutEngine:
             "data_dna": dna,
             "leaderboard": results,
             "top_features": list(self.feature_importances.items())[:10],
-            "diagnostics": diagnostics
+            "diagnostics": diagnostics,
+            "xai": xai_summary
         }
