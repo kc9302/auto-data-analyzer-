@@ -141,6 +141,13 @@ if run_btn and connector and selected_table:
             ml_scout = MLScoutEngine()
             ml_results = ml_scout.run_scout(X_train, y_train)
 
+        # 4-1. Live Drift Monitor baseline
+        from src.serving.drift_monitor import DriftMonitor
+        drift_monitor = DriftMonitor().fit_baseline(X_train[pipeline.selected_features])
+        st.session_state["live_drift_monitor"] = drift_monitor
+        st.session_state["X_train"] = X_train
+        st.session_state["selected_features"] = pipeline.selected_features
+
         # 5. SSOT Audit Data
         checksum_raw = hashlib.sha256(str(df.head(100).to_dict()).encode("utf-8")).hexdigest()
         audit_data = {
@@ -242,10 +249,12 @@ if "audit_data" in st.session_state:
     st.divider()
 
     # Tabs for Decks
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 [DECK 1] 데이터 현황 진단",
         "🛣️ [DECK 2] 피처 엔지니어링 여정",
         "🏆 [AutoML] 모델 벤치마크 및 리더보드",
+        "🧠 [XAI & What-If] 설명력 & 비용 최적화",
+        "📡 [MLOps 관제] 실시간 데이터 드리프트",
         "🔍 [SSOT] 무결성 감사 로그 원문"
     ])
 
@@ -308,6 +317,133 @@ if "audit_data" in st.session_state:
             st.info("타겟 변수가 지정되지 않아 비지도 탐색 모드로 수행되었습니다.")
 
     with tab4:
+        st.markdown("#### 🧠 XAI 모델 설명력 & What-If 의사결정 시뮬레이터")
+        ml = data.get("ml_scout", {})
+        xai = ml.get("xai", {})
+        imb = ml.get("imbalance_optimization", {})
+
+        if not xai and not imb:
+            st.info("타겟 변수 모델링이 수행되지 않았거나 XAI 지표가 없습니다.")
+        else:
+            # 1. Global Sensitivity
+            st.markdown("##### 🌐 전체 피처 글로벌 영향력 (Global Sensitivity)")
+            g_imp = xai.get("global_importance", [])
+            if g_imp:
+                g_df = pd.DataFrame(g_imp)[["rank", "feature", "mean_abs_impact", "impact_pct", "direction"]]
+                g_df.columns = ["순위", "피처명", "평균 영향력(Impact)", "기여율(%)", "영향 방향성"]
+                st.dataframe(g_df, use_container_width=True)
+
+            # 2. Local Representative Cases (Waterfall)
+            st.markdown("##### 👤 대표 고객군별 개별 예측 원인 분석 (Local Waterfall)")
+            cases = xai.get("representative_cases", [])
+            if cases:
+                c_cols = st.columns(len(cases))
+                for idx, (col_ui, case_info) in enumerate(zip(c_cols, cases)):
+                    with col_ui:
+                        st.markdown(f"**{case_info['case_name']}**")
+                        st.metric("예측 확률", f"{case_info['predicted_value']*100:.1f}%",
+                                  delta=f"기준치 대비 {case_info['total_shift']*100:+.1f}%p")
+                        st.caption("주요 기여 피처 Top 4:")
+                        for driver in case_info.get("top_drivers", [])[:4]:
+                            st.write(f"• **{driver['feature']}** ({driver['actual_value']}): `{driver['impact']:+.3f}` ({driver['interpretation']})")
+
+            # 3. Cost-Sensitive Threshold Interactive Slider
+            st.markdown("---")
+            st.markdown("##### 🎛️ What-If 의사결정 임계치(Cutoff) & 비즈니스 손실 시뮬레이터")
+            tuning = imb.get("tuning", {})
+            if tuning and "optimal_business_cost_threshold" in tuning:
+                opt_cost = tuning["optimal_business_cost_threshold"]
+                st.success(f"💡 **AI 권고 최적 임계치:** {opt_cost.get('business_summary', '')}")
+
+                rec_th = float(opt_cost.get("threshold", 0.5))
+                user_cutoff = st.slider(
+                    "의사결정 임계값(Threshold)을 조절해보세요:",
+                    min_value=0.05, max_value=0.95, value=rec_th, step=0.01,
+                    help="임계값을 낮추면 이탈 고객을 더 많이 잡아내지만 오탐지 비용이 늘어납니다."
+                )
+
+                curve = tuning.get("threshold_curve_points", [])
+                if curve:
+                    closest = min(curve, key=lambda p: abs(p["threshold"] - user_cutoff))
+                    m1, m2, m3, m4 = st.columns(4)
+                    with m1:
+                        st.metric("선택 Cutoff", f"{user_cutoff:.2f}")
+                    with m2:
+                        st.metric("예상 타겟 감지율 (Recall)", f"{closest['recall']*100:.1f}%")
+                    with m3:
+                        st.metric("정밀도 (Precision)", f"{closest['precision']*100:.1f}%")
+                    with m4:
+                        st.metric("예상 비즈니스 총비용", f"{closest['cost']:,} 원")
+
+                    st.caption("📈 임계값 변화에 따른 비즈니스 비용 및 F1/재현율 변화 곡선")
+                    chart_df = pd.DataFrame(curve).set_index("threshold")[["f1", "recall", "precision"]]
+                    st.line_chart(chart_df)
+
+    with tab5:
+        st.markdown("#### 📡 MLOps 실시간 데이터 드리프트 관제 (Live Drift Monitor)")
+        if "live_drift_monitor" in st.session_state:
+            dm = st.session_state["live_drift_monitor"]
+
+            drift_res = dm.compute_drift(min_samples=1)
+            d_col1, d_col2, d_col3 = st.columns([1.5, 1, 1])
+
+            with d_col1:
+                st.markdown(f"### 상태: {drift_res.get('badge', '🟢 정상')}")
+                st.write(f"**운영 가이드:** {drift_res.get('action_guide', '')}")
+            with d_col2:
+                st.metric("최대 피처 PSI", f"{drift_res.get('max_feature_psi', 0.0):.4f}",
+                          delta="0.1 미만 정상 / 0.25 이상 재학습")
+            with d_col3:
+                st.metric("수집된 추론 표본", f"{drift_res.get('sample_count', 0)} / {dm.buffer_size} 건")
+
+            # Interactive Simulation Buttons
+            st.markdown("---")
+            st.markdown("##### 🧪 실시간 인입 데이터 시뮬레이션 테스트")
+            b1, b2, b3 = st.columns(3)
+            with b1:
+                if st.button("🟢 정상 분포 데이터 50건 인입", use_container_width=True):
+                    X_tr = st.session_state.get("X_train")
+                    sel_f = st.session_state.get("selected_features")
+                    if X_tr is not None and sel_f:
+                        avail = [c for c in sel_f if c in X_tr.columns]
+                        normal_sample = X_tr[avail].sample(n=min(50, len(X_tr)), replace=True, random_state=42)
+                        dm.record_batch(normal_sample.to_dict(orient="records"))
+                        st.rerun()
+            with b2:
+                if st.button("🚨 왜곡(Drift) 데이터 50건 인입", use_container_width=True):
+                    X_tr = st.session_state.get("X_train")
+                    sel_f = st.session_state.get("selected_features")
+                    if X_tr is not None and sel_f:
+                        avail = [c for c in sel_f if c in X_tr.columns]
+                        drifted_sample = X_tr[avail].sample(n=min(50, len(X_tr)), replace=True, random_state=42).copy()
+                        num_cols = drifted_sample.select_dtypes(include=["number"]).columns
+                        for c in num_cols:
+                            drifted_sample[c] = drifted_sample[c] * 2.5 + 50.0
+                        dm.record_batch(drifted_sample.to_dict(orient="records"))
+                        st.rerun()
+            with b3:
+                if st.button("🔄 모니터링 버퍼 초기화 (Reset)", use_container_width=True):
+                    dm.reset()
+                    st.rerun()
+
+            # Feature Drift Table
+            st.markdown("##### 📋 피처별 세부 드리프트(PSI) 지표 현황")
+            f_drift = drift_res.get("feature_drift", {})
+            if f_drift:
+                rows = []
+                for feat, info in f_drift.items():
+                    rows.append({
+                        "피처명": feat,
+                        "PSI 수치": info["psi"],
+                        "신호등": info["traffic_light"],
+                        "상태": info["status_label"],
+                        "변수 유형": info["type"]
+                    })
+                st.dataframe(pd.DataFrame(rows), use_container_width=True)
+        else:
+            st.info("파이프라인이 실행되면 실시간 데이터 드리프트 모니터가 자동으로 가동됩니다.")
+
+    with tab6:
         st.markdown("#### 🔍 단일 진실 공급원(SSOT) 감사 로그 (run_audit.json)")
         st.caption(f"Audit Checksum: {data['checksum']}")
         st.json(data)
