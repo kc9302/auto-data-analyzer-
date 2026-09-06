@@ -7,9 +7,19 @@ import os
 import json
 from typing import Dict, Any
 
+from src.presenter.theme_manager import ThemeManager, BusinessTranslator
+
+
 class HtmlReportBuilder:
-    def __init__(self, theme_config: Dict[str, Any] = None):
-        self.theme = theme_config or {}
+    def __init__(self, theme_config: Any = None):
+        if isinstance(theme_config, ThemeManager):
+            self.theme_mgr = theme_config
+        elif isinstance(theme_config, dict):
+            self.theme_mgr = ThemeManager()
+            self.theme_mgr.theme_data.update(theme_config)
+        else:
+            self.theme_mgr = ThemeManager()
+        self.translator = BusinessTranslator()
 
     def build_report(self, audit_data: Dict[str, Any], output_html_path: str) -> str:
         os.makedirs(os.path.dirname(output_html_path), exist_ok=True)

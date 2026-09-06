@@ -12,25 +12,35 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 from src.presenter.chart_generator import PresentationChartGenerator
+from src.presenter.theme_manager import ThemeManager, BusinessTranslator
 
 
 class PptxDeckBuilder:
-    def __init__(self, theme_config: Dict[str, Any] = None):
-        self.theme = theme_config or {}
+    def __init__(self, theme_config: Any = None):
+        if isinstance(theme_config, ThemeManager):
+            self.theme_mgr = theme_config
+        elif isinstance(theme_config, dict):
+            self.theme_mgr = ThemeManager()
+            self.theme_mgr.theme_data.update(theme_config)
+        else:
+            self.theme_mgr = ThemeManager()
+
+        self.translator = BusinessTranslator()
         self.prs = Presentation()
         # 16:9 widescreen
         self.prs.slide_width = Inches(13.333)
         self.prs.slide_height = Inches(7.5)
         self.blank_layout = self.prs.slide_layouts[6]
 
-        # Theme Colors
-        self.c_primary = RGBColor(0x1E, 0x29, 0x3B)    # Slate Navy
-        self.c_accent = RGBColor(0x0E, 0xA5, 0xE9)     # Sky Blue
-        self.c_success = RGBColor(0x10, 0xB9, 0x81)    # Emerald Green
-        self.c_warning = RGBColor(0xF5, 0x9E, 0x0B)    # Amber
-        self.c_danger = RGBColor(0xF4, 0x3F, 0x5E)     # Rose
-        self.c_card_bg = RGBColor(0xFF, 0xFF, 0xFF)    # White
-        self.c_slide_bg = RGBColor(0xF8, 0xFA, 0xFC)   # Light Slate
+        # Theme Colors dynamically mapped from ThemeManager
+        self.c_primary = self.theme_mgr.get_pptx_rgb("primary")
+        self.c_secondary = self.theme_mgr.get_pptx_rgb("secondary")
+        self.c_accent = self.theme_mgr.get_pptx_rgb("accent")
+        self.c_success = self.theme_mgr.get_pptx_rgb("success")
+        self.c_warning = self.theme_mgr.get_pptx_rgb("warning")
+        self.c_danger = self.theme_mgr.get_pptx_rgb("danger")
+        self.c_card_bg = self.theme_mgr.get_pptx_rgb("card_bg")
+        self.c_slide_bg = self.theme_mgr.get_pptx_rgb("slide_bg")
         self.c_text_dark = RGBColor(0x0F, 0x17, 0x2A)  # Slate 900
         self.c_text_muted = RGBColor(0x64, 0x74, 0x8B) # Slate 500
 
