@@ -35,19 +35,39 @@ class ServingPackager:
         joblib.dump(model_instance, model_artifact_path)
         generated_files["model_artifact"] = model_artifact_path
 
-        # 2. Metadata JSON
+        # 2. Extract Drift Baseline & Metadata JSON
+        from src.serving.drift_monitor import DriftMonitor
+        drift_baseline = {}
+        if feature_sample is not None and not feature_sample.empty:
+            avail_cols = [c for c in selected_features if c in feature_sample.columns]
+            if avail_cols:
+                try:
+                    dm = DriftMonitor().fit_baseline(feature_sample[avail_cols])
+                    drift_baseline = dm.baseline_stats
+                except Exception:
+                    drift_baseline = {}
+
         meta_data = {
             "model_name": model_name,
             "task_type": task_type,
             "target_column": target_column,
             "features": selected_features,
             "metrics": metrics or {},
-            "framework": type(model_instance).__module__
+            "framework": type(model_instance).__module__,
+            "drift_baseline": drift_baseline
         }
         meta_path = os.path.join(export_dir, "metadata.json")
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta_data, f, indent=2, ensure_ascii=False)
         generated_files["metadata"] = meta_path
+
+        # 2-1. Export self-contained drift_monitor.py
+        dm_src = os.path.join(os.path.dirname(__file__), "drift_monitor.py")
+        dm_dst = os.path.join(export_dir, "drift_monitor.py")
+        if os.path.exists(dm_src):
+            with open(dm_src, "r", encoding="utf-8") as f_in, open(dm_dst, "w", encoding="utf-8") as f_out:
+                f_out.write(f_in.read())
+            generated_files["drift_monitor"] = dm_dst
 
         # 3. Infer Feature Types and Default Values
         import re
@@ -142,6 +162,13 @@ if os.path.exists(META_PATH):
 
 FEATURE_COLUMNS = metadata.get("features", {selected_features!r})
 
+# Initialize Real-time Drift Monitor
+try:
+    from drift_monitor import DriftMonitor
+    drift_monitor = DriftMonitor(baseline_stats=metadata.get("drift_baseline", {{}}))
+except Exception:
+    drift_monitor = None
+
 
 class ItemFeatures(BaseModel):
     """Pydantic schema representing raw feature input with strict types."""
@@ -191,6 +218,9 @@ def predict_single(item: ItemFeatures):
     start_t = time.perf_counter()
     try:
         data_dict = item.model_dump(by_alias=True)
+        if drift_monitor is not None:
+            drift_monitor.record(data_dict)
+
         df = pd.DataFrame([data_dict])[FEATURE_COLUMNS]
         
         pred = model.predict(df)[0]
@@ -220,6 +250,9 @@ def predict_batch(batch: BatchPredictionRequest):
     start_t = time.perf_counter()
     try:
         data_list = [item.model_dump(by_alias=True) for item in batch.items]
+        if drift_monitor is not None:
+            drift_monitor.record_batch(data_list)
+
         df = pd.DataFrame(data_list)[FEATURE_COLUMNS]
         
         raw_preds = model.predict(df)
@@ -236,6 +269,22 @@ def predict_batch(batch: BatchPredictionRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch inference error: {{str(e)}}")
+
+
+@app.get("/drift/status", tags=["Monitoring"])
+def get_drift_status(min_samples: int = 20):
+    """Real-time Population Stability Index (PSI) and traffic light drift report."""
+    if drift_monitor is None:
+        raise HTTPException(status_code=503, detail="Drift monitor not initialized")
+    return drift_monitor.compute_drift(min_samples=min_samples)
+
+
+@app.post("/drift/reset", tags=["Monitoring"])
+def reset_drift_buffer():
+    """Clears the live inference buffer for drift monitoring."""
+    if drift_monitor is not None:
+        drift_monitor.reset()
+    return {{"status": "ok", "message": "Drift buffer successfully reset"}}
 
 
 if __name__ == "__main__":

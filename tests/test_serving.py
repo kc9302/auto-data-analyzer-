@@ -45,8 +45,10 @@ def test_serving_packager_e2e():
         assert os.path.exists(files["serve"])
         assert os.path.exists(files["dockerfile"])
         assert os.path.exists(files["test_client"])
+        assert os.path.exists(files["drift_monitor"])
 
         # 3. Dynamically load the generated serve.py and test with TestClient
+        sys.path.insert(0, tmpdir)
         spec = importlib.util.spec_from_file_location("serve_module", files["serve"])
         serve_mod = importlib.util.module_from_spec(spec)
         sys.modules["serve_module"] = serve_mod
@@ -78,3 +80,17 @@ def test_serving_packager_e2e():
         batch_data = resp_batch.json()
         assert batch_data["count"] == 3
         assert len(batch_data["predictions"]) == 3
+
+        # 7. Test /drift/status (verify live telemetry tracking)
+        resp_drift = client.get("/drift/status?min_samples=1")
+        assert resp_drift.status_code == 200
+        drift_data = resp_drift.json()
+        assert "status" in drift_data
+        assert "traffic_light" in drift_data
+        assert drift_data["sample_count"] >= 4  # 1 single + 3 batch recorded
+
+        # 8. Test /drift/reset
+        resp_reset = client.post("/drift/reset")
+        assert resp_reset.status_code == 200
+        assert resp_reset.json()["status"] == "ok"
+
