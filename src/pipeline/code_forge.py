@@ -91,6 +91,7 @@ Production Training Script with Feature A/B Benchmark
 Model: {best_model_name}
 Target: {target_column}
 """
+import os
 import argparse
 import numpy as np
 import pandas as pd
@@ -100,6 +101,9 @@ from lightgbm import LGBMClassifier, LGBMRegressor
 from pipeline import MissingManager, AutoFeatureSynthesizer
 
 def load_data(db_url: str, table_name: str):
+    clean = db_url.replace("csv://", "").strip("\"'")
+    if clean.endswith(".csv") or os.path.isfile(clean):
+        return pd.read_csv(clean)
     engine = create_engine(db_url)
     with engine.connect() as conn:
         return pd.read_sql_table(table_name, conn)

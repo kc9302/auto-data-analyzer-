@@ -55,3 +55,42 @@ def test_leakage_free_pipeline():
     # Lineage events must be recorded
     events = pipeline.tracker.get_summary()
     assert len(events) >= 3
+
+
+def test_csv_connector():
+    csv_path = "data/sample_customers.csv"
+    assert os.path.exists(csv_path), "sample_customers.csv must exist"
+
+    # Test path format 1: direct relative path
+    connector = SafeDBConnector(csv_path)
+    assert connector.engine_type == "CSV"
+    tables = connector.get_table_names()
+    assert tables == ["sample_customers"]
+
+    # Row count verification
+    count = connector.get_table_row_count("sample_customers")
+    assert count == 5000
+
+    # Sampling test: threshold < total_rows
+    load_sampled = connector.load_table_data("sample_customers", sample_threshold=1000, seed=42)
+    assert load_sampled["is_sampled"] is True
+    assert len(load_sampled["data"]) == 1000
+    assert load_sampled["total_rows"] == 5000
+    assert load_sampled["engine"] == "CSV"
+
+    # Full load test: threshold >= total_rows
+    load_full = connector.load_table_data("sample_customers", sample_threshold=10000)
+    assert load_full["is_sampled"] is False
+    assert len(load_full["data"]) == 5000
+
+    # Test path format 2: csv:// protocol prefix
+    connector_proto = SafeDBConnector(f"csv://{csv_path}")
+    assert connector_proto.engine_type == "CSV"
+    assert connector_proto.get_table_names() == ["sample_customers"]
+    assert connector_proto.get_table_row_count("sample_customers") == 5000
+
+    # Test non-existent file error handling
+    non_existent = SafeDBConnector("data/non_existent.csv")
+    with pytest.raises(FileNotFoundError):
+        non_existent.get_table_row_count("non_existent")
+

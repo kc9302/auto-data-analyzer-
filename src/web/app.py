@@ -60,21 +60,52 @@ with st.sidebar:
     st.title("⚙️ DB 접속 & 파라미터")
     st.caption("Zero-Mutation / Read-Only 안전 접속이 기본 적용됩니다.")
 
-    db_url = st.text_input(
-        "데이터베이스 접속 URL",
-        value="sqlite:///tests/data/sample_warehouse.db",
-        help="SQLite, PostgreSQL, MySQL 등 SQLAlchemy 지원 접속 포맷"
+    source_type = st.radio(
+        "데이터 소스 선택",
+        options=["📁 CSV 파일 분석", "🗄️ 데이터베이스 URL 접속"],
+        horizontal=True
     )
 
-    # Initialize connector upon test button
+    db_url = ""
+    if source_type == "📁 CSV 파일 분석":
+        csv_mode = st.radio(
+            "CSV 소스 모드",
+            options=["기본 제공 고객 샘플 (sample_customers.csv)", "직접 CSV 파일 업로드"],
+            label_visibility="collapsed"
+        )
+        if csv_mode == "기본 제공 고객 샘플 (sample_customers.csv)":
+            default_csv = os.path.join("data", "sample_customers.csv")
+            db_url = default_csv
+            st.info(f"💡 기본 5,000행 통신사 고객 이탈 샘플 데이터 (`{default_csv}`)")
+        else:
+            uploaded_file = st.file_uploader("분석할 CSV 파일을 업로드하세요", type=["csv"])
+            if uploaded_file is not None:
+                upload_dir = os.path.join("data", "uploads")
+                os.makedirs(upload_dir, exist_ok=True)
+                temp_path = os.path.join(upload_dir, uploaded_file.name)
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                db_url = temp_path
+                st.success(f"✓ 업로드 완료: `{uploaded_file.name}`")
+            else:
+                st.warning("분석할 CSV 파일을 업로드해주세요.")
+    else:
+        db_url = st.text_input(
+            "데이터베이스 접속 URL",
+            value="sqlite:///tests/data/sample_warehouse.db",
+            help="SQLite, PostgreSQL, MySQL 등 SQLAlchemy 지원 접속 포맷"
+        )
+
+    # Initialize connector upon valid db_url
     connector = None
     tables = []
-    try:
-        connector = SafeDBConnector(db_url)
-        tables = connector.get_table_names()
-        st.success(f"✓ 엔진 식별: **{connector.engine_type}** ({len(tables)}개 테이블 발견)")
-    except Exception as e:
-        st.error(f"DB 연결 실패: {e}")
+    if db_url:
+        try:
+            connector = SafeDBConnector(db_url)
+            tables = connector.get_table_names()
+            st.success(f"✓ 엔진 식별: **{connector.engine_type}** ({len(tables)}개 테이블/데이터셋 발견)")
+        except Exception as e:
+            st.error(f"연결 실패: {e}")
 
     selected_table = None
     if tables:
