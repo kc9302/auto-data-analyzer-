@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  analyzer:
+    build: .
+    container_name: auto-data-analyzer
+    volumes:
+      - ./dist:/app/dist
+      - ./tests/data:/app/data
+    # Example usage:
+    # docker-compose run analyzer --db-url "sqlite:///app/data/sample_warehouse.db" --table "customers" --target "churn"

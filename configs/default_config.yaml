@@ -1,0 +1,44 @@
+# 기본 운영 및 안전 설정
+system:
+  max_memory_mb: 500
+  query_timeout_sec: 30
+  random_seed: 42
+
+sampling:
+  adaptive_threshold_rows: 50000
+  max_sample_rows: 50000
+  confidence_level: 0.99
+  margin_of_error: 0.01
+
+security:
+  read_only_enforced: true
+  pii_regex_patterns:
+    - name: "KOREAN_RRN"
+      regex: "\\b\\d{6}-[1-4]\\d{6}\\b"
+    - name: "EMAIL"
+      regex: "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+"
+    - name: "PHONE"
+      regex: "\\b01[016789]-?\\d{3,4}-?\\d{4}\\b"
+    - name: "CREDIT_CARD"
+      regex: "\\b(?:\\d{4}[-\\s]?){3}\\d{4}\\b"
+  pii_column_keywords:
+    - "password"
+    - "passwd"
+    - "pwd"
+    - "ssn"
+    - "resident"
+    - "secret"
+    - "token"
+
+profiling:
+  iqr_multiplier: 1.5
+  high_correlation_threshold: 0.6
+  vif_threshold: 10.0
+  max_cardinality_for_onehot: 10
+
+ml_scout:
+  cv_folds: 5
+  test_size: 0.2
+  scoring:
+    classification: "f1_weighted"
+    regression: "neg_root_mean_squared_error"

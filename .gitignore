@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Pytest and test caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build & generated outputs
+dist/
+build/
+*.egg-info/
+
+# Jupyter & IDEs
+.ipynb_checkpoints
+.vscode/
+.idea/
+
+# Environment variables & secrets
+.env
+.env.*
+*.pem
+*.key
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini

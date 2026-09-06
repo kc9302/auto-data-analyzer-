@@ -1,0 +1,24 @@
+# 장표 디자인 테마 설정
+theme:
+  company_name: "AI Data Insights Lab"
+  department: "Advanced Analytics Team"
+  logo_path: "" # Optional logo path
+  
+palette:
+  primary: "#1E293B"     # Slate Navy (Header, Main Title)
+  secondary: "#334155"   # Subtitles, Card Headers
+  accent: "#0EA5E9"      # Sky Blue (Key highlights, Best Model)
+  success: "#10B981"     # Emerald (Clean data, Normal status)
+  warning: "#F59E0B"     # Amber (Missing values, moderate skew)
+  danger: "#F43F5E"      # Rose (Severe outliers, Multicollinearity, PII)
+  card_bg: "#FFFFFF"     # White
+  slide_bg: "#F8FAFC"    # Ultra-light gray/slate
+  border: "#E2E8F0"
+
+typography:
+  font_family_korean: "Malgun Gothic"
+  font_family_latin: "Segoe UI"
+  title_size_pt: 24
+  header_size_pt: 16
+  body_size_pt: 11
+  caption_size_pt: 9
