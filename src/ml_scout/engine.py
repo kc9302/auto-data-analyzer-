@@ -230,6 +230,24 @@ class MLScoutEngine:
         except Exception as xai_err:
             xai_summary = {"error": str(xai_err)}
 
+        # 6. Imbalance Diagnosis & Cost-Sensitive Threshold Tuning
+        imbalance_report = {}
+        if task_type == "Binary_Classification" and y_train is not None:
+            try:
+                from src.pipeline.imbalance_handler import ImbalanceHandler
+                imb_handler = ImbalanceHandler()
+                imb_analysis = imb_handler.analyze_imbalance(y_train)
+                threshold_tuning = {}
+                if hasattr(best_instance, "predict_proba"):
+                    probs = best_instance.predict_proba(X_train)[:, 1]
+                    threshold_tuning = imb_handler.tune_threshold(y_train, probs)
+                imbalance_report = {
+                    "analysis": imb_analysis,
+                    "tuning": threshold_tuning
+                }
+            except Exception as imb_err:
+                imbalance_report = {"error": str(imb_err)}
+
         return {
             "task_type": task_type,
             "primary_metric": primary_metric,
@@ -238,5 +256,6 @@ class MLScoutEngine:
             "leaderboard": results,
             "top_features": list(self.feature_importances.items())[:10],
             "diagnostics": diagnostics,
-            "xai": xai_summary
+            "xai": xai_summary,
+            "imbalance_optimization": imbalance_report
         }
