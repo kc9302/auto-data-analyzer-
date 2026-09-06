@@ -14,6 +14,9 @@ from src.serving.api_packager import ServingPackager
 
 
 class CodeForge:
+    def __init__(self):
+        self.last_manifest: Optional[Dict[str, Any]] = None
+
     def export_code(
         self,
         output_dir: str,
@@ -26,7 +29,9 @@ class CodeForge:
         task_type: str,
         model_instance: Optional[Any] = None,
         feature_sample: Optional[pd.DataFrame] = None,
-        metrics: Optional[Dict[str, Any]] = None
+        metrics: Optional[Dict[str, Any]] = None,
+        train_split: Optional[Any] = None,
+        val_split: Optional[Any] = None
     ) -> str:
         export_path = os.path.join(output_dir, "export_pipeline")
         os.makedirs(export_path, exist_ok=True)
@@ -181,6 +186,7 @@ if __name__ == "__main__":
             "fastapi>=0.100.0\n"
             "uvicorn>=0.22.0\n"
             "pydantic>=2.0.0\n"
+            "pyarrow>=14.0.0\n"
         )
         with open(os.path.join(export_path, "requirements.txt"), "w", encoding="utf-8") as f:
             f.write(reqs)
@@ -197,6 +203,22 @@ if __name__ == "__main__":
                 model_name=best_model_name,
                 feature_sample=feature_sample,
                 metrics=metrics
+            )
+
+        # 6. Model Reproducibility & Data Freezing (frozen_data/ & reproduce.py)
+        if train_split is not None and val_split is not None:
+            from src.reproducibility.freezer import DataFreezer
+            freezer = DataFreezer()
+            self.last_manifest = freezer.freeze_dataset(
+                export_dir=export_path,
+                train_split=train_split,
+                val_split=val_split,
+                target_column=target_column,
+                best_model_name=best_model_name,
+                best_model_instance=model_instance,
+                task_type=task_type,
+                metrics=metrics,
+                db_url=db_url
             )
 
         return export_path

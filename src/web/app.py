@@ -179,10 +179,34 @@ if run_btn and connector and selected_table:
         st.session_state["X_train"] = X_train
         st.session_state["selected_features"] = pipeline.selected_features
 
-        # 5. SSOT Audit Data
+        # 5. Export Code, Serving Package & Data Freezing
+        from src.pipeline.code_forge import CodeForge
+        code_forge = CodeForge()
+        best_estimator = ml_scout.best_model_instance if (target_column and y_train is not None) else None
+        train_split = (X_train, y_train) if (target_column and y_train is not None) else None
+        val_split = (X_test, y_test) if (target_column and y_test is not None) else None
+        out_dir = "dist"
+        export_path = code_forge.export_code(
+            output_dir=out_dir,
+            best_model_name=ml_results.get("best_model", "LightGBM"),
+            target_column=target_column or "target",
+            db_url=db_url,
+            table_name=selected_table,
+            selected_features=pipeline.selected_features,
+            synthesis_audit=pipeline.synthesis_audit,
+            task_type=ml_results.get("task_type", "Classification"),
+            model_instance=best_estimator,
+            feature_sample=X_train if (target_column and y_train is not None) else None,
+            metrics=ml_results.get("diagnostics"),
+            train_split=train_split,
+            val_split=val_split
+        )
+        st.session_state["export_path"] = export_path
+
+        # 6. SSOT Audit Data
         checksum_raw = hashlib.sha256(str(df.head(100).to_dict()).encode("utf-8")).hexdigest()
         audit_data = {
-            "audit_version": "1.0.0",
+            "audit_version": "2.1.0",
             "generated_at": datetime.now().isoformat(),
             "checksum": checksum_raw,
             "db_meta": {
@@ -204,7 +228,8 @@ if run_btn and connector and selected_table:
             "missing_summary": missing_summary,
             "numeric_profiles": numeric_profiles,
             "feature_journey": lineage_events,
-            "ml_scout": ml_results
+            "ml_scout": ml_results,
+            "reproducibility_manifest": code_forge.last_manifest
         }
 
         # 6. Generate presentation files
@@ -246,12 +271,12 @@ if "audit_data" in st.session_state:
     st.divider()
 
     # One-Click Downloads Section
-    st.markdown("### 📥 장표 및 보고서 다운로드")
-    d1, d2, d3 = st.columns(3)
+    st.markdown("### 📥 장표, 코드 패키지 및 감사 로그 다운로드")
+    d1, d2, d3, d4 = st.columns(4)
     with d1:
         with open(st.session_state["pptx_path"], "rb") as f:
             st.download_button(
-                label="📊 16:9 파워포인트 (PPTX) 다운로드",
+                label="📊 파워포인트 (PPTX)",
                 data=f.read(),
                 file_name=os.path.basename(st.session_state["pptx_path"]),
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -261,7 +286,7 @@ if "audit_data" in st.session_state:
     with d2:
         with open(st.session_state["html_path"], "rb") as f:
             st.download_button(
-                label="🌐 반응형 웹 리포트 (HTML) 다운로드",
+                label="🌐 반응형 웹 리포트 (HTML)",
                 data=f.read(),
                 file_name=os.path.basename(st.session_state["html_path"]),
                 mime="text/html",
@@ -270,9 +295,19 @@ if "audit_data" in st.session_state:
     with d3:
         audit_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
         st.download_button(
-            label="📜 단일 진실 감사 로그 (JSON) 다운로드",
+            label="📜 감사 로그 (JSON)",
             data=audit_bytes,
             file_name="run_audit.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    with d4:
+        rep_manifest = data.get("reproducibility_manifest") or {}
+        rep_bytes = json.dumps(rep_manifest, indent=2, ensure_ascii=False).encode("utf-8")
+        st.download_button(
+            label="🔒 재현성 매니페스트 (JSON)",
+            data=rep_bytes,
+            file_name="data_manifest.json",
             mime="application/json",
             use_container_width=True
         )
@@ -280,12 +315,13 @@ if "audit_data" in st.session_state:
     st.divider()
 
     # Tabs for Decks
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 [DECK 1] 데이터 현황 진단",
         "🛣️ [DECK 2] 피처 엔지니어링 여정",
         "🏆 [AutoML] 모델 벤치마크 및 리더보드",
         "🧠 [XAI & What-If] 설명력 & 비용 최적화",
         "📡 [MLOps 관제] 실시간 데이터 드리프트",
+        "🔒 [재현성 관리자] 동결 데이터 & 감사 매니페스트",
         "🔍 [SSOT] 무결성 감사 로그 원문"
     ])
 
@@ -475,6 +511,41 @@ if "audit_data" in st.session_state:
             st.info("파이프라인이 실행되면 실시간 데이터 드리프트 모니터가 자동으로 가동됩니다.")
 
     with tab6:
+        st.markdown("#### 🔒 [재현성 관리자] 동결 데이터 스냅샷 & 100% 모델 재현성 매니페스트")
+        rep_manifest = data.get("reproducibility_manifest")
+        if rep_manifest:
+            st.success("✓ **데이터 동결 완료:** 원본 데이터 및 Train/Val 분할셋이 Parquet & CSV로 암호화 봉인(Freeze)되었습니다.")
+
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                st.metric("동결 Train 레코드", f"{rep_manifest['freeze_splits']['train_rows']:,} 행")
+            with m2:
+                st.metric("동결 Val 레코드", f"{rep_manifest['freeze_splits']['val_rows']:,} 행")
+            with m3:
+                st.metric("분할 비율", rep_manifest['freeze_splits']['split_ratio'])
+            with m4:
+                st.metric("난수 고정 시드", rep_manifest['freeze_splits']['random_seed'])
+
+            st.markdown("##### 🛡️ 암호화 체크섬 무결성 검증 (SHA-256 Hashes)")
+            hash_rows = [
+                {"데이터 구분": "Train Split (Parquet)", "파일명": "train_split.parquet", "SHA-256 해시": rep_manifest['freeze_splits']['train_sha256_parquet']},
+                {"데이터 구분": "Val Split (Parquet)", "파일명": "val_split.parquet", "SHA-256 해시": rep_manifest['freeze_splits']['val_sha256_parquet']},
+                {"데이터 구분": "Train Split (CSV)", "파일명": "train_split.csv", "SHA-256 해시": rep_manifest['freeze_splits']['train_sha256_csv']},
+                {"데이터 구분": "Val Split (CSV)", "파일명": "val_split.csv", "SHA-256 해시": rep_manifest['freeze_splits']['val_sha256_csv']},
+            ]
+            st.dataframe(pd.DataFrame(hash_rows), use_container_width=True)
+
+            st.markdown("##### 💻 실행 환경 핑거프린트 (Environment Fingerprint)")
+            env_df = pd.DataFrame(list(rep_manifest["environment_fingerprint"].items()), columns=["컴포넌트", "버전 / 릴리즈 정보"])
+            st.dataframe(env_df, use_container_width=True)
+
+            st.markdown("##### 🚀 모델 완벽 재현 실행 가이드 (Standalone CLI)")
+            st.info("외부 DB나 인터넷 연결 없이, 동결된 데이터와 아래 명령어로 언제든 정확히 100% 동일한 모델을 재현할 수 있습니다:")
+            st.code("cd dist/export_pipeline\npython reproduce.py", language="bash")
+        else:
+            st.info("타겟 변수 모델링이 수행되지 않아 데이터 동결이 생략되었습니다.")
+
+    with tab7:
         st.markdown("#### 🔍 단일 진실 공급원(SSOT) 감사 로그 (run_audit.json)")
         st.caption(f"Audit Checksum: {data['checksum']}")
         st.json(data)

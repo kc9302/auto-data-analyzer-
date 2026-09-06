@@ -111,11 +111,38 @@ def run_analyzer(
             perf = r.get("f1_weighted") or r.get("accuracy") or r.get("r2") or r.get("neg_root_mean_squared_error", 0.0)
             print(f"   [{r['rank']}위] {r['model']} ({r.get('model_category')}): 성능 {perf:.4f} (학습 {r['train_time_sec']}초)")
 
-    # 5. Build Audit Log (Single Source of Truth)
-    print("\n[Step 5] 단일 진실 공급원(SSOT) 감사 로그 생성 중...")
+    # 5. Export Production Clean Python Code, FastAPI Serving Package & Data Freezing
+    print("\n[Step 5] 프로덕션 레디 클린 파이썬, 서빙 패키지 및 데이터 동결(Freezing) 추출 중...")
+    code_forge = CodeForge()
+    best_estimator = ml_scout.best_model_instance if (target_col and y_train is not None) else None
+    train_split = (X_train, y_train) if (target_col and y_train is not None) else None
+    val_split = (X_test, y_test) if (target_col and y_test is not None) else None
+
+    export_path = code_forge.export_code(
+        output_dir=out_dir,
+        best_model_name=ml_results.get("best_model", "LightGBM"),
+        target_column=target_col or "target",
+        db_url=db_url,
+        table_name=table_name,
+        selected_features=pipeline.selected_features,
+        synthesis_audit=pipeline.synthesis_audit,
+        task_type=ml_results.get("task_type", "Classification"),
+        model_instance=best_estimator,
+        feature_sample=X_train if (target_col and y_train is not None) else None,
+        metrics=ml_results.get("diagnostics"),
+        train_split=train_split,
+        val_split=val_split
+    )
+    print(f"[OK] 파이썬 파이프라인 및 서빙 패키지 생성 완료: {os.path.abspath(export_path)}")
+    if code_forge.last_manifest:
+        print(f"[OK] 데이터 동결 및 무결성 해시 매니페스트 저장: {os.path.join(export_path, 'frozen_data', 'data_manifest.json')}")
+        print(f"[OK] 모델 완벽 재현 검증 스크립트 생성: {os.path.join(export_path, 'reproduce.py')}")
+
+    # 6. Build Audit Log (Single Source of Truth)
+    print("\n[Step 6] 단일 진실 공급원(SSOT) 감사 로그 생성 중...")
     checksum_raw = hashlib.sha256(str(df.head(100).to_dict()).encode("utf-8")).hexdigest()
     audit_data = {
-        "audit_version": "2.0.0",
+        "audit_version": "2.1.0",
         "generated_at": datetime.now().isoformat(),
         "checksum": checksum_raw,
         "db_meta": {
@@ -140,7 +167,8 @@ def run_analyzer(
         "feature_ab_test": ab_res,
         "feature_synthesis_audit": pipeline.synthesis_audit,
         "missing_governance_log": pipeline.missing_gov.governance_log_,
-        "ml_scout": ml_results
+        "ml_scout": ml_results,
+        "reproducibility_manifest": code_forge.last_manifest
     }
 
     os.makedirs(out_dir, exist_ok=True)
@@ -148,25 +176,6 @@ def run_analyzer(
     with open(audit_json_path, "w", encoding="utf-8") as f:
         json.dump(audit_data, f, indent=2, ensure_ascii=False)
     print(f"[OK] 감사 로그 저장 완료: {audit_json_path}")
-
-    # 6. Export Production Clean Python Code & FastAPI Serving Package (Code Forge)
-    print("\n[Step 6] 프로덕션 레디 클린 파이썬 & FastAPI 서빙 패키지 추출 중...")
-    code_forge = CodeForge()
-    best_estimator = ml_scout.best_model_instance if (target_col and y_train is not None) else None
-    export_path = code_forge.export_code(
-        output_dir=out_dir,
-        best_model_name=ml_results.get("best_model", "LightGBM"),
-        target_column=target_col or "target",
-        db_url=db_url,
-        table_name=table_name,
-        selected_features=pipeline.selected_features,
-        synthesis_audit=pipeline.synthesis_audit,
-        task_type=ml_results.get("task_type", "Classification"),
-        model_instance=best_estimator,
-        feature_sample=X_train if (target_col and y_train is not None) else None,
-        metrics=ml_results.get("diagnostics")
-    )
-    print(f"[OK] 파이썬 파이프라인 및 서빙 패키지 생성 완료: {os.path.abspath(export_path)}")
 
     # 7. Render Essential 4-Slide Visual Presentations (PPTX & HTML)
     print("\n[Step 7] 도식화/차트 중심 필수 4장 장표(PPTX) & 인터랙티브 리포트(HTML) 렌더링 중...")
@@ -183,6 +192,8 @@ def run_analyzer(
     print(f"1. 프로덕션 파이프라인 및 서빙 패키지: {os.path.abspath(export_path)}")
     print(f"   • 실시간 REST API 서버: {os.path.join(os.path.abspath(export_path), 'serve.py')}")
     print(f"   • 모델 바이너리 아티팩트: {os.path.join(os.path.abspath(export_path), 'best_model.joblib')}")
+    print(f"   • 동결 데이터 스냅샷: {os.path.join(os.path.abspath(export_path), 'frozen_data')}")
+    print(f"   • 100% 모델 재현 검증기: {os.path.join(os.path.abspath(export_path), 'reproduce.py')}")
     print(f"   • 프로덕션 컨테이너: {os.path.join(os.path.abspath(export_path), 'Dockerfile')}")
     print(f"   • 자동화 테스트 클라이언트: {os.path.join(os.path.abspath(export_path), 'test_client.py')}")
     print(f"2. 단일 진실 공급원 감사 로그 JSON: {os.path.abspath(audit_json_path)}")
