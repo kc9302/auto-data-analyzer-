@@ -34,7 +34,9 @@ def run_analyzer(
     table_name: str = None,
     target_col: str = None,
     out_dir: str = "dist",
-    sample_threshold: int = 50000
+    sample_threshold: int = 50000,
+    query: str = None,
+    sql_file: str = None
 ):
     print("=" * 80)
     print("[SYSTEM] Auto Data Analyzer & ML Scout 시스템 가동")
@@ -42,21 +44,41 @@ def run_analyzer(
     print(f"• 실행 모드: Read-Only 안전 접속 (Zero-Mutation)")
     print("=" * 80)
 
+    # Resolve custom query from file if specified
+    if sql_file:
+        if not os.path.exists(sql_file):
+            raise FileNotFoundError(f"지정한 SQL 파일을 찾을 수 없습니다: {sql_file}")
+        with open(sql_file, "r", encoding="utf-8") as f:
+            query = f.read()
+        if not table_name:
+            table_name = os.path.splitext(os.path.basename(sql_file))[0]
+
     # 1. Safe DB Connection
     print("\n[Step 1] 안전 데이터베이스 커넥터 연결 중...")
     connector = SafeDBConnector(db_url)
-    tables = connector.get_table_names()
     print(f"[OK] DB 엔진 식별: {connector.engine_type}")
-    print(f"[OK] 발견된 테이블 목록 ({len(tables)}개): {', '.join(tables)}")
 
+    if query:
+        target_name = table_name or "custom_query_mart"
+        print(f"[INFO] 커스텀 복합 SQL 쿼리 로드 모드 가동 (대상: '{target_name}')")
+        load_res = connector.load_query_data(
+            query=query,
+            sample_threshold=sample_threshold,
+            dataset_name=target_name
+        )
+        table_name = load_res["table_name"]
+    else:
+        tables = connector.get_table_names()
+        print(f"[OK] 발견된 테이블 목록 ({len(tables)}개): {', '.join(tables)}")
+        if not table_name:
+            table_name = tables[0]
+            print(f"[INFO] 테이블 미지정으로 첫 번째 테이블('{table_name}')을 자동 선택합니다.")
 
-    if not table_name:
-        table_name = tables[0]
-        print(f"[INFO] 테이블 미지정으로 첫 번째 테이블('{table_name}')을 자동 선택합니다.")
+        load_res = connector.load_table_data(table_name, sample_threshold=sample_threshold)
 
-    load_res = connector.load_table_data(table_name, sample_threshold=sample_threshold)
     df = load_res["data"]
-    print(f"[OK] 테이블 '{table_name}' 로드 완료: 총 {load_res['total_rows']:,}행 중 {load_res['sample_rows']:,}행 (표본 {load_res['is_sampled']})")
+    print(f"[OK] 데이터 '{table_name}' 로드 완료: 총 {load_res['total_rows']:,}행 중 {load_res['sample_rows']:,}행 (표본 {load_res['is_sampled']})")
+    print(f"[OK] 표본 추출 전략: {load_res.get('sampling_strategy', 'Full Population')}")
     print(f"[OK] 메모리 점유율: {load_res['memory_mb']} MB (OOM 안전 한도 내)")
 
     # 2. Fact-Based Profiling
@@ -194,6 +216,7 @@ def run_analyzer(
     print(f"   • 모델 바이너리 아티팩트: {os.path.join(os.path.abspath(export_path), 'best_model.joblib')}")
     print(f"   • 동결 데이터 스냅샷: {os.path.join(os.path.abspath(export_path), 'frozen_data')}")
     print(f"   • 100% 모델 재현 검증기: {os.path.join(os.path.abspath(export_path), 'reproduce.py')}")
+    print(f"   • 대용량 일괄 스코어링 CLI: {os.path.join(os.path.abspath(export_path), 'batch_score.py')}")
     print(f"   • 프로덕션 컨테이너: {os.path.join(os.path.abspath(export_path), 'Dockerfile')}")
     print(f"   • 자동화 테스트 클라이언트: {os.path.join(os.path.abspath(export_path), 'test_client.py')}")
     print(f"2. 단일 진실 공급원 감사 로그 JSON: {os.path.abspath(audit_json_path)}")
@@ -207,6 +230,8 @@ def main():
     parser.add_argument("--db-url", type=str, required=True, help="Database Connection URL (e.g. sqlite:///tests/data/sample_warehouse.db)")
     parser.add_argument("--table", type=str, default=None, help="Target Table Name")
     parser.add_argument("--target", type=str, default=None, help="Target Column Name for ML")
+    parser.add_argument("--query", type=str, default=None, help="Direct Read-Only SQL Query String")
+    parser.add_argument("--sql-file", type=str, default=None, help="Path to .sql File Containing Read-Only Query")
     parser.add_argument("--out-dir", type=str, default="dist", help="Output Directory")
     parser.add_argument("--sample-size", type=int, default=50000, help="Adaptive Sampling Threshold")
 
@@ -216,8 +241,11 @@ def main():
         table_name=args.table,
         target_col=args.target,
         out_dir=args.out_dir,
-        sample_threshold=args.sample_size
+        sample_threshold=args.sample_size,
+        query=args.query,
+        sql_file=args.sql_file
     )
 
 if __name__ == "__main__":
     main()
+

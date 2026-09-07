@@ -403,4 +403,128 @@ if __name__ == "__main__":
             f.write(client_code)
         generated_files["test_client"] = client_path
 
+        # 7. Generate batch_score.py (High-Throughput CLI Batch Scorer)
+        batch_cli_code = f'''"""
+Standalone High-Throughput Batch Scoring CLI for {model_name}
+Designed for periodic academic evaluation (e.g. 15,000+ students per semester).
+Streams CSV in memory-safe chunks, predicts probabilities, and outputs risk rankings.
+"""
+import os
+import sys
+
+# Ensure UTF-8 output on Windows console
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+import argparse
+import time
+import json
+import joblib
+import pandas as pd
+import numpy as np
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "best_model.joblib")
+META_PATH = os.path.join(os.path.dirname(__file__), "metadata.json")
+
+def load_metadata():
+    if os.path.exists(META_PATH):
+        with open(META_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {{}}
+
+def run_batch_scoring(
+    input_csv: str,
+    output_csv: str,
+    chunk_size: int = 5000
+):
+    print("=" * 70)
+    print(f"[{model_name}] 대용량 일괄 스코어링(Batch Scoring) 프로세스 가동")
+    print(f"- 입력 파일: {{input_csv}}")
+    print(f"- 출력 파일: {{output_csv}}")
+    print(f"- 청크 크기: {{chunk_size:,}}행 (OOM 방지 스트리밍)")
+    print("=" * 70)
+
+    if not os.path.exists(input_csv):
+        raise FileNotFoundError(f"입력 CSV 파일을 찾을 수 없습니다: {{input_csv}}")
+
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(f"모델 아티팩트를 찾을 수 없습니다: {{MODEL_PATH}}")
+
+    model = joblib.load(MODEL_PATH)
+    meta = load_metadata()
+    feature_columns = meta.get("features", {selected_features!r})
+
+    start_time = time.time()
+    scored_chunks = []
+    total_processed = 0
+
+    print("\\n[Step 1] 메모리 절약형 스트리밍 예측 수행 중...")
+    for chunk_idx, chunk in enumerate(pd.read_csv(input_csv, chunksize=chunk_size)):
+        chunk_len = len(chunk)
+        X_chunk = pd.DataFrame(index=chunk.index)
+        for col in feature_columns:
+            if col in chunk.columns:
+                X_chunk[col] = chunk[col]
+            else:
+                X_chunk[col] = 0.0
+
+        preds = model.predict(X_chunk)
+        chunk_res = chunk.copy()
+        chunk_res["predicted_risk"] = preds
+
+        if hasattr(model, "predict_proba"):
+            probs = model.predict_proba(X_chunk)
+            risk_probs = probs[:, 1] if probs.shape[1] > 1 else probs[:, 0]
+            chunk_res["risk_probability"] = np.round(risk_probs, 4)
+            chunk_res["risk_tier"] = np.where(
+                risk_probs >= 0.7, "HIGH_RISK (집중관리)",
+                np.where(risk_probs >= 0.4, "MEDIUM_RISK (관찰요망)", "NORMAL (안정)")
+            )
+        else:
+            chunk_res["risk_probability"] = preds
+            chunk_res["risk_tier"] = np.where(preds == 1, "HIGH_RISK", "NORMAL")
+
+        scored_chunks.append(chunk_res)
+        total_processed += chunk_len
+        print(f"   - 청크 {{chunk_idx + 1}}: {{chunk_len:,}}건 처리 완료 (누적 {{total_processed:,}}건)")
+
+    print(f"\\n[Step 2] 전체 결과 취합 및 위험 순위(Rank) 산출 중...")
+    final_df = pd.concat(scored_chunks, ignore_index=True)
+
+    if "risk_probability" in final_df.columns:
+        final_df = final_df.sort_values(by="risk_probability", ascending=False).reset_index(drop=True)
+        final_df["risk_rank"] = final_df.index + 1
+        final_df["risk_percentile"] = np.round((final_df["risk_rank"] / len(final_df)) * 100, 2)
+
+    out_dir = os.path.dirname(os.path.abspath(output_csv))
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    final_df.to_csv(output_csv, index=False, encoding="utf-8-sig")
+    elapsed = time.time() - start_time
+
+    print(f"[OK] 대용량 일괄 스코어링 완료: 총 {{len(final_df):,}}건 저장 완료 -> {{output_csv}}")
+    print(f"[OK] 총 소요 시간: {{elapsed:.2f}}초 (초당 {{len(final_df) / max(0.001, elapsed):.1f}}건)")
+    if "risk_tier" in final_df.columns:
+        tier_counts = final_df["risk_tier"].value_counts().to_dict()
+        print(f"[OK] 위험 등급별 분포: {{tier_counts}}")
+    print("=" * 70)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Batch Scoring CLI for {model_name}")
+    parser.add_argument("--input", "-i", type=str, required=True, help="Path to input CSV file")
+    parser.add_argument("--output", "-o", type=str, default="batch_predictions.csv", help="Path to output scored CSV")
+    parser.add_argument("--chunk-size", type=int, default=5000, help="Chunk size for streaming processing")
+    args = parser.parse_args()
+    run_batch_scoring(args.input, args.output, chunk_size=args.chunk_size)
+'''
+        batch_cli_path = os.path.join(export_dir, "batch_score.py")
+        with open(batch_cli_path, "w", encoding="utf-8") as f:
+            f.write(batch_cli_code)
+        generated_files["batch_score"] = batch_cli_path
+
         return generated_files
+

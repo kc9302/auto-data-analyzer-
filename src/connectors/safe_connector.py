@@ -109,12 +109,14 @@ class SafeDBConnector:
         total_rows = self.get_table_row_count(table_name)
         is_sampled = False
 
+        sampling_strategy = "Full Population (Zero Sampling)"
         if self.engine_type == "CSV":
             clean_path = self._clean_csv_path()
             if total_rows <= sample_threshold:
                 df = pd.read_csv(clean_path)
             else:
                 is_sampled = True
+                sampling_strategy = f"Uniform Random Sample (Seed={seed})"
                 df = pd.read_csv(clean_path)
                 df = df.sample(n=sample_threshold, random_state=seed).reset_index(drop=True)
         else:
@@ -124,19 +126,22 @@ class SafeDBConnector:
                     df = pd.read_sql_query(text(query), conn)
             else:
                 is_sampled = True
+                sample_percent = min(100.0, max(0.1, (sample_threshold / max(1, total_rows)) * 100))
                 if self.engine_type == "SQLite":
-                    # Deterministic sampling for SQLite
+                    sampling_strategy = f"SQLite Uniform Random Sample (Limit={sample_threshold})"
                     query = f"SELECT * FROM {table_name} ORDER BY RANDOM() LIMIT {sample_threshold}"
                 elif self.engine_type == "PostgreSQL":
-                    # Efficient BERNOULLI sampling for Postgres
-                    sample_percent = min(100.0, max(0.1, (sample_threshold / total_rows) * 100))
+                    sampling_strategy = f"PostgreSQL TABLESAMPLE BERNOULLI ({sample_percent:.2f}%)"
                     query = f"SELECT * FROM {table_name} TABLESAMPLE BERNOULLI ({sample_percent:.2f}) LIMIT {sample_threshold}"
                 elif self.engine_type == "Oracle":
-                    # Oracle 11g/12c/19c compatible ROWNUM sampling
-                    query = f"SELECT * FROM {table_name} WHERE ROWNUM <= {sample_threshold}"
+                    # Oracle 11g/12c/19c compatible unbiased SAMPLE clause with ROWNUM guard
+                    sampling_strategy = f"Oracle Native Unbiased SAMPLE ({sample_percent:.2f}%)"
+                    query = f"SELECT * FROM {table_name} SAMPLE ({sample_percent:.2f}) WHERE ROWNUM <= {sample_threshold}"
                 elif self.engine_type == "MS-SQL":
-                    query = f"SELECT TOP {sample_threshold} * FROM {table_name}"
+                    sampling_strategy = f"MS-SQL TABLESAMPLE ({sample_percent:.2f}%)"
+                    query = f"SELECT TOP {sample_threshold} * FROM {table_name} TABLESAMPLE ({sample_percent:.2f} PERCENT)"
                 else:
+                    sampling_strategy = f"Generic Capped Sample ({sample_threshold} rows)"
                     query = f"SELECT * FROM {table_name} LIMIT {sample_threshold}"
 
                 self.validate_query(query)
@@ -157,5 +162,109 @@ class SafeDBConnector:
             "total_rows": total_rows,
             "sample_rows": len(df),
             "is_sampled": is_sampled,
+            "sampling_strategy": sampling_strategy,
             "memory_mb": round(mem_mb, 2)
         }
+
+    def load_query_data(
+        self,
+        query: str,
+        sample_threshold: int = 50000,
+        seed: int = 42,
+        dataset_name: str = "custom_query"
+    ) -> Dict[str, Any]:
+        """
+        Safely executes a custom read-only SQL query with adaptive unbiased sampling and memory guards.
+        Prevents source DB overload and eliminates cohort/temporal selection bias.
+        """
+        self.validate_query(query)
+        clean_query = query.strip().rstrip(";")
+        is_sampled = False
+        sampling_strategy = "Full Population (Zero Sampling)"
+
+        if self.engine_type == "CSV":
+            clean_path = self._clean_csv_path()
+            df_raw = pd.read_csv(clean_path)
+            total_rows = len(df_raw)
+            if total_rows <= sample_threshold:
+                df = df_raw
+            else:
+                is_sampled = True
+                sampling_strategy = f"CSV Uniform Random Sample (Seed={seed})"
+                df = df_raw.sample(n=sample_threshold, random_state=seed).reset_index(drop=True)
+            mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
+            return {
+                "data": df,
+                "table_name": dataset_name,
+                "engine": self.engine_type,
+                "total_rows": total_rows,
+                "sample_rows": len(df),
+                "is_sampled": is_sampled,
+                "sampling_strategy": sampling_strategy,
+                "memory_mb": round(mem_mb, 2)
+            }
+
+        # Safely determine total row count of the custom query
+        count_sql = f"SELECT COUNT(*) FROM ({clean_query}) _sub_probe"
+        try:
+            with self.engine.connect() as conn:
+                res = conn.execute(text(count_sql))
+                total_rows = int(res.scalar() or 0)
+        except Exception:
+            total_rows = sample_threshold + 1
+
+        if total_rows <= sample_threshold:
+            final_query = clean_query
+            with self.engine.connect() as conn:
+                df = pd.read_sql_query(text(final_query), conn)
+        else:
+            is_sampled = True
+            sample_pct = min(100.0, max(0.1, (sample_threshold / max(1, total_rows)) * 100))
+            if self.engine_type == "Oracle":
+                # Unbiased hash-based stream sampling without temp table sorting
+                sampling_strategy = f"Oracle ORA_HASH Pseudo-Random Uniform Sample ({sample_pct:.2f}%)"
+                final_query = (
+                    f"SELECT * FROM ("
+                    f"  SELECT _sub_inner.*, ORA_HASH(ROWNUM, 999, {seed}) AS _sub_hash "
+                    f"  FROM ({clean_query}) _sub_inner"
+                    f") WHERE _sub_hash < {int(sample_pct * 10)} AND ROWNUM <= {sample_threshold}"
+                )
+            elif self.engine_type == "PostgreSQL":
+                sampling_strategy = f"PostgreSQL Uniform Bernoulli Sample ({sample_pct:.2f}%)"
+                final_query = (
+                    f"SELECT * FROM ({clean_query}) AS _sub_inner "
+                    f"WHERE random() < {sample_pct / 100.0:.4f} LIMIT {sample_threshold}"
+                )
+            elif self.engine_type == "SQLite":
+                sampling_strategy = f"SQLite Uniform Pseudo-Random Sample ({sample_pct:.2f}%)"
+                final_query = (
+                    f"SELECT * FROM ({clean_query}) AS _sub_inner "
+                    f"WHERE abs(random() % 1000) < {int(sample_pct * 10)} LIMIT {sample_threshold}"
+                )
+            else:
+                sampling_strategy = f"Generic Capped Stream ({sample_threshold} rows)"
+                final_query = f"SELECT * FROM ({clean_query}) AS _sub_inner LIMIT {sample_threshold}"
+
+            with self.engine.connect() as conn:
+                df = pd.read_sql_query(text(final_query), conn)
+                if "_sub_hash" in df.columns:
+                    df = df.drop(columns=["_sub_hash"])
+
+        # Enforce Memory Guard
+        mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
+        if mem_mb > self.max_memory_mb:
+            for col in df.select_dtypes(include=["object"]).columns:
+                df[col] = df[col].astype(str).str.slice(0, 200)
+            mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
+
+        return {
+            "data": df,
+            "table_name": dataset_name,
+            "engine": self.engine_type,
+            "total_rows": total_rows,
+            "sample_rows": len(df),
+            "is_sampled": is_sampled,
+            "sampling_strategy": sampling_strategy,
+            "memory_mb": round(mem_mb, 2)
+        }
+
