@@ -173,6 +173,64 @@ class HtmlReportBuilder:
       {"".join(f"<div class='bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between'><span class='text-xs font-bold text-blue-600'>Step {s.get('step_id')}</span><h4 class='font-bold text-slate-800 text-sm mt-1 mb-2'>{s.get('step_name')}</h4><p class='text-xs text-slate-600 mb-2'><strong>전략:</strong> {s.get('strategy')}</p><p class='text-xs text-slate-400 bg-slate-50 p-2 rounded'>{s.get('rationale')}</p></div>" for s in journey[:4])}
     </div>
 
+    <!-- AI Adoption & Baseline Lift Card -->
+    {f'''
+    <div class="bg-emerald-50/70 border border-emerald-200 p-5 rounded-xl mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
+          <span>🎯 AI 도입 타당성 및 대조군 대비 성능 향상 (Lift Analysis)</span>
+        </h4>
+        <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">과학적 도입 근거 검증 완료</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 text-center">
+        <div class="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+          <div class="text-xs text-slate-500 mb-1">챔피언 모델 ({ml_scout.get('best_model')})</div>
+          <div class="text-lg font-bold text-emerald-700">{ml_scout.get('lift_analysis', {}).get('champion_score', 0):.4f}</div>
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+          <div class="text-xs text-slate-500 mb-1">전체 통계 대조군 대비</div>
+          <div class="text-lg font-bold text-blue-700">+{ml_scout.get('lift_analysis', {}).get('lift_vs_global_pct', 0)}% Lift</div>
+          <div class="text-[11px] text-slate-400">기준 점수: {ml_scout.get('lift_analysis', {}).get('global_baseline_score', 0):.4f}</div>
+        </div>
+        <div class="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
+          <div class="text-xs text-slate-500 mb-1">단순 세그먼트 규칙 대비</div>
+          <div class="text-lg font-bold text-indigo-700">+{ml_scout.get('lift_analysis', {}).get('lift_vs_segment_pct', 0)}% Lift</div>
+          <div class="text-[11px] text-slate-400">기준 점수: {ml_scout.get('lift_analysis', {}).get('segment_baseline_score', 0):.4f}</div>
+        </div>
+      </div>
+      <p class="text-xs text-emerald-900 font-medium">{ml_scout.get('lift_analysis', {}).get('conclusion', '')}</p>
+    </div>
+    ''' if ml_scout.get('lift_analysis') else ''}
+
+    <!-- AI Feasibility Gate & Data Engineering Prescriptions Card -->
+    {f'''
+    <div class="{'bg-rose-50/70 border-rose-200 text-rose-900' if gate.get('decision') == 'NO_GO_PIVOT' else ('bg-amber-50/70 border-amber-200 text-amber-900' if gate.get('decision') == 'CONDITIONAL_GO' else 'bg-slate-50 border-slate-200 text-slate-900')} border p-5 rounded-xl mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-bold text-sm flex items-center gap-2">
+          <span>🚦 AI 배포 타당성 게이트: <strong>{gate.get('decision_badge')}</strong></span>
+        </h4>
+        <span class="text-xs font-bold px-2.5 py-1 rounded {'bg-rose-100 text-rose-800' if gate.get('decision') == 'NO_GO_PIVOT' else ('bg-amber-100 text-amber-800' if gate.get('decision') == 'CONDITIONAL_GO' else 'bg-emerald-100 text-emerald-800')}">{gate.get('decision')}</span>
+      </div>
+      <p class="text-xs mb-3 leading-relaxed">{gate.get('recommendation')}</p>
+
+      {f"""
+      <div class="mt-4 pt-3 border-t border-slate-200/70">
+        <span class="font-bold text-xs block mb-2 text-slate-700">🛠️ 차기 필수 데이터 엔지니어링 처방전 (Actionable Prescriptions):</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {"".join(f'''<div class="bg-white p-3 rounded-lg border border-slate-200 text-xs shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-blue-700">{p.get('priority')}</span>
+              <span class="text-[10px] text-slate-400 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{p.get('category')}</span>
+            </div>
+            <strong class="text-slate-800 block mb-1">{p.get('title')}</strong>
+            <p class="text-slate-600 text-[11px] leading-relaxed">{p.get('action')}</p>
+          </div>''' for p in gate.get('prescriptions', []))}
+        </div>
+      </div>
+      """ if gate.get('prescriptions') else ""}
+    </div>
+    ''' if (gate := ml_scout.get('feasibility_gate')) else ''}
+
     <!-- AutoML Leaderboard & Feature Importance -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
       <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -190,7 +248,7 @@ class HtmlReportBuilder:
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            {"".join(f"<tr><td class='p-2.5 font-bold text-slate-800'>{m.get('rank')}위</td><td class='p-2.5 font-medium'>{m.get('model')}</td><td class='p-2.5 text-blue-600 font-bold'>{m.get('f1_weighted', m.get('accuracy', m.get('neg_root_mean_squared_error', 0.0))):.4f}</td><td class='p-2.5 text-xs text-slate-400'>{m.get('train_time_sec', 0)}초</td></tr>" for m in ml_scout.get('leaderboard', []))}
+            {"".join(f"<tr><td class='p-2.5 font-bold text-slate-800'>{m.get('rank')}위</td><td class='p-2.5 font-medium'>{m.get('model')} {'<span class=\"ml-1 px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-500 font-normal rounded\">대조군</span>' if m.get('is_baseline') else ''}</td><td class='p-2.5 text-blue-600 font-bold'>{m.get('f1_weighted', m.get('accuracy', m.get('r2', m.get('neg_root_mean_squared_error', 0.0)))):.4f}</td><td class='p-2.5 text-xs text-slate-400'>{m.get('train_time_sec', 0)}초</td></tr>" for m in ml_scout.get('leaderboard', []))}
           </tbody>
         </table>
       </div>

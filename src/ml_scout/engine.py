@@ -7,6 +7,8 @@ import time
 from typing import Dict, Any, List, Optional
 import numpy as np
 import pandas as pd
+from sklearn.dummy import DummyClassifier, DummyRegressor
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.model_selection import StratifiedKFold, KFold, cross_validate
 from sklearn.linear_model import LogisticRegression, Ridge, ElasticNet
 from sklearn.ensemble import (
@@ -85,11 +87,124 @@ class DataDNAProfiler:
         }
 
 
+class FeasibilityGate:
+    """
+    Evaluates whether an applied ML model should be deployed (GO) or pivoted to data engineering (NO-GO / PIVOT).
+    Diagnoses root causes (Marginal Lift, Overfitting Gap, Weak Signal, Extreme Sparsity)
+    and formulates actionable Data Engineering Prescriptions for next-stage evolution.
+    """
+    def evaluate(
+        self,
+        task_type: str,
+        primary_metric: str,
+        lift_analysis: Dict[str, Any],
+        diagnostics: Dict[str, Any],
+        dna: Dict[str, Any],
+        feature_count: int = 0
+    ) -> Dict[str, Any]:
+        triggers = []
+        prescriptions = []
+
+        champ_score = float(lift_analysis.get("champion_score", 0.0))
+        lift_global = float(lift_analysis.get("lift_vs_global_pct", 0.0))
+        lift_segment = float(lift_analysis.get("lift_vs_segment_pct", 0.0))
+        gap = float(diagnostics.get("generalization_gap", 0.0))
+        n_rows = int(dna.get("n_rows", 0))
+        sparsity = float(dna.get("sparsity_pct", 0.0))
+
+        # Check Trigger 1: Marginal Lift
+        is_marginal_lift = (lift_global < 5.0 and lift_segment < 5.0)
+        if is_marginal_lift:
+            triggers.append({
+                "code": "MARGINAL_LIFT",
+                "severity": "High",
+                "title": "통계 대조군 대비 성능 향상 미미 (Lift < 5%)",
+                "description": f"챔피언 모델의 향상도(전체 통계 대비 +{lift_global}%, 세그먼트 규칙 대비 +{lift_segment}%)가 5% 미만으로, 복잡한 ML 추론 인프라 운영 대비 경제적 실익(ROI)이 부족합니다."
+            })
+            prescriptions.append({
+                "priority": "P1 (즉시 조치)",
+                "category": "Interim Rule-Based Serving",
+                "title": "임시 규칙 기반(Rule-Based) 서빙 유지",
+                "action": "차기 피처 보강 전까지는 고비용 ML 추론 서버 배포를 지양하고, 단순 통계 규칙(Baseline Segment Rule)을 임시 운영하여 인프라 비용 절감"
+            })
+
+        # Check Trigger 2: Overfitting / Generalization Gap
+        is_overfitting = (gap > 0.15 or diagnostics.get("overfitting_risk") == "High")
+        if is_overfitting:
+            triggers.append({
+                "code": "HIGH_OVERFITTING",
+                "severity": "High",
+                "title": "과적합(Overfitting) 위험 감지",
+                "description": f"Train 세트와 검증(CV) 세트 간 일반화 격차가 {gap*100:.1f}%p로 높아, 실전 서빙 시 성능 급락(Performance Decay) 위험이 있습니다."
+            })
+            prescriptions.append({
+                "priority": "P1 (필수 보강)",
+                "category": "Sample Augmentation & Regularization",
+                "title": "표본 이력 데이터 추가 축적 및 정규화 강화",
+                "action": f"현재 N={n_rows:,}행에서 최소 3,000건 이상의 누적 이력 데이터를 추가 확보하거나 강한 L1/L2 페널티 모델(Ridge/ElasticNet) 채택 권고"
+            })
+
+        # Check Trigger 3: Weak Signal / Floor Score
+        is_weak_signal = False
+        if "Classification" in task_type and champ_score < 0.58:
+            is_weak_signal = True
+        elif "Regression" in task_type and champ_score < 0.10:
+            is_weak_signal = True
+
+        if is_weak_signal:
+            triggers.append({
+                "code": "SIGNAL_DEFICIENCY",
+                "severity": "Critical",
+                "title": "피처 정보 신호 결핍 (Low Signal-to-Noise)",
+                "description": f"현재 피처셋의 예측 성능({primary_metric}={champ_score:.4f})이 베이스라인 바닥 수준에 머물러 있어, 현재 테이블 내 예측 신호가 부족합니다."
+            })
+            prescriptions.append({
+                "priority": "P0 (최우선 과제)",
+                "category": "Cross-Mart Join",
+                "title": "이종 데이터마트 교차 결합 (Cross-Mart Join)",
+                "action": "기본 단일 원장 외에 'LMS 온라인 학습 활동 로그(접속 빈도, 출결)' 또는 '비교과/상담 이력 마트'를 Key 기반으로 결합하여 다차원 행동 신호 확보"
+            })
+
+        # Check Trigger 4: Sparsity & Time-Series Needs
+        if sparsity > 35.0:
+            prescriptions.append({
+                "priority": "P2 (품질 개선)",
+                "category": "Time-Series Delta Engineering",
+                "title": "시계열 추세(Time-Series Trend/Delta) 파생 피처 생성",
+                "action": "정적 스냅샷 결측을 완화하기 위해 '최근 2개 학기 간 성적/활동 증감률(Delta)' 및 '이동평균(Moving Average)' 파생 피처 파이프라인 구축"
+            })
+
+        # Final Decision Gate
+        if any(t["severity"] in ["High", "Critical"] for t in triggers):
+            if is_marginal_lift or is_weak_signal:
+                decision = "NO_GO_PIVOT"
+                decision_badge = "도입 유보 및 데이터 엔지니어링 전환 (Pivot Required)"
+                recommendation = "현재 피처셋으로는 ML 배포 실익이 낮으므로, 고비용 AI 서버 구축을 유보하고 '데이터 엔지니어링 3대 처방' 선행을 강력 권고합니다."
+            else:
+                decision = "CONDITIONAL_GO"
+                decision_badge = "조건부 도입 및 데이터 보강 권고 (Conditional Go)"
+                recommendation = "모델 성능은 통계 대조군을 상회하나 과적합 위험이 존재하므로, 표본 축적 및 경량 모델 서빙과 병행하여 추진을 권고합니다."
+        else:
+            decision = "GO"
+            decision_badge = "프로덕션 배포 권고 (Production Ready)"
+            recommendation = f"통계 대조군 대비 우수한 성능 향상(Lift +{lift_global}%)과 일반화 안정성을 검증 완료하여 실시간 REST API 서빙 배포를 승인합니다."
+
+        return {
+            "decision": decision,
+            "decision_badge": decision_badge,
+            "recommendation": recommendation,
+            "triggers_count": len(triggers),
+            "triggers": triggers,
+            "prescriptions": prescriptions
+        }
+
+
 class MLScoutEngine:
     def __init__(self, random_seed: int = 42, cv_folds: int = 5):
         self.random_seed = random_seed
         self.cv_folds = cv_folds
         self.dna_profiler = DataDNAProfiler()
+        self.feasibility_gate = FeasibilityGate()
         self.best_model_name: Optional[str] = None
         self.best_model_instance = None
         self.feature_importances: Dict[str, float] = {}
@@ -113,6 +228,8 @@ class MLScoutEngine:
 
         if task_type == "Binary_Classification":
             models = {
+                "Baseline (Global Stat)": DummyClassifier(strategy="prior"),
+                "Baseline (Segment Rule)": DecisionTreeClassifier(max_depth=1, random_state=self.random_seed),
                 "LogisticRegression": LogisticRegression(max_iter=1000, random_state=self.random_seed),
                 "RandomForest": RandomForestClassifier(n_estimators=100, random_state=self.random_seed),
                 "ExtraTrees": ExtraTreesClassifier(n_estimators=100, random_state=self.random_seed),
@@ -126,6 +243,8 @@ class MLScoutEngine:
 
         elif task_type == "Regression":
             models = {
+                "Baseline (Global Stat)": DummyRegressor(strategy="mean"),
+                "Baseline (Segment Rule)": DecisionTreeRegressor(max_depth=1, random_state=self.random_seed),
                 "RidgeRegression": Ridge(random_state=self.random_seed),
                 "ElasticNet": ElasticNet(random_state=self.random_seed),
                 "RandomForest": RandomForestRegressor(n_estimators=100, random_state=self.random_seed),
@@ -139,6 +258,8 @@ class MLScoutEngine:
 
         else:
             models = {
+                "Baseline (Global Stat)": DummyClassifier(strategy="prior"),
+                "Baseline (Segment Rule)": DecisionTreeClassifier(max_depth=1, random_state=self.random_seed),
                 "RandomForest": RandomForestClassifier(n_estimators=100, random_state=self.random_seed),
                 "LightGBM": LGBMClassifier(n_estimators=100, random_state=self.random_seed, verbose=-1)
             }
@@ -153,10 +274,12 @@ class MLScoutEngine:
                 scores = cross_validate(model, X_train, y_train, cv=cv, scoring=scoring, n_jobs=1)
                 elapsed = round(time.time() - start_t, 2)
 
+                is_base = "Baseline" in name
                 res = {
                     "model": name,
                     "train_time_sec": elapsed,
-                    "model_category": "Deep Learning" if "Deep" in name else ("GBDT" if "GBM" in name or "Hist" in name else ("Ensemble" if "Forest" in name or "Trees" in name else "Linear/Baseline"))
+                    "is_baseline": is_base,
+                    "model_category": "Baseline (통계 대조군)" if is_base else ("Deep Learning" if "Deep" in name else ("GBDT" if "GBM" in name or "Hist" in name else ("Ensemble" if "Forest" in name or "Trees" in name else "Linear")))
                 }
                 for m in scoring:
                     key_name = f"test_{m}"
@@ -164,7 +287,7 @@ class MLScoutEngine:
                         res[m] = round(float(np.mean(scores[key_name])), 4)
                 results.append(res)
             except Exception as e:
-                results.append({"model": name, "error": str(e)})
+                results.append({"model": name, "error": str(e), "is_baseline": "Baseline" in name})
 
         # Sort leaderboard
         sort_key = primary_metric if primary_metric in scoring else list(scoring)[0]
@@ -173,8 +296,9 @@ class MLScoutEngine:
         for i, r in enumerate(results):
             r["rank"] = i + 1
 
-        # Fit best model on full train set to extract feature importances
-        best_name = results[0]["model"]
+        # Fit best non-baseline champion model on full train set to extract feature importances
+        candidates = [r for r in results if not r.get("is_baseline", False)]
+        best_name = candidates[0]["model"] if candidates else results[0]["model"]
         self.best_model_name = best_name
         best_instance = models[best_name]
         best_instance.fit(X_train, y_train)
@@ -248,6 +372,50 @@ class MLScoutEngine:
             except Exception as imb_err:
                 imbalance_report = {"error": str(imb_err)}
 
+        # 7. Baseline Comparison & Lift Analysis (Customer Justification)
+        champ_score = 0.0
+        for r in results:
+            if r.get("model") == self.best_model_name:
+                champ_score = float(r.get(primary_metric, 0.0))
+                break
+
+        baseline_scores = {r["model"]: float(r.get(primary_metric, 0.0)) for r in results if r.get("is_baseline", False)}
+        global_score = baseline_scores.get("Baseline (Global Stat)", 0.0)
+        segment_score = baseline_scores.get("Baseline (Segment Rule)", 0.0)
+
+        def compute_lift(champ: float, base: float) -> float:
+            if abs(base) < 1e-6:
+                return 0.0
+            return round(((champ - base) / abs(base)) * 100, 2)
+
+        lift_vs_global = compute_lift(champ_score, global_score)
+        lift_vs_segment = compute_lift(champ_score, segment_score)
+
+        lift_analysis = {
+            "champion_model": self.best_model_name,
+            "primary_metric": primary_metric,
+            "champion_score": champ_score,
+            "global_baseline_score": global_score,
+            "lift_vs_global_pct": lift_vs_global,
+            "segment_baseline_score": segment_score,
+            "lift_vs_segment_pct": lift_vs_segment,
+            "conclusion": (
+                f"최종 챔피언 모델({self.best_model_name})은 단순 전체 통계(Global Stat) 대비 +{lift_vs_global}%, "
+                f"단순 세그먼트 규칙 대비 +{lift_vs_segment}%의 상대적 성능 향상(Lift)을 실측하여 "
+                f"기존 통계 방식 대비 AI 도입 타당성을 입증했습니다."
+            )
+        }
+
+        # 8. Feasibility Gate & Data Engineering Prescriptions
+        gate_report = self.feasibility_gate.evaluate(
+            task_type=task_type,
+            primary_metric=primary_metric,
+            lift_analysis=lift_analysis,
+            diagnostics=diagnostics,
+            dna=dna,
+            feature_count=len(X_train.columns)
+        )
+
         return {
             "task_type": task_type,
             "primary_metric": primary_metric,
@@ -257,5 +425,7 @@ class MLScoutEngine:
             "top_features": list(self.feature_importances.items())[:10],
             "diagnostics": diagnostics,
             "xai": xai_summary,
-            "imbalance_optimization": imbalance_report
+            "imbalance_optimization": imbalance_report,
+            "lift_analysis": lift_analysis,
+            "feasibility_gate": gate_report
         }

@@ -72,14 +72,14 @@ class SafeDBConnector:
                 raise PermissionError(f"Security Violation: Mutation keyword '{token.upper()}' is strictly prohibited.")
         return True
 
-    def get_table_names(self) -> List[str]:
+    def get_table_names(self, schema: Optional[str] = None) -> List[str]:
         """Inspect and return all public table names."""
         if self.engine_type == "CSV":
             clean_path = self._clean_csv_path()
             base_name = os.path.splitext(os.path.basename(clean_path))[0]
             return [base_name or "sample_data"]
         inspector = inspect(self.engine)
-        return inspector.get_table_names()
+        return inspector.get_table_names(schema=schema)
 
     def get_table_row_count(self, table_name: str) -> int:
         """Retrieve total row count safely."""
@@ -131,6 +131,11 @@ class SafeDBConnector:
                     # Efficient BERNOULLI sampling for Postgres
                     sample_percent = min(100.0, max(0.1, (sample_threshold / total_rows) * 100))
                     query = f"SELECT * FROM {table_name} TABLESAMPLE BERNOULLI ({sample_percent:.2f}) LIMIT {sample_threshold}"
+                elif self.engine_type == "Oracle":
+                    # Oracle 11g/12c/19c compatible ROWNUM sampling
+                    query = f"SELECT * FROM {table_name} WHERE ROWNUM <= {sample_threshold}"
+                elif self.engine_type == "MS-SQL":
+                    query = f"SELECT TOP {sample_threshold} * FROM {table_name}"
                 else:
                     query = f"SELECT * FROM {table_name} LIMIT {sample_threshold}"
 
