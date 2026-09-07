@@ -370,6 +370,30 @@ if "audit_data" in st.session_state:
         ml = data["ml_scout"]
         if ml:
             st.success(f"🥇 1위 최적 승자 모델: **{ml.get('best_model')}** (문제 유형: {ml.get('task_type')})")
+            lift = ml.get("lift_analysis", {})
+            if lift:
+                c1, c2, c3 = st.columns(3)
+                c1.metric("🥇 챔피언 모델 점수", f"{lift.get('champion_score', 0):.4f}", f"선정: {lift.get('champion_model')}")
+                c2.metric("📊 vs 전체 통계 (Global Stat)", f"{lift.get('global_baseline_score', 0):.4f}", f"Lift {lift.get('lift_vs_global_pct', 0):+.1f}%")
+                c3.metric("🎯 vs 단순 규칙 (Segment Rule)", f"{lift.get('segment_baseline_score', 0):.4f}", f"Lift {lift.get('lift_vs_segment_pct', 0):+.1f}%")
+                st.info(f"💡 **AI 도입 타당성 검증:** {lift.get('conclusion', '')}")
+
+            gate = ml.get("feasibility_gate", {})
+            if gate:
+                decision = gate.get("decision")
+                if decision == "NO_GO_PIVOT":
+                    st.error(f"🚦 **AI 배포 타당성 게이트 (NO-GO):** {gate.get('decision_badge')}\n\n{gate.get('recommendation')}")
+                elif decision == "CONDITIONAL_GO":
+                    st.warning(f"🚦 **AI 배포 타당성 게이트 (조건부):** {gate.get('decision_badge')}\n\n{gate.get('recommendation')}")
+                else:
+                    st.success(f"🚦 **AI 배포 타당성 게이트 (승인):** {gate.get('decision_badge')}\n\n{gate.get('recommendation')}")
+
+                prescriptions = gate.get("prescriptions", [])
+                if prescriptions:
+                    with st.expander("🛠️ 차기 필수 데이터 엔지니어링 처방전 (Actionable Roadmap)", expanded=True):
+                        for p in prescriptions:
+                            st.markdown(f"• **[{p.get('priority')}] {p.get('title')}** (`{p.get('category')}`): {p.get('action')}")
+
             c_lb, c_fi = st.columns(2)
             with c_lb:
                 st.markdown("##### 📊 모델 성능 벤치마크 (Cross-Validation)")

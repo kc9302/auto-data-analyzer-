@@ -17,7 +17,7 @@ class FactDataProfiler:
         "CREDIT_CARD": r"\b(?:\d{4}[-\s]?){3}\d{4}\b"
     }
 
-    PII_KEYWORDS = ["resident", "ssn", "password", "passwd", "pwd", "card", "secret", "token", "rrn"]
+    PII_KEYWORDS = ["resident", "ssn", "password", "passwd", "pwd", "card", "secret", "token", "rrn", "name"]
 
     def __init__(self, df: pd.DataFrame, table_name: str = "main_table"):
         self.raw_df = df.copy()

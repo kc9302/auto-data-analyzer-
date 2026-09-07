@@ -268,9 +268,12 @@ class PptxDeckBuilder:
         dna = ml_res.get("data_dna", {})
         roadmap = dna.get("roadmap", {})
 
+        lift_res = ml_res.get("lift_analysis", {})
+        lift_str = f" (통계 대조군 대비 Lift +{lift_res.get('lift_vs_global_pct', 0)}%)" if lift_res else ""
+
         self._add_header(
-            s3, 3, "모델 토너먼트 리더보드 & 데이터 수명주기 로드맵",
-            f"1위 승자: {best_model} | 데이터 DNA 진단 기반 [콜드스타트 ➔ 스케일업] 진화 로드맵 수립"
+            s3, 3, "모델 토너먼트 리더보드 & AI 도입 타당성 (Baseline Comparison)",
+            f"1위 승자: {best_model}{lift_str} | 단순 통계/세그먼트 대조군 대비 과학적 우수성 검증"
         )
 
         # Left Column: Leaderboard Chart
@@ -324,21 +327,39 @@ class PptxDeckBuilder:
         r_step3_sub.font.size = Pt(8.5)
         r_step3_sub.font.color.rgb = self.c_text_muted
 
-        # Bottom Recommendation Box
-        bot3 = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
+        # Bottom Recommendation Box: AI 배포 타당성 게이트 & 데이터 엔지니어링 처방전
+        gate = ml_res.get("feasibility_gate", {})
+        decision = gate.get("decision", "GO")
+
+        bot3 = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.75), Inches(11.733), Inches(1.1))
         bot3.fill.solid()
-        bot3.fill.fore_color.rgb = RGBColor(0xFE, 0xF3, 0xC7)
-        bot3.line.color.rgb = self.c_warning
+        if decision == "NO_GO_PIVOT":
+            bot3.fill.fore_color.rgb = RGBColor(0xFE, 0xF2, 0xF2)
+            bot3.line.color.rgb = self.c_danger
+            title_color = self.c_danger
+        elif decision == "CONDITIONAL_GO":
+            bot3.fill.fore_color.rgb = RGBColor(0xFE, 0xF3, 0xC7)
+            bot3.line.color.rgb = self.c_warning
+            title_color = RGBColor(0x92, 0x40, 0x0E)
+        else:
+            bot3.fill.fore_color.rgb = RGBColor(0xEC, 0xFD, 0xF5)
+            bot3.line.color.rgb = self.c_success
+            title_color = RGBColor(0x06, 0x5F, 0x46)
+
         btf = bot3.text_frame
         btf.word_wrap = True
         bp = btf.paragraphs[0]
-        bp.text = f"📍 현재 데이터 DNA 판정: {roadmap.get('current_phase', '성장 단계')}"
+        gate_badge = gate.get("decision_badge", "타당성 검증 완료")
+        bp.text = f"🚦 AI 배포 타당성 게이트 (Feasibility Gate): {gate_badge}"
         bp.font.size = Pt(10)
         bp.font.bold = True
-        bp.font.color.rgb = RGBColor(0x92, 0x40, 0x0E)
+        bp.font.color.rgb = title_color
+
         bp2 = btf.add_paragraph()
-        bp2.text = f"• {roadmap.get('immediate_action', '')} | 다음 목표: {roadmap.get('future_recommendation', '')}"
-        bp2.font.size = Pt(9.5)
+        p_texts = [p.get("action", "") for p in gate.get("prescriptions", [])[:2]]
+        p_summary = " | ".join(p_texts) if p_texts else roadmap.get("immediate_action", "")
+        bp2.text = f"• {lift_res.get('conclusion', '')}\n• 🛠️ 차기 엔지니어링 과제: {p_summary}"
+        bp2.font.size = Pt(8.5)
         bp2.font.color.rgb = self.c_text_dark
 
         self._add_footer(s3, audit_data)

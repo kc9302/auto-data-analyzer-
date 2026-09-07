@@ -80,12 +80,13 @@ class FeaturePipeline:
         # Step 0: Isolate PII & ID columns
         cols_to_drop = list(self.pii_columns)
         for col in df_clean.columns:
-            if col != self.target_column and ("id" in col.lower() or "code" in col.lower()):
-                if df_clean[col].nunique() == len(df_clean):
+            if col != self.target_column:
+                is_id_or_name = any(k in col.lower() for k in ["id", "code", "name", "sn", "num", "token"])
+                if (is_id_or_name and df_clean[col].nunique() >= 0.5 * len(df_clean)) or df_clean[col].nunique() == len(df_clean):
                     cols_to_drop.append(col)
                     self.dropped_features_log.append({
                         "column": col,
-                        "reason": "Unique identifier (no generalization power)"
+                        "reason": "Unique identifier / High-cardinality text (no generalization power)"
                     })
 
         cols_to_drop = list(set(cols_to_drop))
@@ -122,8 +123,12 @@ class FeaturePipeline:
                 X_train_base[col] = X_train_base[col].fillna(mode_v[0] if not mode_v.empty else "Missing")
         
         base_cat_cols = list(X_train_base.select_dtypes(include=["object", "category"]).columns)
-        if base_cat_cols:
-            X_train_base = pd.get_dummies(X_train_base, columns=base_cat_cols, drop_first=True, dtype=float)
+        valid_base_cats = [c for c in base_cat_cols if X_train_base[c].nunique() <= 50]
+        drop_base_high = [c for c in base_cat_cols if X_train_base[c].nunique() > 50]
+        if drop_base_high:
+            X_train_base = X_train_base.drop(columns=drop_base_high)
+        if valid_base_cats:
+            X_train_base = pd.get_dummies(X_train_base, columns=valid_base_cats, drop_first=True, dtype=float)
         base_scaler = RobustScaler()
         X_train_base_scaled = pd.DataFrame(
             base_scaler.fit_transform(X_train_base),
@@ -163,11 +168,16 @@ class FeaturePipeline:
             rationale="상호정보량(MI) 필터를 통과한 고레버리지 파생 피처 선별 결합"
         )
 
-        # Step 3: Categorical Encoding (One-Hot)
+        # Step 3: Categorical Encoding (One-Hot with Cardinality Guard)
         cat_cols = list(X_train_b.select_dtypes(include=["object", "category"]).columns)
-        if cat_cols:
-            X_train_b = pd.get_dummies(X_train_b, columns=cat_cols, drop_first=True, dtype=float)
-            X_test_b = pd.get_dummies(X_test_b, columns=cat_cols, drop_first=True, dtype=float)
+        valid_cat_cols = [c for c in cat_cols if X_train_b[c].nunique() <= 50]
+        drop_high_card = [c for c in cat_cols if X_train_b[c].nunique() > 50]
+        if drop_high_card:
+            X_train_b = X_train_b.drop(columns=drop_high_card)
+            X_test_b = X_test_b.drop(columns=drop_high_card)
+        if valid_cat_cols:
+            X_train_b = pd.get_dummies(X_train_b, columns=valid_cat_cols, drop_first=True, dtype=float)
+            X_test_b = pd.get_dummies(X_test_b, columns=valid_cat_cols, drop_first=True, dtype=float)
             X_test_b = X_test_b.reindex(columns=X_train_b.columns, fill_value=0.0)
         self.dummy_columns_ = list(X_train_b.columns)
 

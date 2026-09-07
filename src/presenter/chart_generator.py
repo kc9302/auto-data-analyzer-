@@ -117,10 +117,18 @@ class PresentationChartGenerator:
             plt.close()
             return
 
-        top_models = leaderboard[:5][::-1]
-        names = [m["model"] for m in top_models]
-        scores = [float(m.get(primary_metric, 0.0)) for m in top_models]
-        colors = [self.colors["success"] if m.get("rank") == 1 else self.colors["accent"] for m in top_models]
+        # Select top ML candidates and ensure baselines are included for visual contrast
+        top_ml = [m for m in leaderboard if not m.get("is_baseline")][:4]
+        baselines = [m for m in leaderboard if m.get("is_baseline")]
+        selected = sorted(top_ml + baselines, key=lambda x: float(x.get(primary_metric, -9999)))
+
+        names = [m["model"] for m in selected]
+        scores = [float(m.get(primary_metric, 0.0)) for m in selected]
+        colors = [
+            self.colors["success"] if m.get("rank") == 1
+            else ("#94A3B8" if m.get("is_baseline") else self.colors["accent"])
+            for m in selected
+        ]
 
         bars = ax.barh(names, scores, color=colors, height=0.55, zorder=3)
         ax.grid(axis="x", linestyle="--", alpha=0.5, zorder=0)
