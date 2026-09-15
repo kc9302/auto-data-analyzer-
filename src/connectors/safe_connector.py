@@ -23,9 +23,15 @@ class SafeDBConnector:
 
     def _detect_engine_type(self, url: str) -> str:
         url_lower = url.lower()
-        if url_lower.endswith(".csv") or url_lower.startswith("csv://") or (os.path.isfile(url) and not url_lower.startswith("sqlite")):
+        if url_lower.endswith(".parquet") or url_lower.startswith("parquet://"):
+            return "Parquet"
+        elif url_lower.endswith(".xlsx") or url_lower.endswith(".xls") or url_lower.startswith("excel://"):
+            return "Excel"
+        elif url_lower.endswith(".json") or url_lower.endswith(".jsonl") or url_lower.startswith("json://"):
+            return "JSON"
+        elif url_lower.endswith(".csv") or url_lower.startswith("csv://") or (os.path.isfile(url) and not url_lower.startswith("sqlite") and not url_lower.endswith(".db") and not url_lower.endswith(".sqlite")):
             return "CSV"
-        elif url_lower.startswith("sqlite"):
+        elif url_lower.startswith("sqlite") or url_lower.endswith(".db") or url_lower.endswith(".sqlite"):
             return "SQLite"
         elif url_lower.startswith("postgresql") or url_lower.startswith("postgres"):
             return "PostgreSQL"
@@ -39,7 +45,7 @@ class SafeDBConnector:
 
     def _create_safe_engine(self) -> Optional[Engine]:
         """Create SQLAlchemy engine with safe read-only options where supported."""
-        if self.engine_type == "CSV":
+        if self.engine_type in ["CSV", "Parquet", "Excel", "JSON"]:
             return None
 
         connect_args = {}
@@ -56,12 +62,39 @@ class SafeDBConnector:
             isolation_level="AUTOCOMMIT"
         )
 
-    def _clean_csv_path(self) -> str:
+    def _clean_file_path(self) -> str:
         clean = self.db_url
-        if clean.lower().startswith("csv://"):
-            clean = clean[6:]
+        for prefix in ["csv://", "parquet://", "excel://", "json://", "file://"]:
+            if clean.lower().startswith(prefix):
+                clean = clean[len(prefix):]
+                break
         clean = clean.strip("\"'")
         return os.path.normpath(clean)
+
+    def _clean_csv_path(self) -> str:
+        return self._clean_file_path()
+
+    def _read_file_dataframe(self, path: str, table_name: Optional[str] = None) -> pd.DataFrame:
+        """Reads local file data with multi-encoding resilience (UTF-8, CP949, EUC-KR)."""
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"지정한 데이터 파일을 찾을 수 없습니다: {path}")
+
+        if self.engine_type == "Parquet":
+            return pd.read_parquet(path)
+        elif self.engine_type == "Excel":
+            # If table_name corresponds to a sheet name, load that sheet
+            return pd.read_excel(path, sheet_name=table_name if table_name else 0)
+        elif self.engine_type == "JSON":
+            is_lines = path.lower().endswith(".jsonl")
+            return pd.read_json(path, lines=is_lines)
+        else:
+            # CSV with encoding auto-detection fallback
+            for enc in ["utf-8", "cp949", "euc-kr", "latin1"]:
+                try:
+                    return pd.read_csv(path, encoding=enc)
+                except (UnicodeDecodeError, UnicodeError):
+                    continue
+            return pd.read_csv(path, encoding="utf-8", errors="replace")
 
     def validate_query(self, query: str) -> bool:
         """Verify query has no mutation / DDL keywords."""
@@ -73,23 +106,50 @@ class SafeDBConnector:
         return True
 
     def get_table_names(self, schema: Optional[str] = None) -> List[str]:
-        """Inspect and return all public table names."""
-        if self.engine_type == "CSV":
-            clean_path = self._clean_csv_path()
+        """Inspect and return all public table names or file sheet/dataset names."""
+        if self.engine_type in ["CSV", "Parquet", "JSON"]:
+            clean_path = self._clean_file_path()
             base_name = os.path.splitext(os.path.basename(clean_path))[0]
             return [base_name or "sample_data"]
+        elif self.engine_type == "Excel":
+            clean_path = self._clean_file_path()
+            try:
+                import openpyxl
+                wb = openpyxl.load_workbook(clean_path, read_only=True)
+                return wb.sheetnames
+            except Exception:
+                base_name = os.path.splitext(os.path.basename(clean_path))[0]
+                return [base_name or "Sheet1"]
+
         inspector = inspect(self.engine)
         return inspector.get_table_names(schema=schema)
 
     def get_table_row_count(self, table_name: str) -> int:
         """Retrieve total row count safely."""
-        if self.engine_type == "CSV":
-            clean_path = self._clean_csv_path()
+        if self.engine_type in ["CSV", "Parquet", "Excel", "JSON"]:
+            clean_path = self._clean_file_path()
             if not os.path.exists(clean_path):
-                raise FileNotFoundError(f"CSV 파일을 찾을 수 없습니다: {clean_path}")
-            with open(clean_path, "r", encoding="utf-8", errors="replace") as f:
-                count = sum(1 for _ in f) - 1
-                return max(0, count)
+                raise FileNotFoundError(f"데이터 파일을 찾을 수 없습니다: {clean_path}")
+
+            if self.engine_type == "Parquet":
+                try:
+                    import pyarrow.parquet as pq
+                    return pq.read_metadata(clean_path).num_rows
+                except Exception:
+                    return len(pd.read_parquet(clean_path))
+            elif self.engine_type == "Excel":
+                df_x = pd.read_excel(clean_path, sheet_name=table_name if table_name in self.get_table_names() else 0)
+                return len(df_x)
+            elif self.engine_type == "JSON":
+                if clean_path.endswith(".jsonl"):
+                    with open(clean_path, "r", encoding="utf-8", errors="replace") as f:
+                        return sum(1 for _ in f)
+                return len(pd.read_json(clean_path))
+            else:
+                # CSV line count
+                with open(clean_path, "r", encoding="utf-8", errors="replace") as f:
+                    count = sum(1 for _ in f) - 1
+                    return max(0, count)
 
         self.validate_query(f"SELECT COUNT(*) FROM {table_name}")
         with self.engine.connect() as conn:
@@ -110,14 +170,14 @@ class SafeDBConnector:
         is_sampled = False
 
         sampling_strategy = "Full Population (Zero Sampling)"
-        if self.engine_type == "CSV":
-            clean_path = self._clean_csv_path()
+        if self.engine_type in ["CSV", "Parquet", "Excel", "JSON"]:
+            clean_path = self._clean_file_path()
             if total_rows <= sample_threshold:
-                df = pd.read_csv(clean_path)
+                df = self._read_file_dataframe(clean_path, table_name=table_name)
             else:
                 is_sampled = True
-                sampling_strategy = f"Uniform Random Sample (Seed={seed})"
-                df = pd.read_csv(clean_path)
+                sampling_strategy = f"{self.engine_type} Uniform Random Sample (Seed={seed})"
+                df = self._read_file_dataframe(clean_path, table_name=table_name)
                 df = df.sample(n=sample_threshold, random_state=seed).reset_index(drop=True)
         else:
             if total_rows <= sample_threshold:
@@ -182,15 +242,15 @@ class SafeDBConnector:
         is_sampled = False
         sampling_strategy = "Full Population (Zero Sampling)"
 
-        if self.engine_type == "CSV":
-            clean_path = self._clean_csv_path()
-            df_raw = pd.read_csv(clean_path)
+        if self.engine_type in ["CSV", "Parquet", "Excel", "JSON"]:
+            clean_path = self._clean_file_path()
+            df_raw = self._read_file_dataframe(clean_path)
             total_rows = len(df_raw)
             if total_rows <= sample_threshold:
                 df = df_raw
             else:
                 is_sampled = True
-                sampling_strategy = f"CSV Uniform Random Sample (Seed={seed})"
+                sampling_strategy = f"{self.engine_type} Uniform Random Sample (Seed={seed})"
                 df = df_raw.sample(n=sample_threshold, random_state=seed).reset_index(drop=True)
             mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
             return {
@@ -203,6 +263,7 @@ class SafeDBConnector:
                 "sampling_strategy": sampling_strategy,
                 "memory_mb": round(mem_mb, 2)
             }
+
 
         # Safely determine total row count of the custom query
         count_sql = f"SELECT COUNT(*) FROM ({clean_query}) _sub_probe"

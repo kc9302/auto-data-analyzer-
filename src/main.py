@@ -257,11 +257,14 @@ def run_analyzer(
         print(f"   - {act}")
     print("=" * 80)
 
+    return audit_data
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Auto Data Analyzer & ML Scout")
-    parser.add_argument("--db-url", type=str, required=True, help="Database Connection URL (e.g. sqlite:///tests/data/sample_warehouse.db)")
-    parser.add_argument("--table", type=str, default=None, help="Target Table Name")
+    parser = argparse.ArgumentParser(description="Auto Data Analyzer & ML Scout - Universal Data & ML Automation")
+    parser.add_argument("--db-url", type=str, default=None, help="Database Connection URL or File Path (e.g. sqlite:///data.db, data.parquet, data.csv, data.xlsx)")
+    parser.add_argument("--file", type=str, default=None, help="Direct Path to Parquet, Excel (.xlsx), CSV, or JSON data file")
+    parser.add_argument("--table", type=str, default=None, help="Target Table or Sheet Name")
     parser.add_argument("--target", type=str, default=None, help="Target Column Name for ML")
     parser.add_argument("--query", type=str, default=None, help="Direct Read-Only SQL Query String")
     parser.add_argument("--sql-file", type=str, default=None, help="Path to .sql File Containing Read-Only Query")
@@ -269,8 +272,14 @@ def main():
     parser.add_argument("--sample-size", type=int, default=50000, help="Adaptive Sampling Threshold")
 
     args = parser.parse_args()
+
+    # Universal source resolution
+    source = args.file or args.db_url
+    if not source:
+        parser.error("데이터 소스를 지정해야 합니다. --db-url 또는 --file 옵션을 사용하세요.")
+
     run_analyzer(
-        db_url=args.db_url,
+        db_url=source,
         table_name=args.table,
         target_col=args.target,
         out_dir=args.out_dir,
@@ -281,4 +290,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
