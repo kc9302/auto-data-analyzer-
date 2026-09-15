@@ -31,6 +31,39 @@ class HtmlReportBuilder:
         missing_summary = audit_data.get("missing_summary", [])
         num_profiles = audit_data.get("numeric_profiles", [])
         corrs = health.get("high_correlation_pairs", [])
+        shap_res = audit_data.get("xgboost_shap_analysis", {})
+
+        # Build 1st-Stage Feature Scout (XGBoost + TreeSHAP) Section HTML
+        shap_rows = ""
+        if shap_res and "top_features" in shap_res:
+            for item in shap_res.get("top_features", [])[:8]:
+                dir_color = "bg-rose-100 text-rose-800" if "Positive" in item.get("direction", "") else ("bg-sky-100 text-sky-800" if "Negative" in item.get("direction", "") else "bg-slate-100 text-slate-700")
+                bar_bg = "bg-rose-500" if "Positive" in item.get("direction", "") else ("bg-sky-500" if "Negative" in item.get("direction", "") else "bg-slate-400")
+                pct = item.get("impact_pct", 0)
+                shap_rows += f"""<tr>
+                  <td class='p-2.5 font-bold text-slate-800 text-xs'>{item.get('rank')}</td>
+                  <td class='p-2.5 font-semibold text-slate-900'>{item.get('feature')}</td>
+                  <td class='p-2.5'>
+                    <div class='flex items-center gap-2'>
+                      <div class='w-28 bg-slate-100 rounded-full h-2 overflow-hidden'>
+                        <div class='{bar_bg} h-2 rounded-full' style='width: {min(pct * 2, 100)}%'></div>
+                      </div>
+                      <span class='text-xs font-bold text-slate-700'>{pct}%</span>
+                    </div>
+                  </td>
+                  <td class='p-2.5'><span class='text-xs font-bold px-2 py-0.5 rounded-full {dir_color}'>{item.get('direction')}</span></td>
+                  <td class='p-2.5 text-xs text-slate-600'>{item.get('interpretation')}</td>
+                </tr>"""
+        else:
+            shap_rows = "<tr><td colspan='5' class='p-3 text-center text-slate-400'>1차 피처 분석 데이터 없음</td></tr>"
+
+        recs = shap_res.get("recommendations", {}) if shap_res else {}
+        ratios_html = "".join(f"<li class='text-xs text-slate-700'><strong>{r.get('suggested_name')}:</strong> <code>{r.get('formula')}</code> <span class='text-slate-500 block'>{r.get('rationale')}</span></li>" for r in recs.get("recommended_ratios", [])[:2])
+        logs_html = "".join(f"<li class='text-xs text-slate-700'><strong>{l.get('suggested_name')}:</strong> <code>{l.get('formula')}</code> (왜도: {l.get('skewness')}) <span class='text-slate-500 block'>{l.get('rationale')}</span></li>" for l in recs.get("recommended_log_transforms", [])[:2])
+        noise_html = "".join(f"<span class='text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-medium mr-1.5 mb-1.5 inline-block'>{n.get('feature')} ({n.get('impact_pct')}%)</span>" for n in shap_res.get("noise_candidates", [])[:5]) if (shap_res and shap_res.get("noise_candidates")) else "<span class='text-xs text-slate-400'>노이즈 의심 변수 없음</span>"
+
+        base_metric = shap_res.get("baseline_metric", "Score") if shap_res else "Score"
+        base_score = shap_res.get("baseline_score", 0.0) if shap_res else 0.0
 
         # Format audit JSON nicely for modal or debug inspection
         audit_json_str = json.dumps(audit_data, indent=2, ensure_ascii=False)
@@ -158,6 +191,69 @@ class HtmlReportBuilder:
         <li>개인정보 감지 컬럼은 사내 컴플라이언스 준수를 위해 즉시 학습 피처셋에서 분리 완료</li>
         <li>결측치가 존재하는 변수는 학습 세트(Train)의 중앙값 기반으로 왜곡 없이 대체 파이프라인 적용 권고</li>
       </ul>
+    </div>
+  </div>
+
+  <!-- 1차 피처 분석: XGBoost & TreeSHAP Section -->
+  <div class="mb-14">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">1차 피처 분석</span>
+      <h2 class="text-2xl font-bold text-slate-900">XGBoost & TreeSHAP 피처 인텔리전스 (1st-Stage Feature Scout)</h2>
+      <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-lg border border-indigo-200">XGBoost Baseline {base_metric}: {base_score:.3f}</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      <!-- Left 2 Cols: SHAP Importance & Direction Table -->
+      <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
+          <span>글로벌 영향력(SHAP) & 영향 방향성 매트릭스</span>
+          <span class="text-xs text-slate-400 font-normal">Native TreeSHAP Ranked</span>
+        </h3>
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-50 text-slate-400 text-xs font-semibold">
+            <tr>
+              <th class="p-2.5">순위</th>
+              <th class="p-2.5">변수명</th>
+              <th class="p-2.5">기여율</th>
+              <th class="p-2.5">영향 방향</th>
+              <th class="p-2.5">비즈니스 해석</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {shap_rows}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right 1 Col: Noise Pruning & Recommendations -->
+      <div class="space-y-6">
+        <!-- Noise Candidates -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h4 class="text-sm font-bold text-slate-800 mb-2 flex items-center justify-between">
+            <span>⚠️ 노이즈 의심 피처 (기여율 &lt; 1.5%)</span>
+            <span class="text-xs text-amber-600 font-semibold">제외(Drop) 권고</span>
+          </h4>
+          <p class="text-xs text-slate-500 mb-3">과적합 방지 및 서빙 경량화를 위해 피처셋에서 제외를 고려할 수 있는 변수입니다.</p>
+          <div class="flex flex-wrap">
+            {noise_html}
+          </div>
+        </div>
+
+        <!-- Synthesis Recommendations -->
+        <div class="bg-indigo-50/70 border border-indigo-200 p-5 rounded-xl">
+          <h4 class="text-sm font-bold text-indigo-950 mb-2">💡 차기 피처 합성 자동 권고 (Prescriptions)</h4>
+          <div class="space-y-3">
+            <div>
+              <span class="text-xs font-bold text-indigo-900 block mb-1">상위 변수 비율(Ratio) 합성:</span>
+              <ul class="space-y-1.5">{ratios_html if ratios_html else "<li class='text-xs text-slate-400'>추천 비율 없음</li>"}</ul>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-indigo-900 block mb-1">왜도 보정(Log1p) 추천:</span>
+              <ul class="space-y-1.5">{logs_html if logs_html else "<li class='text-xs text-slate-400'>보정 대상 없음</li>"}</ul>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -228,6 +228,9 @@ if run_btn and connector and selected_table:
             "missing_summary": missing_summary,
             "numeric_profiles": numeric_profiles,
             "feature_journey": lineage_events,
+            "feature_ab_test": pipeline.ab_test_result,
+            "feature_synthesis_audit": pipeline.synthesis_audit,
+            "xgboost_shap_analysis": pipeline.xgb_shap_analysis,
             "ml_scout": ml_results,
             "reproducibility_manifest": code_forge.last_manifest
         }
@@ -315,8 +318,9 @@ if "audit_data" in st.session_state:
     st.divider()
 
     # Tabs for Decks
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab_shap, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 [DECK 1] 데이터 현황 진단",
+        "🔬 [1차 피처 분석] XGBoost & TreeSHAP",
         "🛣️ [DECK 2] 피처 엔지니어링 여정",
         "🏆 [AutoML] 모델 벤치마크 및 리더보드",
         "🧠 [XAI & What-If] 설명력 & 비용 최적화",
@@ -326,7 +330,7 @@ if "audit_data" in st.session_state:
     ])
 
     with tab1:
-        st.markdown("#### DECK 1: 데이터 현황 및 건전성 진단 (4개 슬라이드 요약)")
+        st.markdown("#### DECK 1: 데이터 현황 및 건전성 진단 (5개 슬라이드 요약)")
         c_left, c_right = st.columns(2)
         with c_left:
             st.markdown("##### 📌 결측치 현황 및 조치 권고")
@@ -350,6 +354,65 @@ if "audit_data" in st.session_state:
             st.info("강한 상관관계 변수 쌍이 없습니다.")
 
         st.info("💡 **[슬라이드 하단 자동 권고 실행 과제 (Next Actions)]**\n• PII(개인정보) 감지 컬럼은 사내 컴플라이언스 준수를 위해 즉시 학습 피처셋에서 분리 완료\n• 결측률이 높은 변수는 원천 분포를 보존하는 Train 중앙값 조건부 대체 권고")
+
+    with tab_shap:
+        st.markdown("#### 🔬 [1차 피처 분석] XGBoost & TreeSHAP 피처 인텔리전스")
+        shap_data = data.get("xgboost_shap_analysis", {})
+        if shap_data and "top_features" in shap_data:
+            b_metric = shap_data.get("baseline_metric", "Score")
+            b_score = shap_data.get("baseline_score", 0.0)
+            top_f = shap_data.get("top_features", [])
+            noise_f = shap_data.get("noise_candidates", [])
+            recs = shap_data.get("recommendations", {})
+
+            # Top KPI Cards
+            sk1, sk2, sk3, sk4 = st.columns(4)
+            with sk1:
+                st.metric("XGBoost 베이스라인", f"{b_score:.4f}", f"평가 지표: {b_metric}")
+            with sk2:
+                top_name = top_f[0]["feature"] if top_f else "N/A"
+                top_pct = top_f[0]["impact_pct"] if top_f else 0
+                st.metric("1위 지배 변수", top_name, f"기여율: {top_pct}%")
+            with sk3:
+                st.metric("노이즈 의심 피처", f"{len(noise_f)} 개", delta="과적합 방지 제외 권고", delta_color="inverse")
+            with sk4:
+                st.metric("차기 합성 추천", f"{len(recs.get('recommended_ratios', [])) + len(recs.get('recommended_log_transforms', []))} 건", delta="비율/로그 변환")
+
+            st.info(f"💡 **1차 탐색 요약:** {shap_data.get('executive_summary', '')}")
+
+            c_shap_left, c_shap_right = st.columns([3, 2])
+            with c_shap_left:
+                st.markdown("##### 📊 Top 피처 글로벌 기여도(SHAP) 및 영향 방향성")
+                shap_df = pd.DataFrame(top_f)[["rank", "feature", "impact_pct", "direction", "correlation", "interpretation"]]
+                shap_df.columns = ["순위", "피처명", "기여율(%)", "영향 방향", "상관계수", "비즈니스 해석"]
+                st.dataframe(shap_df, use_container_width=True)
+
+                # Bar chart of impact_pct
+                chart_df = pd.DataFrame([{"피처명": f["feature"], "기여율(%)": f["impact_pct"]} for f in top_f[:8]])
+                st.bar_chart(chart_df.set_index("피처명"))
+
+            with c_shap_right:
+                st.markdown("##### ⚠️ 노이즈 의심 피처 (기여율 < 1.5%)")
+                if noise_f:
+                    n_df = pd.DataFrame(noise_f)[["feature", "impact_pct", "recommendation"]]
+                    n_df.columns = ["피처명", "기여율(%)", "권고사항"]
+                    st.dataframe(n_df, use_container_width=True)
+                else:
+                    st.success("모든 변수가 유의미한 예측 기여도를 확보하고 있습니다.")
+
+                st.markdown("##### 💡 차기 피처 합성 자동 권고 (Prescriptions)")
+                r_list = recs.get("recommended_ratios", [])
+                l_list = recs.get("recommended_log_transforms", [])
+                if r_list:
+                    st.markdown("**1) 상위 변수 비율(Ratio) 합성:**")
+                    for r in r_list:
+                        st.markdown(f"• `{r['suggested_name']}` = `{r['formula']}`\n  > {r['rationale']}")
+                if l_list:
+                    st.markdown("**2) 왜도 보정(Log1p) 추천:**")
+                    for l in l_list:
+                        st.markdown(f"• `{l['suggested_name']}` = `{l['formula']}` (왜도: {l.get('skewness')})\n  > {l['rationale']}")
+        else:
+            st.info("타겟 컬럼이 지정되지 않았거나 1차 피처 분석 데이터가 생성되지 않았습니다.")
 
     with tab2:
         st.markdown("#### DECK 2: 피처 엔지니어링 변환 여정 (Before vs After)")

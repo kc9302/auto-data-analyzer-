@@ -46,14 +46,14 @@ class PptxDeckBuilder:
 
         self.chart_gen = PresentationChartGenerator()
 
-    def _add_header(self, slide, slide_num: int, title: str, takeaway: str):
+    def _add_header(self, slide, slide_num: int, title: str, takeaway: str, total_slides: int = 5):
         header_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.4), Inches(11.733), Inches(0.95))
         tf = header_box.text_frame
         tf.word_wrap = True
         tf.margin_left = tf.margin_top = tf.margin_right = tf.margin_bottom = 0
 
         p1 = tf.paragraphs[0]
-        p1.text = f"[Slide {slide_num}/4]  {title}"
+        p1.text = f"[Slide {slide_num}/{total_slides}]  {title}"
         p1.font.size = Pt(20)
         p1.font.bold = True
         p1.font.color.rgb = self.c_primary
@@ -186,19 +186,125 @@ class PptxDeckBuilder:
         self._add_footer(s1, audit_data)
 
         # ----------------------------------------------------
-        # SLIDE 2: Feature Engineering & A/B Testing Verification
+        # SLIDE 2: 1차 피처 분석 & SHAP 시그널 진단 (XGBoost & TreeSHAP)
         # ----------------------------------------------------
         s2 = self.prs.slides.add_slide(self.blank_layout)
+        shap_res = audit_data.get("xgboost_shap_analysis", {})
+        base_metric = shap_res.get("baseline_metric", "Score")
+        base_score = shap_res.get("baseline_score", 0.0)
+        noise_cnt = len(shap_res.get("noise_candidates", []))
+
+        self._add_header(
+            s2, 2, "1차 피처 분석 & SHAP 시그널 진단 (XGBoost & TreeSHAP Feature Scout)",
+            f"XGBoost 베이스라인 {base_metric} {base_score:.3f} | Top 영향 피처 및 노이즈 변수 {noise_cnt}건 정밀 진단",
+            total_slides=5
+        )
+
+        # Left Column: SHAP Importance Chart
+        chart_shap_path = os.path.join(charts_dir, "shap_summary_chart.png")
+        self.chart_gen.generate_shap_summary_chart(shap_res, chart_shap_path)
+        if os.path.exists(chart_shap_path):
+            s2.shapes.add_picture(chart_shap_path, Inches(0.8), Inches(1.5), Inches(6.0), Inches(4.15))
+
+        # Right Column: Insights, Directions & Recommendations Card
+        sh_card = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.5), Inches(5.4), Inches(4.15))
+        sh_card.fill.solid()
+        sh_card.fill.fore_color.rgb = self.c_card_bg
+        sh_card.line.color.rgb = RGBColor(0xE2, 0xE8, 0xF0)
+        stf = sh_card.text_frame
+        stf.word_wrap = True
+
+        sp1 = stf.paragraphs[0]
+        sp1.text = "🎯 1차 피처 탐색 인텔리전스 (XGBoost+TreeSHAP)"
+        sp1.font.size = Pt(11)
+        sp1.font.bold = True
+        sp1.font.color.rgb = self.c_primary
+
+        sp2 = stf.add_paragraph()
+        sp2.text = "\n1. 핵심 지배 변수 및 영향 방향성"
+        sp2.font.size = Pt(10)
+        sp2.font.bold = True
+        sp2.font.color.rgb = self.c_primary
+
+        top_f = shap_res.get("top_drivers_summary", [])
+        if top_f:
+            for item in top_f[:3]:
+                sp_item = stf.add_paragraph()
+                sp_item.text = f"• [{item.get('direction', 'Positive')}] {item['feature']} (기여율 {item['impact_pct']}%): {item.get('interpretation', '')}"
+                sp_item.font.size = Pt(8.5)
+                sp_item.font.color.rgb = self.c_text_dark
+        else:
+            sp_item = stf.add_paragraph()
+            sp_item.text = "• 수치형 및 범주형 변수의 균등한 영향력 분포"
+            sp_item.font.size = Pt(8.5)
+
+        sp3 = stf.add_paragraph()
+        sp3.text = "\n2. 노이즈 변수 및 차기 피처 합성 제언"
+        sp3.font.size = Pt(10)
+        sp3.font.bold = True
+        sp3.font.color.rgb = self.c_primary
+
+        recs = shap_res.get("recommendations", {})
+        ratios = recs.get("recommended_ratios", [])
+        logs = recs.get("recommended_log_transforms", [])
+        noise_items = shap_res.get("noise_candidates", [])
+
+        if noise_items:
+            n_names = ", ".join([n["feature"] for n in noise_items[:3]])
+            sp_n = stf.add_paragraph()
+            sp_n.text = f"• ⚠️ 노이즈 의심: {n_names} (기여도 < 1.5% -> 모델 경량화 제외 권고)"
+            sp_n.font.size = Pt(8.5)
+            sp_n.font.color.rgb = self.c_warning
+
+        if ratios:
+            r0 = ratios[0]
+            sp_r = stf.add_paragraph()
+            sp_r.text = f"• 💡 파생 비율 추천: {r0['suggested_name']} = {r0['formula']}"
+            sp_r.font.size = Pt(8.5)
+            sp_r.font.color.rgb = self.c_accent
+
+        if logs:
+            l0 = logs[0]
+            sp_l = stf.add_paragraph()
+            sp_l.text = f"• 💡 왜도 보정 추천: {l0['suggested_name']} (왜도 {l0.get('skewness', 0):.2f})"
+            sp_l.font.size = Pt(8.5)
+            sp_l.font.color.rgb = self.c_success
+
+        # Bottom Action Bar
+        sh_bot = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
+        sh_bot.fill.solid()
+        sh_bot.fill.fore_color.rgb = RGBColor(0xEE, 0xF2, 0xFF)
+        sh_bot.line.color.rgb = self.c_accent
+        sbtf = sh_bot.text_frame
+        sbtf.word_wrap = True
+        sbp = sbtf.paragraphs[0]
+        sbp.text = "💡 1차 피처 분석 기반 후속 엔지니어링 전략:"
+        sbp.font.size = Pt(10)
+        sbp.font.bold = True
+        sbp.font.color.rgb = self.c_primary
+        sbp2 = sbtf.add_paragraph()
+        exec_sum = shap_res.get("executive_summary", "XGBoost와 TreeSHAP으로 원천 피처의 예측 기여도를 사전 검증하여, 차기 단계에서 고부가가치 합성 피처를 집중 생성합니다.")
+        sbp2.text = f"• {exec_sum}\n• 1차 분석에서 도출된 상위 변수를 바탕으로 피처 A/B 테스트 및 스마트 합성 파이프라인 가동"
+        sbp2.font.size = Pt(9)
+        sbp2.font.color.rgb = self.c_text_dark
+
+        self._add_footer(s2, audit_data)
+
+        # ----------------------------------------------------
+        # SLIDE 3: Feature Engineering & A/B Testing Verification
+        # ----------------------------------------------------
+        s3 = self.prs.slides.add_slide(self.blank_layout)
         ab_res = audit_data.get("feature_ab_test", {})
         lift = ab_res.get("lift_pct", 0)
 
         self._add_header(
-            s2, 2, "피처 엔지니어링 & A/B 테스트 실측 검증 (Feature A/B Rationale)",
-            f"대조군(Baseline A) 대비 피처 가공/합성군(B)의 성능 리프트 +{lift}% 달성으로 피처 채택 과학적 증명"
+            s3, 3, "피처 엔지니어링 & A/B 테스트 실측 검증 (Feature A/B Rationale)",
+            f"대조군(Baseline A) 대비 피처 가공/합성군(B)의 성능 리프트 +{lift}% 달성으로 피처 채택 과학적 증명",
+            total_slides=5
         )
 
         # Left Column: Missing Governance & Feature Synthesis Summary Card
-        f_box = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.5), Inches(5.2), Inches(4.15))
+        f_box = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.5), Inches(5.2), Inches(4.15))
         f_box.fill.solid()
         f_box.fill.fore_color.rgb = self.c_card_bg
         f_box.line.color.rgb = RGBColor(0xE2, 0xE8, 0xF0)
@@ -238,10 +344,10 @@ class PptxDeckBuilder:
         chart2_path = os.path.join(charts_dir, "ab_test_chart.png")
         self.chart_gen.generate_ab_test_chart(ab_res, chart2_path)
         if os.path.exists(chart2_path):
-            s2.shapes.add_picture(chart2_path, Inches(6.3), Inches(1.5), Inches(6.2), Inches(4.15))
+            s3.shapes.add_picture(chart2_path, Inches(6.3), Inches(1.5), Inches(6.2), Inches(4.15))
 
         # Bottom Conclusion Box
-        ab_bot = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
+        ab_bot = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
         ab_bot.fill.solid()
         ab_bot.fill.fore_color.rgb = RGBColor(0xEC, 0xFD, 0xF5)
         ab_bot.line.color.rgb = self.c_success
@@ -257,12 +363,12 @@ class PptxDeckBuilder:
         abp2.font.size = Pt(9.5)
         abp2.font.color.rgb = self.c_text_dark
 
-        self._add_footer(s2, audit_data)
+        self._add_footer(s3, audit_data)
 
         # ----------------------------------------------------
-        # SLIDE 3: Model Leaderboard & Cold-Start Roadmap
+        # SLIDE 4: Model Leaderboard & Cold-Start Roadmap
         # ----------------------------------------------------
-        s3 = self.prs.slides.add_slide(self.blank_layout)
+        s4 = self.prs.slides.add_slide(self.blank_layout)
         ml_res = audit_data.get("ml_scout", {})
         best_model = ml_res.get("best_model", "Unknown")
         dna = ml_res.get("data_dna", {})
@@ -272,18 +378,19 @@ class PptxDeckBuilder:
         lift_str = f" (통계 대조군 대비 Lift +{lift_res.get('lift_vs_global_pct', 0)}%)" if lift_res else ""
 
         self._add_header(
-            s3, 3, "모델 토너먼트 리더보드 & AI 도입 타당성 (Baseline Comparison)",
-            f"1위 승자: {best_model}{lift_str} | 단순 통계/세그먼트 대조군 대비 과학적 우수성 검증"
+            s4, 4, "모델 토너먼트 리더보드 & AI 도입 타당성 (Baseline Comparison)",
+            f"1위 승자: {best_model}{lift_str} | 단순 통계/세그먼트 대조군 대비 과학적 우수성 검증",
+            total_slides=5
         )
 
         # Left Column: Leaderboard Chart
         chart3_path = os.path.join(charts_dir, "leaderboard_chart.png")
         self.chart_gen.generate_leaderboard_chart(ml_res.get("leaderboard", []), ml_res.get("primary_metric", "f1_weighted"), chart3_path)
         if os.path.exists(chart3_path):
-            s3.shapes.add_picture(chart3_path, Inches(0.8), Inches(1.5), Inches(6.0), Inches(4.15))
+            s4.shapes.add_picture(chart3_path, Inches(0.8), Inches(1.5), Inches(6.0), Inches(4.15))
 
         # Right Column: 3-Stage Lifecycle Roadmap Diagram
-        rm_card = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.5), Inches(5.4), Inches(4.15))
+        rm_card = s4.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.5), Inches(5.4), Inches(4.15))
         rm_card.fill.solid()
         rm_card.fill.fore_color.rgb = self.c_card_bg
         rm_card.line.color.rgb = self.c_accent
@@ -331,7 +438,7 @@ class PptxDeckBuilder:
         gate = ml_res.get("feasibility_gate", {})
         decision = gate.get("decision", "GO")
 
-        bot3 = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.75), Inches(11.733), Inches(1.1))
+        bot3 = s4.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.75), Inches(11.733), Inches(1.1))
         bot3.fill.solid()
         if decision == "NO_GO_PIVOT":
             bot3.fill.fore_color.rgb = RGBColor(0xFE, 0xF2, 0xF2)
@@ -362,27 +469,28 @@ class PptxDeckBuilder:
         bp2.font.size = Pt(8.5)
         bp2.font.color.rgb = self.c_text_dark
 
-        self._add_footer(s3, audit_data)
+        self._add_footer(s4, audit_data)
 
         # ----------------------------------------------------
-        # SLIDE 4: Feature Importance & Engineering Takeaways
+        # SLIDE 5: Feature Importance & Engineering Takeaways
         # ----------------------------------------------------
-        s4 = self.prs.slides.add_slide(self.blank_layout)
+        s5 = self.prs.slides.add_slide(self.blank_layout)
         top_feats = ml_res.get("top_features", [])
 
         self._add_header(
-            s4, 4, "핵심 피처 영향도 & 실무 권고사항 (Feature Importance & Action)",
-            f"Top 8 핵심 예측 변수 가중치 분석 및 프로덕션 파이프라인 배포 가이드"
+            s5, 5, "핵심 피처 영향도 & 실무 권고사항 (Feature Importance & Action)",
+            f"Top 8 핵심 예측 변수 가중치 분석 및 프로덕션 파이프라인 배포 가이드",
+            total_slides=5
         )
 
         # Left Column: Importance Chart
         chart4_path = os.path.join(charts_dir, "importance_chart.png")
         self.chart_gen.generate_importance_chart(top_feats, chart4_path)
         if os.path.exists(chart4_path):
-            s4.shapes.add_picture(chart4_path, Inches(0.8), Inches(1.5), Inches(6.0), Inches(4.15))
+            s5.shapes.add_picture(chart4_path, Inches(0.8), Inches(1.5), Inches(6.0), Inches(4.15))
 
         # Right Column: Actionable Takeaways & Next Steps
-        inf_card = s4.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.5), Inches(5.4), Inches(4.15))
+        inf_card = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.5), Inches(5.4), Inches(4.15))
         inf_card.fill.solid()
         inf_card.fill.fore_color.rgb = self.c_card_bg
         inf_card.line.color.rgb = RGBColor(0xE2, 0xE8, 0xF0)
@@ -420,7 +528,7 @@ class PptxDeckBuilder:
         ip2_sub.font.color.rgb = self.c_text_muted
 
         # Bottom Code Export & Production Guide
-        bot4 = s4.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
+        bot4 = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
         bot4.fill.solid()
         bot4.fill.fore_color.rgb = RGBColor(0xEC, 0xFD, 0xF5)
         bot4.line.color.rgb = self.c_success
@@ -436,8 +544,8 @@ class PptxDeckBuilder:
         bp4_sub.font.size = Pt(9.5)
         bp4_sub.font.color.rgb = self.c_text_dark
 
-        self._add_footer(s4, audit_data)
+        self._add_footer(s5, audit_data)
 
         # Save presentation
         self.prs.save(output_pptx_path)
-        print(f"[OK] 필수 4장 고품질 비주얼 PPTX 장표 생성 완료: {output_pptx_path}")
+        print(f"[OK] 필수 5장 고품질 비주얼 PPTX 장표 생성 완료: {output_pptx_path}")
