@@ -5,6 +5,7 @@ plain-text business labels, and Action Items.
 """
 import os
 import json
+import base64
 from typing import Dict, Any
 
 from src.presenter.theme_manager import ThemeManager, BusinessTranslator
@@ -64,6 +65,37 @@ class HtmlReportBuilder:
 
         base_metric = shap_res.get("baseline_metric", "Score") if shap_res else "Score"
         base_score = shap_res.get("baseline_score", 0.0) if shap_res else 0.0
+
+        # Base64 encode native library plots if available
+        native_plots = shap_res.get("native_plots", {}) if shap_res else {}
+        shap_beeswarm_b64 = ""
+        xgb_importance_b64 = ""
+        if native_plots.get("shap_beeswarm") and os.path.exists(native_plots["shap_beeswarm"]):
+            try:
+                with open(native_plots["shap_beeswarm"], "rb") as f_img:
+                    shap_beeswarm_b64 = base64.b64encode(f_img.read()).decode("utf-8")
+            except Exception:
+                pass
+        if native_plots.get("xgb_importance") and os.path.exists(native_plots["xgb_importance"]):
+            try:
+                with open(native_plots["xgb_importance"], "rb") as f_img:
+                    xgb_importance_b64 = base64.b64encode(f_img.read()).decode("utf-8")
+            except Exception:
+                pass
+
+        native_plots_html = ""
+        if shap_beeswarm_b64 or xgb_importance_b64:
+            native_plots_html = f"""
+    <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center justify-between">
+        <span>📊 라이브러리 공식 도식화 갤러리 (Official Native Visualizations)</span>
+        <span class="text-xs text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded font-semibold border border-indigo-200">SHAP &amp; XGBoost Engine</span>
+      </h3>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {"<div class='border border-slate-100 rounded-lg p-3 bg-slate-50/50'><h4 class='text-xs font-bold text-slate-700 mb-2'>🔬 SHAP Beeswarm Summary Plot (개별 샘플 분포 및 영향 방향성)</h4><img src='data:image/png;base64," + shap_beeswarm_b64 + "' alt='SHAP Beeswarm' class='w-full rounded border border-slate-200 shadow-sm' /></div>" if shap_beeswarm_b64 else ""}
+        {"<div class='border border-slate-100 rounded-lg p-3 bg-slate-50/50'><h4 class='text-xs font-bold text-slate-700 mb-2'>📈 XGBoost Feature Importance (Gain 기반 핵심 지배 피처)</h4><img src='data:image/png;base64," + xgb_importance_b64 + "' alt='XGBoost Importance' class='w-full rounded border border-slate-200 shadow-sm' /></div>" if xgb_importance_b64 else ""}
+      </div>
+    </div>"""
 
         # Format audit JSON nicely for modal or debug inspection
         audit_json_str = json.dumps(audit_data, indent=2, ensure_ascii=False)
@@ -255,6 +287,7 @@ class HtmlReportBuilder:
         </div>
       </div>
     </div>
+    {native_plots_html}
   </div>
 
   <!-- DECK 2: 피처 엔지니어링 여정 -->

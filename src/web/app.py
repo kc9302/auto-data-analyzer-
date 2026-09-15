@@ -23,6 +23,7 @@ from src.pipeline.feature_pipeline import FeaturePipeline
 from src.ml_scout.engine import MLScoutEngine
 from src.presenter.pptx_builder import PptxDeckBuilder
 from src.presenter.html_builder import HtmlReportBuilder
+from src.presenter.excel_builder import ExcelReportBuilder
 
 st.set_page_config(
     page_title="Auto Data Analyzer & ML Scout",
@@ -246,10 +247,15 @@ if run_btn and connector and selected_table:
         html_builder = HtmlReportBuilder()
         html_builder.build_report(audit_data, html_path)
 
+        excel_path = os.path.join(out_dir, f"{selected_table}_analysis_report.xlsx")
+        excel_builder = ExcelReportBuilder()
+        excel_builder.build_report(audit_data, excel_path, native_plots=audit_data.get("xgboost_shap_analysis", {}).get("native_plots"))
+
         st.session_state["audit_data"] = audit_data
         st.session_state["pptx_path"] = pptx_path
         st.session_state["html_path"] = html_path
-        st.success("🎉 분석 및 장표 생성이 성공적으로 완료되었습니다!")
+        st.session_state["excel_path"] = excel_path
+        st.success("🎉 분석 및 장표(PPTX), 엑셀(XLSX), 웹 리포트(HTML) 생성이 성공적으로 완료되었습니다!")
 
 # -------------------------------------------------------------
 # Results Presentation
@@ -274,8 +280,8 @@ if "audit_data" in st.session_state:
     st.divider()
 
     # One-Click Downloads Section
-    st.markdown("### 📥 장표, 코드 패키지 및 감사 로그 다운로드")
-    d1, d2, d3, d4 = st.columns(4)
+    st.markdown("### 📥 장표, 엑셀, 코드 패키지 및 감사 로그 원클릭 다운로드")
+    d1, d2, d3, d4, d5 = st.columns(5)
     with d1:
         with open(st.session_state["pptx_path"], "rb") as f:
             st.download_button(
@@ -287,15 +293,25 @@ if "audit_data" in st.session_state:
                 use_container_width=True
             )
     with d2:
+        if "excel_path" in st.session_state and os.path.exists(st.session_state["excel_path"]):
+            with open(st.session_state["excel_path"], "rb") as f:
+                st.download_button(
+                    label="📗 정밀 엑셀 (XLSX)",
+                    data=f.read(),
+                    file_name=os.path.basename(st.session_state["excel_path"]),
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+    with d3:
         with open(st.session_state["html_path"], "rb") as f:
             st.download_button(
-                label="🌐 반응형 웹 리포트 (HTML)",
+                label="🌐 반응형 웹 (HTML)",
                 data=f.read(),
                 file_name=os.path.basename(st.session_state["html_path"]),
                 mime="text/html",
                 use_container_width=True
             )
-    with d3:
+    with d4:
         audit_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
         st.download_button(
             label="📜 감사 로그 (JSON)",
@@ -304,7 +320,7 @@ if "audit_data" in st.session_state:
             mime="application/json",
             use_container_width=True
         )
-    with d4:
+    with d5:
         rep_manifest = data.get("reproducibility_manifest") or {}
         rep_bytes = json.dumps(rep_manifest, indent=2, ensure_ascii=False).encode("utf-8")
         st.download_button(
@@ -390,6 +406,18 @@ if "audit_data" in st.session_state:
                 # Bar chart of impact_pct
                 chart_df = pd.DataFrame([{"피처명": f["feature"], "기여율(%)": f["impact_pct"]} for f in top_f[:8]])
                 st.bar_chart(chart_df.set_index("피처명"))
+
+            # Native Library Plots Section
+            native_plots = shap_data.get("native_plots", {})
+            if native_plots:
+                st.markdown("##### 🔬 [라이브러리 공식 도식화] SHAP Beeswarm & XGBoost Importance 플롯")
+                pc1, pc2 = st.columns(2)
+                with pc1:
+                    if "shap_beeswarm" in native_plots and os.path.exists(native_plots["shap_beeswarm"]):
+                        st.image(native_plots["shap_beeswarm"], caption="라이브러리 공식 SHAP Beeswarm 플롯 (개별 데이터 포인트 & 영향 방향성)", use_container_width=True)
+                with pc2:
+                    if "xgb_importance" in native_plots and os.path.exists(native_plots["xgb_importance"]):
+                        st.image(native_plots["xgb_importance"], caption="라이브러리 공식 XGBoost Feature Importance (Gain)", use_container_width=True)
 
             with c_shap_right:
                 st.markdown("##### ⚠️ 노이즈 의심 피처 (기여율 < 1.5%)")

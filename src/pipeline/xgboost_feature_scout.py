@@ -37,6 +37,9 @@ class XGBoostFeatureScout:
         self.noise_threshold_pct = noise_threshold_pct
         self.max_background_samples = max_background_samples
         self.last_analysis_: Optional[Dict[str, Any]] = None
+        self.last_model_: Optional[Any] = None
+        self.last_shap_values_: Optional[np.ndarray] = None
+        self.last_bg_data_: Optional[pd.DataFrame] = None
 
     def analyze(
         self,
@@ -71,9 +74,12 @@ class XGBoostFeatureScout:
         )
 
         # 2. Extract SHAP Values using TreeSHAP (with FastMarginal fallback)
-        shap_values, base_value = self._compute_shap_values(
+        shap_values, base_value, bg_data = self._compute_shap_values(
             model, X_num, is_classification
         )
+        self.last_model_ = model
+        self.last_shap_values_ = shap_values
+        self.last_bg_data_ = bg_data
 
         # 3. Calculate Global Importance & Impact Direction
         # Mean absolute SHAP value per feature
@@ -245,10 +251,10 @@ class XGBoostFeatureScout:
         model: Any,
         X: pd.DataFrame,
         is_classification: bool
-    ) -> Tuple[np.ndarray, float]:
+    ) -> Tuple[np.ndarray, float, pd.DataFrame]:
         """Computes SHAP values using shap.TreeExplainer or pure-numpy fallback."""
         bg_size = min(len(X), self.max_background_samples)
-        bg_data = X.sample(n=bg_size, random_state=self.random_seed) if len(X) > bg_size else X
+        bg_data = X.sample(n=bg_size, random_state=self.random_seed) if len(X) > bg_size else X.copy()
 
         try:
             import shap
@@ -298,7 +304,81 @@ class XGBoostFeatureScout:
                     vals[:, idx] = rank_item["mean_abs_impact"] * sign
 
             base_val = float(res.get("base_value", 0.5))
-            return vals, base_val
+            return vals, base_val, bg_data
+
+        return vals, base_val, bg_data
+
+    def export_native_plots(self, output_dir: str) -> Dict[str, str]:
+        """
+        Exports official SHAP beeswarm/bar summary plots and XGBoost feature importance plot.
+        Returns a dictionary mapping plot keys to output file paths.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        plot_paths = {}
+
+        # 1. Official SHAP Beeswarm Summary Plot
+        if self.last_shap_values_ is not None and self.last_bg_data_ is not None:
+            try:
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+                import shap
+
+                plt.figure(figsize=(7.5, 4.5), dpi=150)
+                shap.summary_plot(self.last_shap_values_, self.last_bg_data_, show=False, max_display=8)
+                plt.title("SHAP Beeswarm Summary Plot", fontsize=11, fontweight="bold", pad=12)
+                plt.tight_layout()
+                beeswarm_path = os.path.join(output_dir, "shap_beeswarm.png")
+                plt.savefig(beeswarm_path, bbox_inches="tight", facecolor="#FFFFFF")
+                plt.close()
+                plot_paths["shap_beeswarm"] = beeswarm_path
+            except Exception as e:
+                print(f"[WARN] SHAP Beeswarm 플롯 생성 실패: {e}")
+
+            # 2. Official SHAP Global Bar Importance Plot
+            try:
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+                import shap
+
+                plt.figure(figsize=(7.5, 4.5), dpi=150)
+                shap.summary_plot(self.last_shap_values_, self.last_bg_data_, plot_type="bar", show=False, max_display=8)
+                plt.title("SHAP Global Feature Importance", fontsize=11, fontweight="bold", pad=12)
+                plt.tight_layout()
+                bar_path = os.path.join(output_dir, "shap_bar.png")
+                plt.savefig(bar_path, bbox_inches="tight", facecolor="#FFFFFF")
+                plt.close()
+                plot_paths["shap_bar"] = bar_path
+            except Exception as e:
+                print(f"[WARN] SHAP Bar 플롯 생성 실패: {e}")
+
+        # 3. Official XGBoost Feature Importance Plot (Gain)
+        if self.last_model_ is not None:
+            try:
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+                import xgboost as xgb
+
+                if hasattr(xgb, "plot_importance") and hasattr(self.last_model_, "get_booster"):
+                    fig, ax = plt.subplots(figsize=(7.5, 4.5), dpi=150)
+                    xgb.plot_importance(self.last_model_, ax=ax, max_num_features=8, importance_type="gain",
+                                        title="XGBoost Feature Importance (Gain)", color="#1E293B")
+                    ax.spines["top"].set_visible(False)
+                    ax.spines["right"].set_visible(False)
+                    plt.tight_layout()
+                    xgb_path = os.path.join(output_dir, "xgb_importance.png")
+                    plt.savefig(xgb_path, bbox_inches="tight", facecolor="#FFFFFF")
+                    plt.close()
+                    plot_paths["xgb_importance"] = xgb_path
+            except Exception as e:
+                print(f"[WARN] XGBoost plot_importance 생성 실패: {e}")
+
+        if self.last_analysis_ is not None:
+            self.last_analysis_["native_plots"] = plot_paths
+
+        return plot_paths
 
     def _generate_recommendations(
         self,
