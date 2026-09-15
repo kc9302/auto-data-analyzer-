@@ -327,7 +327,20 @@ class HtmlReportBuilder:
           <div class="text-[11px] text-slate-400">기준 점수: {ml_scout.get('lift_analysis', {}).get('segment_baseline_score', 0):.4f}</div>
         </div>
       </div>
-      <p class="text-xs text-emerald-900 font-medium">{ml_scout.get('lift_analysis', {}).get('conclusion', '')}</p>
+      <p class="text-xs text-emerald-900 font-medium mb-3">{ml_scout.get('lift_analysis', {}).get('conclusion', '')}</p>
+
+      {f'''
+      <div class="mt-3 pt-3 border-t border-emerald-100">
+        <span class="text-xs font-bold text-emerald-950 block mb-2">👥 연령/군집화 계층별 대조군 룰 vs AI 챔피언 실측 우위 (Subgroup Slice):</span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {"".join(f"""<div class="bg-white/90 p-2.5 rounded border border-emerald-100 text-[11px] shadow-sm">
+            <div class="font-bold text-slate-800 flex justify-between"><span>{s.get('segment_name')}</span><span class="text-emerald-700 font-extrabold">{'+' if s.get('lift_pct',0)>0 else ''}{s.get('lift_pct',0)}% Lift</span></div>
+            <div class="text-[10px] text-slate-500 mt-0.5">표본: {s.get('sample_count')}건 ({s.get('sample_share_pct')}%) | 룰 {s.get('baseline_score')} &rarr; AI {s.get('champion_score')}</div>
+            <div class="text-[10px] text-slate-600 mt-1 italic leading-tight">{s.get('interpretation')}</div>
+          </div>""" for s in ml_scout.get('lift_analysis', {}).get('segment_slices', []))}
+        </div>
+      </div>
+      ''' if ml_scout.get('lift_analysis', {}).get('segment_slices') else ''}
     </div>
     ''' if ml_scout.get('lift_analysis') else ''}
 
@@ -372,12 +385,14 @@ class HtmlReportBuilder:
             <tr>
               <th class="p-2.5">순위</th>
               <th class="p-2.5">알고리즘</th>
+              <th class="p-2.5">역할</th>
               <th class="p-2.5">평가 성능</th>
+              <th class="p-2.5">룰 대비 Lift</th>
               <th class="p-2.5">소요 시간</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            {"".join(f"<tr><td class='p-2.5 font-bold text-slate-800'>{m.get('rank')}위</td><td class='p-2.5 font-medium'>{m.get('model')} {'<span class=\"ml-1 px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-500 font-normal rounded\">대조군</span>' if m.get('is_baseline') else ''}</td><td class='p-2.5 text-blue-600 font-bold'>{m.get('f1_weighted', m.get('accuracy', m.get('r2', m.get('neg_root_mean_squared_error', 0.0)))):.4f}</td><td class='p-2.5 text-xs text-slate-400'>{m.get('train_time_sec', 0)}초</td></tr>" for m in ml_scout.get('leaderboard', []))}
+            {"".join(f"<tr><td class='p-2.5 font-bold text-slate-800'>{m.get('rank')}위</td><td class='p-2.5 font-medium'>{m.get('model')}</td><td class='p-2.5 text-xs text-slate-500'>{m.get('model_role', '후보')}</td><td class='p-2.5 text-blue-600 font-bold'>{m.get('f1_weighted', m.get('accuracy', m.get('r2', m.get('neg_root_mean_squared_error', 0.0)))):.4f}</td><td class='p-2.5 text-xs font-bold text-emerald-600'>{'+' if m.get('lift_vs_segment_pct',0)>0 else ''}{m.get('lift_vs_segment_pct', 0):.1f}%</td><td class='p-2.5 text-xs text-slate-400'>{m.get('train_time_sec', 0)}초</td></tr>" for m in ml_scout.get('leaderboard', []))}
           </tbody>
         </table>
       </div>

@@ -35,3 +35,7 @@ data/uploads/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Mock databases
+tests/data/*.db
+

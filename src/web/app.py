@@ -463,11 +463,16 @@ if "audit_data" in st.session_state:
             st.success(f"🥇 1위 최적 승자 모델: **{ml.get('best_model')}** (문제 유형: {ml.get('task_type')})")
             lift = ml.get("lift_analysis", {})
             if lift:
-                c1, c2, c3 = st.columns(3)
                 c1.metric("🥇 챔피언 모델 점수", f"{lift.get('champion_score', 0):.4f}", f"선정: {lift.get('champion_model')}")
                 c2.metric("📊 vs 전체 통계 (Global Stat)", f"{lift.get('global_baseline_score', 0):.4f}", f"Lift {lift.get('lift_vs_global_pct', 0):+.1f}%")
                 c3.metric("🎯 vs 단순 규칙 (Segment Rule)", f"{lift.get('segment_baseline_score', 0):.4f}", f"Lift {lift.get('lift_vs_segment_pct', 0):+.1f}%")
                 st.info(f"💡 **AI 도입 타당성 검증:** {lift.get('conclusion', '')}")
+
+                slices = lift.get("segment_slices", [])
+                if slices:
+                    with st.expander("👥 고객 설득용: 연령/군집화 계층별 단순 룰 vs AI 챔피언 실측 우위 (Subgroup Slices)", expanded=True):
+                        st.dataframe(pd.DataFrame(slices), use_container_width=True)
+
 
             gate = ml.get("feasibility_gate", {})
             if gate:

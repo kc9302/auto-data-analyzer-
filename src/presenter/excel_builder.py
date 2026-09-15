@@ -341,54 +341,176 @@ class ExcelReportBuilder:
         ml = audit_data.get("ml_scout", {})
         lift = ml.get("lift_analysis", {})
         gate = ml.get("feasibility_gate", {})
+        best_model = ml.get("best_model", "Unknown")
+        primary_metric = ml.get("primary_metric", "Score")
 
-        ws["A1"] = "🏆 AutoML 모델 토너먼트 리더보드 & AI 도입 타당성 검증"
+        # ----------------------------------------------------
+        # Header Block
+        # ----------------------------------------------------
+        ws["A1"] = "🏆 AutoML 모델 토너먼트 리더보드 & 비교 모델(대조군) 벤치마크"
         ws["A1"].font = self.f_title
-        ws["A2"] = f"최종 승자: {ml.get('best_model', 'Unknown')} | 평가 지표: {ml.get('primary_metric', 'Score')} | 판정: {gate.get('decision_badge', '승인')}"
+        ws["A2"] = (
+            f"최종 승자: {best_model} | 평가 지표: {primary_metric} | "
+            f"판정: {gate.get('decision_badge', '승인')} | "
+            f"전체 통계 대비 Lift: +{lift.get('lift_vs_global_pct', 0.0)}% | "
+            f"연령/군집 룰 대비 Lift: +{lift.get('lift_vs_segment_pct', 0.0)}%"
+        )
         ws["A2"].font = self.f_subtitle
 
-        # Lift & Gate Summary
-        ws["A4"] = "AI 도입 타당성 실측 결과 (Baseline Comparison)"
+        # ----------------------------------------------------
+        # Section 1: AI 도입 타당성 및 대조군 비교 종합 요약 (Executive Summary Card)
+        # ----------------------------------------------------
+        ws["A4"] = "1. AI 도입 타당성 및 비교 모델(대조군) 실측 벤치마크 총괄 요약"
         ws["A4"].font = self.f_section
+
         summary_rows = [
-            ("최종 챔피언 모델", ml.get("best_model", "Unknown")),
-            ("챔피언 모델 점수", f"{lift.get('champion_score', 0.0):.4f}"),
-            ("전체 통계 기준선 대비 Lift (%)", f"+{lift.get('lift_vs_global_pct', 0.0)}%"),
-            ("단순 세그먼트 규칙 대비 Lift (%)", f"+{lift.get('lift_vs_segment_pct', 0.0)}%"),
-            ("AI 배포 타당성 게이트 결정", gate.get("decision_badge", "배포 승인")),
-            ("검증 결론", lift.get("conclusion", ""))
+            ("최종 챔피언 모델 (Adopted ML)", best_model),
+            ("챔피언 모델 검증 점수", f"{lift.get('champion_score', 0.0):.4f} ({primary_metric})"),
+            ("비교 대조군 1: 일반 인기도 / 전체 통계 (Global Stat)", f"{lift.get('global_baseline_score', 0.0):.4f}"),
+            ("전체 통계 기준선 대비 순수 향상도 (Lift %)", f"+{lift.get('lift_vs_global_pct', 0.0)}% (인기도 대비 ML의 정보 획득량 증명)"),
+            ("비교 대조군 2: 연령/인구통계 군집화 룰 (Segment Rule)", f"{lift.get('segment_baseline_score', 0.0):.4f}"),
+            ("단순 연령/군집 룰 대비 순수 향상도 (Lift %)", f"+{lift.get('lift_vs_segment_pct', 0.0)}% (현업 규칙 대비 AI 차별화 우위 증명)"),
+            ("AI 배포 타당성 게이트 (Feasibility Gate)", gate.get("decision_badge", "배포 승인")),
+            ("고객 보고용 종합 판정 (Executive Verdict)", lift.get("conclusion", ""))
         ]
         row = 5
         for k, v in summary_rows:
             ws.cell(row=row, column=1, value=k).font = self.f_bold
-            ws.cell(row=row, column=2, value=v).font = self.f_normal
+            c_val = ws.cell(row=row, column=2, value=v)
+            c_val.font = self.f_normal
             ws.cell(row=row, column=1).border = self.thin_border
-            ws.cell(row=row, column=2).border = self.thin_border
+            c_val.border = self.thin_border
+            if "Lift %" in k:
+                c_val.font = self.f_bold
+                c_val.fill = self.c_succ_fill
             row += 1
 
-        # Leaderboard Table
+        # ----------------------------------------------------
+        # Section 2: 모델 비교 토너먼트 종합 리더보드 (10개 확장 컬럼)
+        # ----------------------------------------------------
         row += 1
-        ws.cell(row=row, column=1, value="모델 토너먼트 리더보드 (Leaderboard)").font = self.f_section
+        ws.cell(row=row, column=1, value="2. 전 모델 비교 토너먼트 리더보드 (Comparative Tournament Leaderboard)").font = self.f_section
         row += 1
-        l_headers = ["순위", "모델명", "모델 분류", "성능 스코어", "학습 소요시간 (초)"]
+
+        l_headers = [
+            "순위",
+            "모델명",
+            "모델 역할 / 분류",
+            "알고리즘 계열",
+            "검증 점수",
+            "전체 통계(인기도) 대비 Lift (%)",
+            "연령/군집 룰 대비 Lift (%)",
+            "학습 소요시간 (초)",
+            "추론 복잡도",
+            "비교 우위 근거 및 최종 채택 사유 (Verdict Rationale)"
+        ]
         for c, h in enumerate(l_headers, start=1):
             cell = ws.cell(row=row, column=c, value=h)
             cell.font = self.f_header
             cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = self.thin_border
         row += 1
 
         board = ml.get("leaderboard", [])
-        primary = ml.get("primary_metric", "f1_weighted")
         for m in board:
-            perf = m.get(primary) or m.get("f1_weighted") or m.get("accuracy") or m.get("r2", 0.0)
-            ws.cell(row=row, column=1, value=m.get("rank")).font = self.f_bold
-            ws.cell(row=row, column=2, value=m.get("model")).font = self.f_bold if m.get("rank") == 1 else self.f_normal
-            ws.cell(row=row, column=3, value=m.get("model_category")).font = self.f_normal
-            ws.cell(row=row, column=4, value=round(float(perf), 4)).font = self.f_normal
-            ws.cell(row=row, column=5, value=m.get("train_time_sec")).font = self.f_normal
-            for c in range(1, 6):
-                ws.cell(row=row, column=c).border = self.thin_border
+            rank = m.get("rank", 99)
+            m_name = m.get("model", "")
+            is_champ = (m_name == best_model or rank == 1 and not m.get("is_baseline", False))
+            is_base = m.get("is_baseline", False) or "Baseline" in m_name
+
+            perf = m.get(primary_metric) or m.get("f1_weighted") or m.get("accuracy") or m.get("r2", 0.0)
+            role = m.get("model_role") or ("🏆 챔피언 채택" if is_champ else ("📊 비교 대조군" if is_base else "후보 모델"))
+            family = m.get("algorithm_family") or m.get("model_category", "기타")
+            lift_g = m.get("lift_vs_global_pct", 0.0)
+            lift_s = m.get("lift_vs_segment_pct", 0.0)
+            t_sec = m.get("train_time_sec", 0.0)
+            complexity = m.get("complexity", "보통")
+            rationale = m.get("verdict_rationale", "")
+
+            lift_g_str = f"+{lift_g:.1f}%" if lift_g > 0 else f"{lift_g:.1f}%"
+            lift_s_str = f"+{lift_s:.1f}%" if lift_s > 0 else f"{lift_s:.1f}%"
+
+            ws.cell(row=row, column=1, value=rank).alignment = Alignment(horizontal="center")
+            ws.cell(row=row, column=2, value=m_name).alignment = Alignment(horizontal="left")
+            ws.cell(row=row, column=3, value=role).alignment = Alignment(horizontal="left")
+            ws.cell(row=row, column=4, value=family).alignment = Alignment(horizontal="left")
+            ws.cell(row=row, column=5, value=round(float(perf), 4)).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=6, value=lift_g_str).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=7, value=lift_s_str).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=8, value=t_sec).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=9, value=complexity).alignment = Alignment(horizontal="center")
+            ws.cell(row=row, column=10, value=rationale).alignment = Alignment(horizontal="left")
+
+            for c in range(1, 11):
+                cell = ws.cell(row=row, column=c)
+                cell.border = self.thin_border
+                if is_champ:
+                    cell.fill = self.c_succ_fill
+                    cell.font = self.f_bold
+                elif is_base:
+                    cell.fill = self.c_sub_fill
+                    cell.font = self.f_normal
+                else:
+                    cell.font = self.f_normal
+
+            row += 1
+
+        # ----------------------------------------------------
+        # Section 3: 연령/군집화 계층별 상세 우위 비교표 (Subgroup Segment Benchmark)
+        # ----------------------------------------------------
+        row += 1
+        ws.cell(row=row, column=1, value="3. 👥 연령별 / 군집화 계층별 대조군 룰 vs AI 챔피언 상세 실측 우위표 (Subgroup Slice Benchmark)").font = self.f_section
+        row += 1
+        ws.cell(row=row, column=1, value="고객 질의 대응용: 연령대나 계층화 집단별로 단순 룰(휴리스틱) 대비 AI 모델의 개별 우위도(Lift)를 실측한 데이터입니다.").font = self.f_subtitle
+        row += 1
+
+        s_headers = [
+            "세그먼트 / 연령 군집",
+            "표본 수 (비율 %)",
+            "기존 통계/군집 룰 점수",
+            "AI 챔피언 모델 점수",
+            "세그먼트별 순수 우위도 (Lift %)",
+            "비즈니스 해석 및 기대효과"
+        ]
+        for c, h in enumerate(s_headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = self.f_header
+            cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = self.thin_border
+        row += 1
+
+        slices = lift.get("segment_slices", [])
+        if slices:
+            for s in slices:
+                sample_str = f"{s.get('sample_count', 0):,} 건 ({s.get('sample_share_pct', 0.0)}%)"
+                s_lift = s.get("lift_pct", 0.0)
+                s_lift_str = f"+{s_lift:.1f}%" if s_lift > 0 else f"{s_lift:.1f}%"
+
+                ws.cell(row=row, column=1, value=s.get("segment_name", "")).alignment = Alignment(horizontal="left")
+                ws.cell(row=row, column=2, value=sample_str).alignment = Alignment(horizontal="right")
+                ws.cell(row=row, column=3, value=s.get("baseline_score", 0.0)).alignment = Alignment(horizontal="right")
+                ws.cell(row=row, column=4, value=s.get("champion_score", 0.0)).alignment = Alignment(horizontal="right")
+
+                c_lift = ws.cell(row=row, column=5, value=s_lift_str)
+                c_lift.alignment = Alignment(horizontal="right")
+                if s_lift >= 10.0:
+                    c_lift.fill = self.c_succ_fill
+                    c_lift.font = self.f_bold
+                else:
+                    c_lift.font = self.f_normal
+
+                ws.cell(row=row, column=6, value=s.get("interpretation", "")).alignment = Alignment(horizontal="left")
+
+                for c in range(1, 7):
+                    cell = ws.cell(row=row, column=c)
+                    cell.border = self.thin_border
+                    if c != 5:
+                        cell.font = self.f_normal
+                row += 1
+        else:
+            ws.cell(row=row, column=1, value="세그먼트 슬라이스 분석 데이터 없음").font = self.f_muted
             row += 1
 
     def _autofit_columns(self, ws):
@@ -401,7 +523,8 @@ class ExcelReportBuilder:
                 if val:
                     val_str = str(val)
                     # Rough character length (Korean characters are wider)
-                    length = sum(2 if ord(char) > 128 else 1 for char in val_str[:50])
+                    length = sum(2 if ord(char) > 128 else 1 for char in val_str[:60])
                     if length > max_len:
                         max_len = length
-            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 45)
+            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 52)
+
