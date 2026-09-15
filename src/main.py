@@ -29,6 +29,7 @@ from src.ml_scout.engine import MLScoutEngine
 from src.presenter.pptx_builder import PptxDeckBuilder
 from src.presenter.html_builder import HtmlReportBuilder
 from src.presenter.excel_builder import ExcelReportBuilder
+from src.ml_scout.methodology_navigator import MethodologyNavigator
 
 def run_analyzer(
     db_url: str,
@@ -241,6 +242,19 @@ def run_analyzer(
     print(f"3. 필수 5장 비주얼 모델 진단 PPTX: {os.path.abspath(pptx_path)}")
     print(f"4. 반응형 기술 감사 HTML 대시보드: {os.path.abspath(html_path)}")
     print(f"5. 라이브러리 공식 도식화 탑재 4개 시트 엑셀 분석 리포트: {os.path.abspath(excel_path)}")
+    print("=" * 80)
+
+    # 8. Render ML Lifecycle Methodology Roadmap & Next Actions
+    navigator = MethodologyNavigator()
+    diag = navigator.diagnose_stage(audit_data)
+    ascii_roadmap = navigator.render_ascii_roadmap(diag["current_stage"])
+    print("\n" + ascii_roadmap)
+    print(f"\n[🚀 방법론 가이드] 현재 프로젝트 진화 단계: {diag['stage_name']}")
+    print(f"• 핵심 목표: {diag['goal']}")
+    print(f"• 달성 기준: {diag['milestone']}")
+    print("• 💡 초보 ML 엔지니어를 위한 다음 단계 추천 액션 (Next Actions):")
+    for act in diag["next_actions"]:
+        print(f"   - {act}")
     print("=" * 80)
 
 
