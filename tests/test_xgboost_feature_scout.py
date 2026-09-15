@@ -192,3 +192,61 @@ def test_deck_and_html_generation_with_shap(classification_data, tmp_path):
         html_text = f.read()
     assert "XGBoost & TreeSHAP" in html_text
     assert "글로벌 영향력(SHAP)" in html_text
+
+
+def test_native_plots_and_excel_export(tmp_path):
+    """Verifies that native plots are exported and embedded properly into Excel and PPTX."""
+    from sklearn.datasets import make_classification
+    from pptx import Presentation
+    import openpyxl
+    from src.presenter.excel_builder import ExcelReportBuilder
+
+    out_dir = str(tmp_path)
+    X, y = make_classification(n_samples=150, n_features=6, n_informative=4, random_state=42)
+    df_X = pd.DataFrame(X, columns=[f"feat_{i}" for i in range(6)])
+    s_y = pd.Series(y, name="target")
+
+    scout = XGBoostFeatureScout()
+    shap_analysis = scout.analyze(df_X, s_y, task_type="Binary_Classification")
+    plots_dir = os.path.join(out_dir, "charts")
+    native_plots = scout.export_native_plots(plots_dir)
+
+    assert "shap_beeswarm" in native_plots
+    assert os.path.exists(native_plots["shap_beeswarm"])
+    assert "xgb_importance" in native_plots
+    assert os.path.exists(native_plots["xgb_importance"])
+
+    shap_analysis["native_plots"] = native_plots
+
+    audit_data = {
+        "audit_version": "2.1.0",
+        "generated_at": "2026-09-15T23:59:00",
+        "db_meta": {"target_table": "test_table", "total_row_count": 150, "sample_row_count": 150, "is_sampled": False, "memory_mb": 0.5},
+        "data_health": {"health_score": 90, "total_columns": 6, "missing_cells_ratio": 0.0, "duplicate_row_count": 0, "pii_detected": [], "high_correlation_pairs": []},
+        "missing_summary": [],
+        "numeric_profiles": [],
+        "feature_journey": [],
+        "feature_ab_test": {"lift_pct": 2.0, "folds_won_by_b": 4, "conclusion": "B Win"},
+        "xgboost_shap_analysis": shap_analysis,
+        "ml_scout": {"best_model": "XGBoost", "task_type": "Classification", "top_features": [("feat_0", 0.5)], "leaderboard": []}
+    }
+
+    # 1. Test Excel Report Builder with native plots
+    excel_path = os.path.join(out_dir, "test_report.xlsx")
+    excel_builder = ExcelReportBuilder()
+    excel_builder.build_report(audit_data, excel_path, native_plots=native_plots)
+    assert os.path.exists(excel_path)
+
+    wb = openpyxl.load_workbook(excel_path)
+    assert "1차_피처분석_SHAP" in wb.sheetnames
+    assert len(wb["1차_피처분석_SHAP"]._images) == 2
+
+    # 2. Test PPTX Deck Builder with native plots in Slide 2
+    pptx_path = os.path.join(out_dir, "test_deck.pptx")
+    deck_builder = PptxDeckBuilder()
+    deck_builder.build_deck(audit_data, pptx_path)
+    assert os.path.exists(pptx_path)
+
+    prs = Presentation(pptx_path)
+    slide2_pictures = [s for s in prs.slides[1].shapes if s.shape_type == 13]
+    assert len(slide2_pictures) == 2

@@ -28,6 +28,7 @@ from src.pipeline.code_forge import CodeForge
 from src.ml_scout.engine import MLScoutEngine
 from src.presenter.pptx_builder import PptxDeckBuilder
 from src.presenter.html_builder import HtmlReportBuilder
+from src.presenter.excel_builder import ExcelReportBuilder
 
 def run_analyzer(
     db_url: str,
@@ -165,7 +166,14 @@ def run_analyzer(
         print(f"[OK] 데이터 동결 및 무결성 해시 매니페스트 저장: {os.path.join(export_path, 'frozen_data', 'data_manifest.json')}")
         print(f"[OK] 모델 완벽 재현 검증 스크립트 생성: {os.path.join(export_path, 'reproduce.py')}")
 
-    # 6. Build Audit Log (Single Source of Truth)
+    # 6. Export Library Native Plots & Build Audit Log (Single Source of Truth)
+    charts_dir = os.path.join(out_dir, "charts")
+    if pipeline.xgb_scout:
+        native_plots = pipeline.xgb_scout.export_native_plots(charts_dir)
+        if pipeline.xgb_shap_analysis:
+            pipeline.xgb_shap_analysis["native_plots"] = native_plots
+        print(f"[OK] 라이브러리 공식 도식화 플롯 추출 완료: {list(native_plots.keys())}")
+
     print("\n[Step 6] 단일 진실 공급원(SSOT) 감사 로그 생성 중...")
     checksum_raw = hashlib.sha256(str(df.head(100).to_dict()).encode("utf-8")).hexdigest()
     audit_data = {
@@ -205,8 +213,8 @@ def run_analyzer(
         json.dump(audit_data, f, indent=2, ensure_ascii=False)
     print(f"[OK] 감사 로그 저장 완료: {audit_json_path}")
 
-    # 7. Render Essential 5-Slide Visual Presentations (PPTX & HTML)
-    print("\n[Step 7] 도식화/차트 중심 필수 5장 장표(PPTX) & 인터랙티브 리포트(HTML) 렌더링 중...")
+    # 7. Render Essential 5-Slide Visual Presentations, HTML & Multi-Sheet Excel Report
+    print("\n[Step 7] 도식화/차트 중심 장표(PPTX), 인터랙티브 리포트(HTML) & 정밀 엑셀(XLSX) 렌더링 중...")
     pptx_path = os.path.join(out_dir, f"{table_name}_presentation_deck.pptx")
     pptx_builder = PptxDeckBuilder()
     pptx_builder.build_deck(audit_data, pptx_path)
@@ -214,6 +222,10 @@ def run_analyzer(
     html_path = os.path.join(out_dir, f"{table_name}_report.html")
     html_builder = HtmlReportBuilder()
     html_builder.build_report(audit_data, html_path)
+
+    excel_path = os.path.join(out_dir, f"{table_name}_analysis_report.xlsx")
+    excel_builder = ExcelReportBuilder()
+    excel_builder.build_report(audit_data, excel_path, native_plots=audit_data.get("xgboost_shap_analysis", {}).get("native_plots"))
 
     print("\n" + "=" * 80)
     print("[SUCCESS] MLE Forge (ML 엔지니어 자동화 도구) 모든 산출물이 생성되었습니다!")
@@ -228,6 +240,7 @@ def run_analyzer(
     print(f"2. 단일 진실 공급원 감사 로그 JSON: {os.path.abspath(audit_json_path)}")
     print(f"3. 필수 5장 비주얼 모델 진단 PPTX: {os.path.abspath(pptx_path)}")
     print(f"4. 반응형 기술 감사 HTML 대시보드: {os.path.abspath(html_path)}")
+    print(f"5. 라이브러리 공식 도식화 탑재 4개 시트 엑셀 분석 리포트: {os.path.abspath(excel_path)}")
     print("=" * 80)
 
 

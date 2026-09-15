@@ -200,14 +200,34 @@ class PptxDeckBuilder:
             total_slides=5
         )
 
-        # Left Column: SHAP Importance Chart
-        chart_shap_path = os.path.join(charts_dir, "shap_summary_chart.png")
-        self.chart_gen.generate_shap_summary_chart(shap_res, chart_shap_path)
-        if os.path.exists(chart_shap_path):
-            s2.shapes.add_picture(chart_shap_path, Inches(0.8), Inches(1.5), Inches(6.0), Inches(4.15))
+        native_plots = shap_res.get("native_plots", {})
+        shap_beeswarm_path = native_plots.get("shap_beeswarm")
+        xgb_importance_path = native_plots.get("xgb_importance")
 
-        # Right Column: Insights, Directions & Recommendations Card
-        sh_card = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.5), Inches(5.4), Inches(4.15))
+        # Left Column: Official SHAP Beeswarm Plot (fallback to generated chart)
+        chart_shap_path = os.path.join(charts_dir, "shap_summary_chart.png")
+        if not (shap_beeswarm_path and os.path.exists(shap_beeswarm_path)):
+            self.chart_gen.generate_shap_summary_chart(shap_res, chart_shap_path)
+            target_left_chart = chart_shap_path
+        else:
+            target_left_chart = shap_beeswarm_path
+
+        if os.path.exists(target_left_chart):
+            s2.shapes.add_picture(target_left_chart, Inches(0.8), Inches(1.5), Inches(5.8), Inches(4.15))
+
+        # Right Column: Official XGBoost Feature Importance Plot + Insights Card
+        has_xgb_chart = bool(xgb_importance_path and os.path.exists(xgb_importance_path))
+
+        if has_xgb_chart:
+            # 1. Native XGBoost Importance Picture (Top)
+            s2.shapes.add_picture(xgb_importance_path, Inches(6.8), Inches(1.5), Inches(5.73), Inches(2.1))
+
+            # 2. Insights & Recommendations Card (Bottom)
+            sh_card = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.8), Inches(3.68), Inches(5.73), Inches(1.97))
+        else:
+            # Full-height Insights Card
+            sh_card = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.8), Inches(1.5), Inches(5.73), Inches(4.15))
+
         sh_card.fill.solid()
         sh_card.fill.fore_color.rgb = self.c_card_bg
         sh_card.line.color.rgb = RGBColor(0xE2, 0xE8, 0xF0)
@@ -216,31 +236,31 @@ class PptxDeckBuilder:
 
         sp1 = stf.paragraphs[0]
         sp1.text = "🎯 1차 피처 탐색 인텔리전스 (XGBoost+TreeSHAP)"
-        sp1.font.size = Pt(11)
+        sp1.font.size = Pt(10 if has_xgb_chart else 11)
         sp1.font.bold = True
         sp1.font.color.rgb = self.c_primary
 
         sp2 = stf.add_paragraph()
-        sp2.text = "\n1. 핵심 지배 변수 및 영향 방향성"
-        sp2.font.size = Pt(10)
+        sp2.text = "1. 핵심 지배 변수 및 영향 방향성"
+        sp2.font.size = Pt(9 if has_xgb_chart else 10)
         sp2.font.bold = True
         sp2.font.color.rgb = self.c_primary
 
         top_f = shap_res.get("top_drivers_summary", [])
         if top_f:
-            for item in top_f[:3]:
+            for item in top_f[:2 if has_xgb_chart else 3]:
                 sp_item = stf.add_paragraph()
                 sp_item.text = f"• [{item.get('direction', 'Positive')}] {item['feature']} (기여율 {item['impact_pct']}%): {item.get('interpretation', '')}"
-                sp_item.font.size = Pt(8.5)
+                sp_item.font.size = Pt(8.0)
                 sp_item.font.color.rgb = self.c_text_dark
         else:
             sp_item = stf.add_paragraph()
             sp_item.text = "• 수치형 및 범주형 변수의 균등한 영향력 분포"
-            sp_item.font.size = Pt(8.5)
+            sp_item.font.size = Pt(8.0)
 
         sp3 = stf.add_paragraph()
-        sp3.text = "\n2. 노이즈 변수 및 차기 피처 합성 제언"
-        sp3.font.size = Pt(10)
+        sp3.text = "2. 노이즈 변수 및 차기 피처 합성 제언"
+        sp3.font.size = Pt(9 if has_xgb_chart else 10)
         sp3.font.bold = True
         sp3.font.color.rgb = self.c_primary
 
@@ -253,21 +273,21 @@ class PptxDeckBuilder:
             n_names = ", ".join([n["feature"] for n in noise_items[:3]])
             sp_n = stf.add_paragraph()
             sp_n.text = f"• ⚠️ 노이즈 의심: {n_names} (기여도 < 1.5% -> 모델 경량화 제외 권고)"
-            sp_n.font.size = Pt(8.5)
+            sp_n.font.size = Pt(8.0)
             sp_n.font.color.rgb = self.c_warning
 
         if ratios:
             r0 = ratios[0]
             sp_r = stf.add_paragraph()
             sp_r.text = f"• 💡 파생 비율 추천: {r0['suggested_name']} = {r0['formula']}"
-            sp_r.font.size = Pt(8.5)
+            sp_r.font.size = Pt(8.0)
             sp_r.font.color.rgb = self.c_accent
 
         if logs:
             l0 = logs[0]
             sp_l = stf.add_paragraph()
             sp_l.text = f"• 💡 왜도 보정 추천: {l0['suggested_name']} (왜도 {l0.get('skewness', 0):.2f})"
-            sp_l.font.size = Pt(8.5)
+            sp_l.font.size = Pt(8.0)
             sp_l.font.color.rgb = self.c_success
 
         # Bottom Action Bar
