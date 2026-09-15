@@ -118,6 +118,11 @@ def run_analyzer(
     print(f"[OK] 전처리 파이프라인 {len(lineage_events)}단계 적용 완료")
     if ab_res:
         print(f"[OK] 피처 A/B 테스트 완료: Baseline 대비 실험군 성능 리프트 +{ab_res.get('lift_pct')}% ({ab_res.get('folds_won_by_b')} 폴드 승리)")
+    if pipeline.xgb_shap_analysis:
+        xgb_info = pipeline.xgb_shap_analysis
+        top_names = [f["feature"] for f in xgb_info.get("top_drivers_summary", [])[:3]]
+        noise_cnt = len(xgb_info.get("noise_candidates", []))
+        print(f"[OK] 1차 피처 분석 완료 (XGBoost+TreeSHAP): Baseline {xgb_info.get('baseline_metric')} {xgb_info.get('baseline_score')} | Top 변수: {', '.join(top_names)} | 노이즈 의심: {noise_cnt}건")
     print(f"[OK] Train 세트 크기: {X_train.shape} | Test 세트 크기: {X_test.shape}")
 
     # 4. AutoML Model Scouting & Lifecycle Roadmap
@@ -188,6 +193,7 @@ def run_analyzer(
         "feature_journey": lineage_events,
         "feature_ab_test": ab_res,
         "feature_synthesis_audit": pipeline.synthesis_audit,
+        "xgboost_shap_analysis": pipeline.xgb_shap_analysis,
         "missing_governance_log": pipeline.missing_gov.governance_log_,
         "ml_scout": ml_results,
         "reproducibility_manifest": code_forge.last_manifest
@@ -199,8 +205,8 @@ def run_analyzer(
         json.dump(audit_data, f, indent=2, ensure_ascii=False)
     print(f"[OK] 감사 로그 저장 완료: {audit_json_path}")
 
-    # 7. Render Essential 4-Slide Visual Presentations (PPTX & HTML)
-    print("\n[Step 7] 도식화/차트 중심 필수 4장 장표(PPTX) & 인터랙티브 리포트(HTML) 렌더링 중...")
+    # 7. Render Essential 5-Slide Visual Presentations (PPTX & HTML)
+    print("\n[Step 7] 도식화/차트 중심 필수 5장 장표(PPTX) & 인터랙티브 리포트(HTML) 렌더링 중...")
     pptx_path = os.path.join(out_dir, f"{table_name}_presentation_deck.pptx")
     pptx_builder = PptxDeckBuilder()
     pptx_builder.build_deck(audit_data, pptx_path)
@@ -220,7 +226,7 @@ def run_analyzer(
     print(f"   • 프로덕션 컨테이너: {os.path.join(os.path.abspath(export_path), 'Dockerfile')}")
     print(f"   • 자동화 테스트 클라이언트: {os.path.join(os.path.abspath(export_path), 'test_client.py')}")
     print(f"2. 단일 진실 공급원 감사 로그 JSON: {os.path.abspath(audit_json_path)}")
-    print(f"3. 필수 4장 비주얼 모델 진단 PPTX: {os.path.abspath(pptx_path)}")
+    print(f"3. 필수 5장 비주얼 모델 진단 PPTX: {os.path.abspath(pptx_path)}")
     print(f"4. 반응형 기술 감사 HTML 대시보드: {os.path.abspath(html_path)}")
     print("=" * 80)
 

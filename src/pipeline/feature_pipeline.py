@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import RobustScaler
 from src.pipeline.feature_synthesizer import MissingGovernance, SmartFeatureSynthesizer
 from src.pipeline.feature_ab_tester import FeatureABTester
+from src.pipeline.xgboost_feature_scout import XGBoostFeatureScout
 
 
 class LineageTracker:
@@ -69,6 +70,8 @@ class FeaturePipeline:
         self.ab_test_result: Dict[str, Any] = {}
         self.synthesis_audit: List[Dict[str, Any]] = []
         self.raw_input_columns_: List[str] = []
+        self.xgb_shap_analysis: Dict[str, Any] = {}
+        self.xgb_scout: Optional[XGBoostFeatureScout] = None
 
     def fit_transform(
         self,
@@ -82,7 +85,8 @@ class FeaturePipeline:
         for col in df_clean.columns:
             if col != self.target_column:
                 is_id_or_name = any(k in col.lower() for k in ["id", "code", "name", "sn", "num", "token"])
-                if (is_id_or_name and df_clean[col].nunique() >= 0.5 * len(df_clean)) or df_clean[col].nunique() == len(df_clean):
+                is_float = pd.api.types.is_float_dtype(df_clean[col])
+                if (is_id_or_name and df_clean[col].nunique() >= 0.5 * len(df_clean)) or (not is_float and df_clean[col].nunique() == len(df_clean)):
                     cols_to_drop.append(col)
                     self.dropped_features_log.append({
                         "column": col,
@@ -135,6 +139,17 @@ class FeaturePipeline:
             columns=X_train_base.columns,
             index=X_train_base.index
         )
+
+        # -------------------------------------------------------------
+        # 1.5 1st-Stage Feature Scout (XGBoost & TreeSHAP)
+        # -------------------------------------------------------------
+        if y_train is not None:
+            self.xgb_scout = XGBoostFeatureScout(random_seed=self.random_seed)
+            self.xgb_shap_analysis = self.xgb_scout.analyze(
+                X_train_base, y_train, task_type=task_type
+            )
+        else:
+            self.xgb_shap_analysis = {}
 
         # -------------------------------------------------------------
         # 2. Build Engineered (Group B): Missing Governance + Synthesis
