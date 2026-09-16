@@ -1,0 +1,63 @@
+# ==============================================================================
+# Domain Recipe: University Student Personalized Recommendation & Academic Care
+# Target Customer: 동국대학교 등 고등교육기관 교무처/학생지원처/상담센터
+# ==============================================================================
+domain_id: "university_student"
+domain_name: "대학 학사 맞춤형 추천 & 학생 위기 선제 케어"
+description: "비교과 역량 보완, 전공 이수체계 맞춤 추천, 학사경고 조기 감지 및 전문 상담 매칭"
+industry: "Higher Education"
+version: "1.0.0"
+
+# Target & ML Task Definition
+task_type: "Classification"
+target_column: "academic_crisis"
+positive_class_label: "위험군 (Crisis/Warning)"
+
+# Objective Weights (Multi-Criteria Optimization)
+weights:
+  crisis_care: 0.40          # 학사위기 선제 예방 케어 가중치
+  competency_gap: 0.30       # 비교과 핵심 역량 갭 보완 가중치
+  major_track: 0.30          # 전공 트랙 및 선수과목 이수 최적화 가중치
+
+# Domain Guardrails & Academic Regulations
+guardrails:
+  max_credits_normal: 18     # 일반 학생 정규 수강 상한 학점
+  max_credits_honor: 21      # 직전 학기 평점 4.0 이상 우수 학생 수강 상한
+  max_credits_warning: 15    # 학사경고 및 위기군 수강 제한 학점
+  prerequisite_mandatory: true # 선수과목 미이수 교과목 강제 배제 여부
+  min_tutoring_hours_on_warning: 10 # 위기군 튜터링 최소 배정 시간
+
+# Essential Key Features & Synthesis Formulas
+key_features:
+  - name: "crisis_interaction_idx"
+    description: "LMS 로그인 일수(<=8) x 비교과 이수시간(0h) 비선형 위기 지수"
+    formula: "np.where((lms_login_days <= 8) & (extracurricular_hours == 0), 1.0, 0.0)"
+    importance_rank: 1
+  - name: "gpa_drop_rate"
+    description: "직전 학기 대비 평점 급락률 (Micro-Drop 감지)"
+    formula: "prev_semester_gpa - curr_semester_gpa"
+    importance_rank: 2
+  - name: "competency_gap_score"
+    description: "전공별 목표 역량 대비 학생의 부족분 갭 스코어"
+    importance_rank: 3
+  - name: "lms_login_days"
+    description: "월간 LMS 학습관리시스템 접속 일수"
+    importance_rank: 4
+  - name: "attendance_rate"
+    description: "교과목 출석률 (%)"
+    importance_rank: 5
+
+# Prescriptive Action Templates
+prescriptions:
+  high_risk:
+    alert_level: "EMERGENCY"
+    action: "교무처 전담 튜터 1:1 학습클리닉 매칭 + 학생생활상담센터 필수 면담 3회 배정"
+    guardrail_trigger: "수강 상한 15학점 제한 발동"
+  medium_risk:
+    alert_level: "WARNING"
+    action: "DreamPATH 비교과 역량 보완 캠프 및 SW 기초 튜터링 추천"
+    guardrail_trigger: "학업 점검 리포트 월 1회 지도교수 전달"
+  normal:
+    alert_level: "STABLE"
+    action: "전공심화 산학협력 인턴십 챌린지 및 캡스톤디자인 연계 추천"
+    guardrail_trigger: "수강 상한 21학점 특별 인출 자격 부여"

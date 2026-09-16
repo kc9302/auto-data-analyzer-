@@ -69,6 +69,14 @@ class ServingPackager:
                 f_out.write(f_in.read())
             generated_files["drift_monitor"] = dm_dst
 
+        # 2-2. Export self-contained slack_notifier.py
+        sn_src = os.path.join(os.path.dirname(__file__), "slack_notifier.py")
+        sn_dst = os.path.join(export_dir, "slack_notifier.py")
+        if os.path.exists(sn_src):
+            with open(sn_src, "r", encoding="utf-8") as f_in, open(sn_dst, "w", encoding="utf-8") as f_out:
+                f_out.write(f_in.read())
+            generated_files["slack_notifier"] = sn_dst
+
         # 3. Infer Feature Types and Default Values
         import re
 

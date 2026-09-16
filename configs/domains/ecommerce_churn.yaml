@@ -1,0 +1,61 @@
+# ==============================================================================
+# Domain Recipe: E-commerce Customer Churn Prevention & VIP Personalization
+# Target Customer: 이커머스 쇼핑몰 마케팅팀, CRM 운영팀, 그로스팀
+# ==============================================================================
+domain_id: "ecommerce_churn"
+domain_name: "이커머스 고객 이탈 방지 & VIP 개인화 추천"
+description: "RFM 기반 이탈 징후 포착, 장바구니 방치 감지, 객단가 및 재구매 전환율 극대화"
+industry: "E-Commerce & Retail"
+version: "1.0.0"
+
+# Target & ML Task Definition
+task_type: "Classification"
+target_column: "is_churned"
+positive_class_label: "이탈 위험 고객 (Churner)"
+
+# Objective Weights (Multi-Criteria Optimization)
+weights:
+  churn_prevention: 0.45     # 이탈 방지 쿠폰/리텐션 가중치
+  purchase_propensity: 0.35  # 교차/업셀링 구매 전환 확률 가중치
+  margin_contribution: 0.20  # 상품 마진 기여도 가중치
+
+# Domain Guardrails & Marketing Regulations
+guardrails:
+  min_inventory_stock: 5     # 재고 5개 미만 품절 임박 상품 추천 제외
+  max_discount_rate: 0.30    # 최대 할인율 30% 상한 제한
+  suppress_notification_days: 3 # 동일 고객 메시지 피로도 방지 (3일간 재발송 차단)
+  min_order_amount_krw: 10000 # 추천 쿠폰 적용 최소 주문 금액
+
+# Essential Key Features & Synthesis Formulas
+key_features:
+  - name: "recency_days"
+    description: "마지막 구매 후 경과 일수"
+    importance_rank: 1
+  - name: "cart_abandonment_rate"
+    description: "장바구니 담은 후 미구매 이탈 비율"
+    formula: "abandoned_carts / total_cart_sessions"
+    importance_rank: 2
+  - name: "monetary_total_90d"
+    description: "최근 90일간 누적 실결제 금액"
+    importance_rank: 3
+  - name: "frequency_orders_90d"
+    description: "최근 90일간 주문 횟수"
+    importance_rank: 4
+  - name: "session_duration_sec"
+    description: "평균 세션 체류 시간 (초)"
+    importance_rank: 5
+
+# Prescriptive Action Templates
+prescriptions:
+  high_risk:
+    alert_level: "EMERGENCY"
+    action: "장바구니 리마인드 15% 시크릿 할인 쿠폰 SMS 실시간 자동 발송"
+    guardrail_trigger: "단기 24시간 유효기간 설정"
+  medium_risk:
+    alert_level: "WARNING"
+    action: "관심 카테고리 베스트 상품 & 무료배송 쿠폰 푸시 발송"
+    guardrail_trigger: "주 1회 리텐션 캠페인 등록"
+  normal:
+    alert_level: "STABLE"
+    action: "VIP 전용 얼리액세스 신상품 및 프리미엄 멤버십 제안"
+    guardrail_trigger: "객단가 1.5배 업셀링 세트 구성"

@@ -1,0 +1,61 @@
+# ==============================================================================
+# Domain Recipe: FinTech Credit Delinquency Prediction & Dynamic Limit Optimization
+# Target Customer: 핀테크 대출 심사팀, 리스크 관리팀, 여신 운영팀
+# ==============================================================================
+domain_id: "fintech_credit_risk"
+domain_name: "핀테크 신용 연체 예측 & 대출 한도 심사"
+description: "다중 채무 연체 조기 경보, DSR 규제 가드레일, AI 기반 맞춤 금리/한도 승인"
+industry: "Banking & FinTech"
+version: "1.0.0"
+
+# Target & ML Task Definition
+task_type: "Classification"
+target_column: "is_delinquent"
+positive_class_label: "연체 위험 차주 (Default/Delinquent)"
+
+# Objective Weights (Multi-Criteria Optimization)
+weights:
+  default_prevention: 0.50   # 대손 충당금 방어 및 부실채권 방지 가중치
+  repayment_capacity: 0.30   # 상환 여력 및 소득 안정성 가중치
+  loyalty_bonus: 0.20        # 주거래 고객 유지 및 마진 가중치
+
+# Domain Guardrails & Financial Regulations
+guardrails:
+  max_dsr_ratio: 0.40        # 금융당국 DSR 상한 40% 법정 가드레일
+  min_credit_score: 600      # 최저 취급 신용평점 기준
+  max_loan_limit_krw: 100000000 # 개인 신용대출 최대 한도 (1억원)
+  cooldown_days_after_reject: 30 # 부결 후 재신청 냉각 기간 30일
+
+# Essential Key Features & Synthesis Formulas
+key_features:
+  - name: "dsr_ratio"
+    description: "총부채원리금상환비율 (DSR)"
+    formula: "annual_debt_service / annual_income"
+    importance_rank: 1
+  - name: "overdue_history_count"
+    description: "과거 3개년 연체 이력 건수"
+    importance_rank: 2
+  - name: "credit_score"
+    description: "KCB/NICE 종합 신용평점"
+    importance_rank: 3
+  - name: "card_spending_stability"
+    description: "월별 신용카드 사용액 변동 계수 (CV)"
+    importance_rank: 4
+  - name: "debt_to_income_ratio"
+    description: "총 대출 잔액 대비 연소득 비율"
+    importance_rank: 5
+
+# Prescriptive Action Templates
+prescriptions:
+  high_risk:
+    alert_level: "EMERGENCY"
+    action: "신규 대출 한도 일시 동결 및 원리금 분할상환 전환 상담"
+    guardrail_trigger: "DSR 40% 초과 차단 발동"
+  medium_risk:
+    alert_level: "WARNING"
+    action: "중금리 대환대출 안내 및 한도 감액 (기존 한도의 70%)"
+    guardrail_trigger: "월간 신용 모니터링 주기를 주 단위로 단축"
+  normal:
+    alert_level: "STABLE"
+    action: "우대금리 0.3%p 인하 및 마이너스 통장 한도 증액 제안"
+    guardrail_trigger: "원클릭 즉시 실행 승인"

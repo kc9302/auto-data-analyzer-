@@ -183,6 +183,27 @@ with st.sidebar:
             pass
 
     st.divider()
+    st.markdown("#### 🎯 비즈니스 도메인 레시피")
+    try:
+        from src.pipeline.recipe_manager import DomainRecipeManager
+        rm = DomainRecipeManager()
+        recipes = rm.list_recipes()
+        if recipes:
+            recipe_map = {r["domain_id"]: f"{r['domain_name']} ({r['industry']})" for r in recipes}
+            chosen_recipe_id = st.selectbox(
+                "도메인 비즈니스 룰 & 가드레일",
+                options=list(recipe_map.keys()),
+                format_func=lambda x: recipe_map[x],
+                index=0
+            )
+            if chosen_recipe_id:
+                active_recipe = rm.load_recipe(chosen_recipe_id)
+                st.caption(f"💡 **목표:** {active_recipe.get('description', '')}")
+                st.session_state["active_recipe"] = active_recipe
+    except Exception:
+        pass
+
+    st.divider()
     run_btn = st.button("🚀 원클릭 분석 & 장표 생성", type="primary", use_container_width=True)
 
 # -------------------------------------------------------------
@@ -830,6 +851,54 @@ if "audit_data" in st.session_state:
                         "변수 유형": info["type"]
                     })
                 st.dataframe(pd.DataFrame(rows), use_container_width=True)
+
+            # Slack & Webhook Real-Time Alert Center
+            st.divider()
+            st.markdown("#### 📢 MLOps 실시간 웹훅 (Slack / MS Teams) 알림 센터")
+            s_col1, s_col2 = st.columns([2.5, 1])
+            with s_col1:
+                slack_url = st.text_input(
+                    "슬랙 Incoming Webhook URL (미입력 시 안전한 Mock 콘솔 모드로 동작):",
+                    value=os.environ.get("SLACK_WEBHOOK_URL", ""),
+                    placeholder="https://hooks.slack.com/services/...",
+                    type="password",
+                    key="slack_webhook_input"
+                )
+            with s_col2:
+                slack_ch = st.text_input("알림 대상 채널:", value=os.environ.get("SLACK_CHANNEL", "#mlops-alerts"), key="slack_ch_input")
+
+            st.markdown("##### 🚀 실시간 알림 발송 시뮬레이션")
+            n1, n2, n3 = st.columns(3)
+            from src.serving.slack_notifier import SlackNotifier
+            notifier = SlackNotifier(webhook_url=slack_url if slack_url.strip() else None, channel=slack_ch)
+
+            with n1:
+                if st.button("🏆 [AutoML] 학습 완료 알림 발송", use_container_width=True):
+                    res = notifier.notify_training_complete(data)
+                    if res.get("status") == "success":
+                        st.success("✓ 슬랙으로 모델 학습 완료 리포트가 전송되었습니다!")
+                    else:
+                        st.info(f"💡 [Mock 발송 완료] Block Kit 카드가 콘솔/로그에 안전하게 기록되었습니다. (상태: {res.get('status')})")
+            with n2:
+                if st.button("🚨 [긴급] 학사위기 학생 경보 발송", use_container_width=True):
+                    res = notifier.notify_crisis_detected(
+                        student_id="2024110001",
+                        risk_score=0.784,
+                        risk_type="학사위기 주의군 (LMS 6일, 출석 78%)",
+                        prescription="교무처 전담 튜터 1:1 학습클리닉 매칭 + 학생생활상담센터 필수 면담 3회 배정",
+                        student_name="김동국 (컴퓨터인공지능전공 1학년)"
+                    )
+                    if res.get("status") == "success":
+                        st.success("✓ 학생지원센터 및 상담센터 채널로 긴급 위기 알림이 전송되었습니다!")
+                    else:
+                        st.info(f"💡 [Mock 발송 완료] 학사위기 긴급 카드가 정상 발송 시뮬레이션되었습니다. (상태: {res.get('status')})")
+            with n3:
+                if st.button("📡 [경보] 데이터 드리프트 알림 발송", use_container_width=True):
+                    res = notifier.notify_drift_alert(drift_res)
+                    if res.get("status") == "success":
+                        st.success("✓ MLOps 관제 채널로 실시간 드리프트 경보가 전송되었습니다!")
+                    else:
+                        st.info(f"💡 [Mock 발송 완료] 데이터 드리프트 경보 카드가 기록되었습니다. (상태: {res.get('status')})")
         else:
             st.info("파이프라인이 실행되면 실시간 데이터 드리프트 모니터가 자동으로 가동됩니다.")
 
