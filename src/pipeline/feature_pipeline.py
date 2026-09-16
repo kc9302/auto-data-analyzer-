@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.preprocessing import RobustScaler
 from src.pipeline.feature_synthesizer import MissingGovernance, SmartFeatureSynthesizer
 from src.pipeline.feature_ab_tester import FeatureABTester
@@ -49,12 +49,14 @@ class FeaturePipeline:
         target_column: Optional[str] = None, 
         pii_columns: Optional[List[str]] = None,
         test_size: float = 0.2,
-        random_seed: int = 42
+        random_seed: int = 42,
+        group_column: Optional[str] = None
     ):
         self.target_column = target_column
         self.pii_columns = pii_columns or []
         self.test_size = test_size
         self.random_seed = random_seed
+        self.group_column = group_column
         self.tracker = LineageTracker()
 
         # Advanced sub-modules
@@ -76,14 +78,16 @@ class FeaturePipeline:
     def fit_transform(
         self,
         df: pd.DataFrame,
-        task_type: str = "Binary_Classification"
+        task_type: str = "Binary_Classification",
+        group_column: Optional[str] = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         df_clean = df.copy()
 
         # Step 0: Isolate PII & ID columns
+        actual_group_col = group_column or self.group_column
         cols_to_drop = list(self.pii_columns)
         for col in df_clean.columns:
-            if col != self.target_column:
+            if col != self.target_column and col != actual_group_col:
                 is_id_or_name = any(k in col.lower() for k in ["id", "code", "name", "sn", "num", "token"])
                 is_float = pd.api.types.is_float_dtype(df_clean[col])
                 if (is_id_or_name and df_clean[col].nunique() >= 0.5 * len(df_clean)) or (not is_float and df_clean[col].nunique() == len(df_clean)):
@@ -95,18 +99,45 @@ class FeaturePipeline:
 
         cols_to_drop = list(set(cols_to_drop))
         for col in cols_to_drop:
-            if col in df_clean.columns:
+            if col in df_clean.columns and col != actual_group_col:
                 self.dropped_features_log.append({
                     "column": col,
                     "reason": "PII privacy policy isolation"
                 })
 
-        X_raw = df_clean.drop(columns=cols_to_drop + ([self.target_column] if self.target_column else []))
+        # Save group series before dropping from features
+        group_series = df_clean[actual_group_col] if (actual_group_col and actual_group_col in df_clean.columns) else None
+        
+        feature_drop_cols = cols_to_drop + ([self.target_column] if self.target_column else [])
+        if actual_group_col and actual_group_col not in feature_drop_cols:
+            feature_drop_cols.append(actual_group_col)
+
+        X_raw = df_clean.drop(columns=[c for c in feature_drop_cols if c in df_clean.columns])
         y = df_clean[self.target_column] if self.target_column else None
         self.raw_input_columns_ = list(X_raw.columns)
 
         # Train/Test Split FIRST (Strict Leakage Prevention)
-        if y is not None:
+        if group_series is not None and len(group_series.unique()) > 1:
+            # Group Leakage Prevention: GroupShuffleSplit ensures no cross-split leakage for same group/student
+            gss = GroupShuffleSplit(n_splits=1, test_size=self.test_size, random_state=self.random_seed)
+            train_idx, test_idx = next(gss.split(X_raw, y, groups=group_series))
+            X_train_raw = X_raw.iloc[train_idx].copy()
+            X_test_raw = X_raw.iloc[test_idx].copy()
+            y_train = y.iloc[train_idx].copy() if y is not None else None
+            y_test = y.iloc[test_idx].copy() if y is not None else None
+            self.tracker.record_step(
+                step_id=1,
+                step_name="Group Leakage-Free Split",
+                strategy="GroupShuffleSplit",
+                features_affected=[actual_group_col],
+                stats_before={"total_groups": int(group_series.nunique())},
+                stats_after={
+                    "train_groups": int(group_series.iloc[train_idx].nunique()),
+                    "test_groups": int(group_series.iloc[test_idx].nunique())
+                },
+                rationale=f"동일 {actual_group_col}의 복수 학기/시계열 데이터가 Train과 Val에 분산되는 Data Snooping 누수를 100% 원천 차단"
+            )
+        elif y is not None:
             stratify = y if y.nunique() <= 10 else None
             X_train_raw, X_test_raw, y_train, y_test = train_test_split(
                 X_raw, y, test_size=self.test_size, random_state=self.random_seed, stratify=stratify

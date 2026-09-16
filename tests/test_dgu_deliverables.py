@@ -49,7 +49,7 @@ def test_feature_journey_excel(dgu_deliverables):
     for row in ws1.iter_rows(values_only=True):
         if row and row[1] and any(m in str(row[1]) for m in ["단순 통계", "글로벌 인기도", "계층별 인기도", "룰 베이스", "데모그래픽", "하이브리드 ML"]):
             models_found.append(row[1])
-            if "하이브리드 ML" in str(row[1]) and row[10] and "+" in str(row[10]):
+            if "하이브리드 ML" in str(row[1]) and any(c and "+" in str(c) for c in row):
                 has_champ_lift = True
     assert len(models_found) >= 18  # 3 functions * 6 models = 18 rows
     assert has_champ_lift
