@@ -25,7 +25,8 @@ class AutoDataAnalyzer:
 
     def analyze(
         self,
-        data_source: str,
+        data_source: Optional[str] = None,
+        config_path: Optional[str] = None,
         target_col: Optional[str] = None,
         table_name: Optional[str] = None,
         query: Optional[str] = None,
@@ -34,17 +35,35 @@ class AutoDataAnalyzer:
         """
         Runs the full profiling, feature engineering, AutoML tournament,
         and generates executive PPTX, XLSX, HTML, and serving packages.
-        Accepts database URLs (SQL) or direct file paths (Parquet, Excel, CSV, JSON).
+        Accepts database URLs (SQL), direct file paths, or a DB config file (.yaml / .json).
         """
+        from src.connectors.db_config_manager import DBConfigManager
+
+        cfg_data = {}
+        resolved_url = None
+        if config_path:
+            cfg_data = DBConfigManager.load_config(config_path)
+            resolved_url = DBConfigManager.resolve_connection_url(cfg_data)
+
+        source = data_source or resolved_url
+        if not source:
+            raise ValueError("data_source 또는 config_path 중 하나를 지정해야 합니다.")
+
+        t_name = table_name or cfg_data.get("table")
+        t_col = target_col or cfg_data.get("target")
+        q_str = query or cfg_data.get("query")
+        s_file = sql_file or cfg_data.get("sql_file")
+
         return run_analyzer(
-            db_url=data_source,
-            table_name=table_name,
-            target_col=target_col,
+            db_url=source,
+            table_name=t_name,
+            target_col=t_col,
             out_dir=self.output_dir,
             sample_threshold=self.sample_threshold,
-            query=query,
-            sql_file=sql_file
+            query=q_str,
+            sql_file=s_file
         )
+
 
     def analyze_dataframe(
         self,

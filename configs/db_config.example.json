@@ -1,0 +1,14 @@
+{
+  "_comment": "Auto Data Analyzer & ML Scout - Database Configuration Template",
+  "database": {
+    "engine": "postgresql",
+    "host": "192.168.1.100",
+    "port": 5432,
+    "database": "enterprise_dw",
+    "username": "readonly_user",
+    "password": "${DB_PASSWORD:-secret123}",
+    "schema": "public",
+    "table": "customers",
+    "target": "churn"
+  }
+}

@@ -22,7 +22,9 @@ if sys.platform == "win32":
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.connectors.safe_connector import SafeDBConnector
+from src.connectors.db_config_manager import DBConfigManager
 from src.profiler.fact_profiler import FactDataProfiler
+
 from src.pipeline.feature_pipeline import FeaturePipeline
 from src.pipeline.code_forge import CodeForge
 from src.ml_scout.engine import MLScoutEngine
@@ -262,31 +264,48 @@ def run_analyzer(
 
 def main():
     parser = argparse.ArgumentParser(description="Auto Data Analyzer & ML Scout - Universal Data & ML Automation")
+    parser.add_argument("--config", type=str, default=None, help="Path to DB Config File (.yaml or .json)")
     parser.add_argument("--db-url", type=str, default=None, help="Database Connection URL or File Path (e.g. sqlite:///data.db, data.parquet, data.csv, data.xlsx)")
     parser.add_argument("--file", type=str, default=None, help="Direct Path to Parquet, Excel (.xlsx), CSV, or JSON data file")
     parser.add_argument("--table", type=str, default=None, help="Target Table or Sheet Name")
     parser.add_argument("--target", type=str, default=None, help="Target Column Name for ML")
     parser.add_argument("--query", type=str, default=None, help="Direct Read-Only SQL Query String")
     parser.add_argument("--sql-file", type=str, default=None, help="Path to .sql File Containing Read-Only Query")
-    parser.add_argument("--out-dir", type=str, default="dist", help="Output Directory")
-    parser.add_argument("--sample-size", type=int, default=50000, help="Adaptive Sampling Threshold")
+    parser.add_argument("--out-dir", type=str, default=None, help="Output Directory")
+    parser.add_argument("--sample-size", type=int, default=None, help="Adaptive Sampling Threshold")
 
     args = parser.parse_args()
 
-    # Universal source resolution
-    source = args.file or args.db_url
+    # Load configuration from file if provided
+    cfg_data = {}
+    resolved_config_url = None
+    if args.config:
+        cfg_data = DBConfigManager.load_config(args.config)
+        resolved_config_url = DBConfigManager.resolve_connection_url(cfg_data)
+        print(f"[INFO] 설정 파일('{args.config}') 로드 완료 (대상 엔진: {cfg_data.get('engine', cfg_data.get('type', 'Unknown'))})")
+
+    # Universal source resolution: CLI args take precedence over config file
+    source = args.file or args.db_url or resolved_config_url
     if not source:
-        parser.error("데이터 소스를 지정해야 합니다. --db-url 또는 --file 옵션을 사용하세요.")
+        parser.error("데이터 소스를 지정해야 합니다. --config, --db-url, 또는 --file 옵션을 사용하세요.")
+
+    target_table = args.table or cfg_data.get("table")
+    target_col = args.target or cfg_data.get("target")
+    query_str = args.query or cfg_data.get("query")
+    sql_path = args.sql_file or cfg_data.get("sql_file")
+    out_dir = args.out_dir or cfg_data.get("out_dir", "dist")
+    sample_size = args.sample_size or cfg_data.get("sample_size", 50000)
 
     run_analyzer(
         db_url=source,
-        table_name=args.table,
-        target_col=args.target,
-        out_dir=args.out_dir,
-        sample_threshold=args.sample_size,
-        query=args.query,
-        sql_file=args.sql_file
+        table_name=target_table,
+        target_col=target_col,
+        out_dir=out_dir,
+        sample_threshold=sample_size,
+        query=query_str,
+        sql_file=sql_path
     )
+
 
 if __name__ == "__main__":
     main()

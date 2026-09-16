@@ -61,25 +61,64 @@ with st.sidebar:
     st.title("⚙️ DB 접속 & 파라미터")
     st.caption("Zero-Mutation / Read-Only 안전 접속이 기본 적용됩니다.")
 
+    from src.connectors.db_config_manager import DBConfigManager
+
     source_type = st.radio(
         "데이터 소스 선택",
-        options=["📁 CSV 파일 분석", "🗄️ 데이터베이스 URL 접속"],
-        horizontal=True
+        options=["⚙️ DB 설정 파일 (YAML/JSON)", "📁 로컬 파일 (CSV/Parquet/Excel)", "🗄️ DB URL 직접 입력"],
+        horizontal=False
     )
 
     db_url = ""
-    if source_type == "📁 CSV 파일 분석":
-        csv_mode = st.radio(
-            "CSV 소스 모드",
-            options=["기본 제공 고객 샘플 (sample_customers.csv)", "직접 CSV 파일 업로드"],
+    config_default_table = None
+    config_default_target = None
+
+    if source_type == "⚙️ DB 설정 파일 (YAML/JSON)":
+        cfg_mode = st.radio("설정 파일 소스", options=["템플릿 파일 선택 (configs/)", "직접 설정 파일 업로드 (.yaml/.json)"], label_visibility="collapsed")
+        if cfg_mode == "템플릿 파일 선택 (configs/)":
+            cfg_files = [f for f in os.listdir("configs") if f.endswith(".yaml") or f.endswith(".json")]
+            chosen_cfg = st.selectbox("사용할 설정 파일 선택", options=cfg_files, index=0 if cfg_files else None)
+            if chosen_cfg:
+                cfg_path = os.path.join("configs", chosen_cfg)
+                try:
+                    cfg_dict = DBConfigManager.load_config(cfg_path)
+                    db_url = DBConfigManager.resolve_connection_url(cfg_dict)
+                    config_default_table = cfg_dict.get("table")
+                    config_default_target = cfg_dict.get("target")
+                    st.success(f"✓ 설정 로드 완료: 엔진 `{cfg_dict.get('engine', cfg_dict.get('type', 'Unknown'))}`")
+                    with st.expander("🔍 설정 상세 보기 (보안 마스킹)", expanded=False):
+                        st.json(DBConfigManager.get_masked_summary(cfg_dict))
+                except Exception as ce:
+                    st.error(f"설정 파일 파싱 실패: {ce}")
+        else:
+            up_cfg = st.file_uploader("DB 설정 파일을 업로드하세요 (.yaml, .json)", type=["yaml", "yml", "json"])
+            if up_cfg is not None:
+                up_dir = os.path.join("data", "uploads")
+                os.makedirs(up_dir, exist_ok=True)
+                cfg_temp = os.path.join(up_dir, up_cfg.name)
+                with open(cfg_temp, "wb") as f:
+                    f.write(up_cfg.getbuffer())
+                try:
+                    cfg_dict = DBConfigManager.load_config(cfg_temp)
+                    db_url = DBConfigManager.resolve_connection_url(cfg_dict)
+                    config_default_table = cfg_dict.get("table")
+                    config_default_target = cfg_dict.get("target")
+                    st.success(f"✓ `{up_cfg.name}` 로드 성공 (엔진: {cfg_dict.get('engine', 'Unknown')})")
+                except Exception as ce:
+                    st.error(f"설정 파일 처리 실패: {ce}")
+
+    elif source_type == "📁 로컬 파일 (CSV/Parquet/Excel)":
+        file_mode = st.radio(
+            "파일 소스 모드",
+            options=["기본 고객 샘플 (sample_customers.csv)", "직접 데이터 파일 업로드 (CSV/Parquet/Excel)"],
             label_visibility="collapsed"
         )
-        if csv_mode == "기본 제공 고객 샘플 (sample_customers.csv)":
+        if file_mode == "기본 고객 샘플 (sample_customers.csv)":
             default_csv = os.path.join("data", "sample_customers.csv")
             db_url = default_csv
             st.info(f"💡 기본 5,000행 통신사 고객 이탈 샘플 데이터 (`{default_csv}`)")
         else:
-            uploaded_file = st.file_uploader("분석할 CSV 파일을 업로드하세요", type=["csv"])
+            uploaded_file = st.file_uploader("분석할 데이터 파일을 업로드하세요", type=["csv", "parquet", "xlsx", "xls", "json"])
             if uploaded_file is not None:
                 upload_dir = os.path.join("data", "uploads")
                 os.makedirs(upload_dir, exist_ok=True)
@@ -89,13 +128,14 @@ with st.sidebar:
                 db_url = temp_path
                 st.success(f"✓ 업로드 완료: `{uploaded_file.name}`")
             else:
-                st.warning("분석할 CSV 파일을 업로드해주세요.")
+                st.warning("분석할 데이터 파일을 업로드해주세요.")
     else:
         db_url = st.text_input(
             "데이터베이스 접속 URL",
             value="sqlite:///tests/data/sample_warehouse.db",
             help="SQLite, PostgreSQL, MySQL 등 SQLAlchemy 지원 접속 포맷"
         )
+
 
     # Initialize connector upon valid db_url
     connector = None
