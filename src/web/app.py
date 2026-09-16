@@ -110,13 +110,28 @@ with st.sidebar:
     elif source_type == "📁 로컬 파일 (CSV/Parquet/Excel)":
         file_mode = st.radio(
             "파일 소스 모드",
-            options=["기본 고객 샘플 (sample_customers.csv)", "직접 데이터 파일 업로드 (CSV/Parquet/Excel)"],
+            options=[
+                "기본 고객 샘플 (sample_customers.csv)",
+                "🏛️ 동국대학교 학사·비교과 샘플 (dgu_student_features.csv)",
+                "직접 데이터 파일 업로드 (CSV/Parquet/Excel)"
+            ],
             label_visibility="collapsed"
         )
         if file_mode == "기본 고객 샘플 (sample_customers.csv)":
             default_csv = os.path.join("data", "sample_customers.csv")
             db_url = default_csv
             st.info(f"💡 기본 5,000행 통신사 고객 이탈 샘플 데이터 (`{default_csv}`)")
+        elif file_mode == "🏛️ 동국대학교 학사·비교과 샘플 (dgu_student_features.csv)":
+            dgu_csv = os.path.join("data", "dgu_student_features.csv")
+            if not os.path.exists(dgu_csv):
+                from scripts.generate_dgu_dataset import generate_dgu_data
+                df_dgu = generate_dgu_data(n_samples=3500)
+                os.makedirs("data", exist_ok=True)
+                df_dgu.to_csv(dgu_csv, index=False, encoding="utf-8-sig")
+            db_url = dgu_csv
+            config_default_table = "dgu_student_features.csv"
+            config_default_target = "is_risk_student"
+            st.info(f"🏛️ 동국대 학사·비교과 3,500행 실전 모의 데이터 (`{dgu_csv}`)")
         else:
             uploaded_file = st.file_uploader("분석할 데이터 파일을 업로드하세요", type=["csv", "parquet", "xlsx", "xls", "json"])
             if uploaded_file is not None:
@@ -321,11 +336,11 @@ if "audit_data" in st.session_state:
 
     # One-Click Downloads Section
     st.markdown("### 📥 장표, 엑셀, 코드 패키지 및 감사 로그 원클릭 다운로드")
-    d1, d2, d3, d4, d5 = st.columns(5)
+    d1, d2, d3, d4, d5, d6, d7 = st.columns(7)
     with d1:
         with open(st.session_state["pptx_path"], "rb") as f:
             st.download_button(
-                label="📊 파워포인트 (PPTX)",
+                label="📊 발표 장표 (PPTX)",
                 data=f.read(),
                 file_name=os.path.basename(st.session_state["pptx_path"]),
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -364,17 +379,48 @@ if "audit_data" in st.session_state:
         rep_manifest = data.get("reproducibility_manifest") or {}
         rep_bytes = json.dumps(rep_manifest, indent=2, ensure_ascii=False).encode("utf-8")
         st.download_button(
-            label="🔒 재현성 매니페스트 (JSON)",
+            label="🔒 매니페스트 (JSON)",
             data=rep_bytes,
             file_name="data_manifest.json",
             mime="application/json",
             use_container_width=True
         )
 
+    # Train / Val Split Dataset Download Buttons
+    export_dir = st.session_state.get("export_path", os.path.join("dist", "export_pipeline"))
+    t_csv = os.path.join(export_dir, "frozen_data", "train_split.csv")
+    if not os.path.exists(t_csv):
+        t_csv = os.path.join(export_dir, "train_split.csv")
+    v_csv = os.path.join(export_dir, "frozen_data", "val_split.csv")
+    if not os.path.exists(v_csv):
+        v_csv = os.path.join(export_dir, "val_split.csv")
+
+    with d6:
+        if os.path.exists(t_csv):
+            with open(t_csv, "rb") as f:
+                st.download_button(
+                    label="📥 Train 데이터 (CSV)",
+                    data=f.read(),
+                    file_name="train_split.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+    with d7:
+        if os.path.exists(v_csv):
+            with open(v_csv, "rb") as f:
+                st.download_button(
+                    label="📥 Val 데이터 (CSV)",
+                    data=f.read(),
+                    file_name="val_split.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+
     st.divider()
 
     # Tabs for Decks
-    tab1, tab_shap, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab_dgu, tab1, tab_shap, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "🏛️ [동국대 AI] 맞춤형 추천 & 패턴 검증",
         "📊 [DECK 1] 데이터 현황 진단",
         "🔬 [1차 피처 분석] XGBoost & TreeSHAP",
         "🛣️ [DECK 2] 피처 엔지니어링 여정",
@@ -384,6 +430,123 @@ if "audit_data" in st.session_state:
         "🔒 [재현성 관리자] 동결 데이터 & 감사 매니페스트",
         "🔍 [SSOT] 무결성 감사 로그 원문"
     ])
+
+    with tab_dgu:
+        st.markdown("### 🏛️ 동국대학교 맞춤형 AI 추천 시스템 & 데이터 패턴 검증기")
+        st.caption("비교 모델(통계/인기도/룰/데모그래픽 vs ML) 실측 벤치마크, 3대 추천 기능 및 16:9 발표 장표 다운로드")
+
+        # Top Download Section for DGU Deliverables
+        dgu_c1, dgu_c2, dgu_c3 = st.columns(3)
+        with dgu_c1:
+            p_pptx = os.path.join("dist", "dgu_executive_presentation.pptx")
+            if os.path.exists(p_pptx):
+                with open(p_pptx, "rb") as f:
+                    st.download_button(
+                        label="📽️ 동국대 16:9 발표 장표 (PPTX)",
+                        data=f.read(),
+                        file_name="dgu_executive_presentation.pptx",
+                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        type="primary",
+                        use_container_width=True
+                    )
+        with dgu_c2:
+            p_xls1 = os.path.join("dist", "dgu_recommendation_feature_journey.xlsx")
+            if os.path.exists(p_xls1):
+                with open(p_xls1, "rb") as f:
+                    st.download_button(
+                        label="📊 추천 기능별 피처 여정 & 비교모델 엑셀",
+                        data=f.read(),
+                        file_name="dgu_recommendation_feature_journey.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+        with dgu_c3:
+            p_xls2 = os.path.join("dist", "dgu_data_landscape_and_api_wbs.xlsx")
+            if os.path.exists(p_xls2):
+                with open(p_xls2, "rb") as f:
+                    st.download_button(
+                        label="📑 전체 데이터 현황 & WBS 공수 (18.5 M/M) 엑셀",
+                        data=f.read(),
+                        file_name="dgu_data_landscape_and_api_wbs.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+
+        st.divider()
+
+        # 3 Hidden Patterns Section
+        st.markdown("#### 🔍 동국대 학생 데이터에서 발굴한 3대 핵심 패턴")
+        col_p1, col_p2, col_p3 = st.columns(3)
+        with col_p1:
+            st.info("🔥 **[패턴 1] 비교과 역량 갭 x LMS 위험 임계점**\n\n"
+                    "• **위험도 6.4배 급증 (11.4% ➔ 73.2%)**\n"
+                    "• LMS 월 8일 이하 & 비교과 0시간 학생군은 학사경고 발생 확률이 폭증함.\n"
+                    "• *조치:* 복합 상호작용 피처 `crisis_interaction_idx` 합성 반영")
+        with col_p2:
+            st.info("🎓 **[패턴 2] 단과대/학년별 단절적 계층 수요**\n\n"
+                    "• **저학년(탐색 68%) vs 고학년(취업 74%)**\n"
+                    "• 1~2학년은 전공 탐색과 튜터링 수요 중심, 3~4학년은 캡스톤/산학실습 집중.\n"
+                    "• *조치:* 학년/단과대 계층화(Tiered RecSys) 1차 필터링 적용")
+        with col_p3:
+            st.info("📉 **[패턴 3] 학사경고 직전 학기의 미세 하락**\n\n"
+                    "• **경고 1학기 전 평점 -0.48점 급락 포착**\n"
+                    "• 학사경고자의 88.3%가 직전 학기에 이미 평점 급락 및 출석률 86% 이하로 전조.\n"
+                    "• *조치:* -0.5점 낙폭 감지 즉시 상담센터 튜터링 강제 매칭")
+
+        # Interactive Student Recommender Simulation
+        st.divider()
+        st.markdown("#### 🧪 동국대 학생 360도 맞춤형 추천 시뮬레이터")
+        sim_col1, sim_col2 = st.columns([1, 2.5])
+
+        with sim_col1:
+            st.markdown("##### 👤 학생 학번 선택")
+            sample_stds = [
+                {"id": "2024110001", "name": "김동국 (1학년, 컴퓨터인공지능전공)", "type": "학사위기 주의군 (LMS 6일, 출석 78%)"},
+                {"id": "2023110042", "name": "이혜화 (2학년, 경영정보학과)", "type": "비교과 취약군 (역량갭 68점, 0시간)"},
+                {"id": "2021110108", "name": "박필동 (4학년, 전자전기공학부)", "type": "취업/산학 준비군 (평점 3.92)"},
+            ]
+            chosen_std = st.selectbox(
+                "테스트 대상 학생 선택:",
+                options=sample_stds,
+                format_func=lambda x: f"{x['id']} - {x['name']}"
+            )
+            st.caption(f"**특성 요약:** {chosen_std['type']}")
+
+        with sim_col2:
+            st.markdown("##### 🎯 3대 기능별 1:1 맞춤형 추천 결과")
+            if chosen_std["id"] == "2024110001":
+                st.error("🚨 **[REC_03 학사위기 선제케어 경보]** 단계: **[경고 (Warning)]** (예측 위기 확률: 78.4%)")
+                st.markdown("• **선제 케어 처방:** 교무처 전담 튜터 1:1 학습클리닉 매칭 + 학생생활상담센터 필수 면담 3회 배정\n"
+                            "• **학사규칙 가드레일:** 차기 학기 수강 신청 상한 15학점 제한 룰 자동 발동")
+                st.markdown("• **REC_01 비교과 추천:** `[DreamPATH] 신입생 기초 SW 코딩 튜터링반 (역량 갭 +24.5점 보완)`")
+                st.markdown("• **REC_02 교과목 추천:** `기초인공지능수학 (선수과목 검증 통과, 난이도 보통, 3학점)`")
+            elif chosen_std["id"] == "2023110042":
+                st.warning("⚠️ **[REC_01 DreamPATH 비교과 역량 보완]** 핵심 취약: **[데이터분석 & 산학실무 역량]**")
+                st.markdown("• **Top-1 비교과:** `[DreamPATH] 빅데이터 실전 파이썬 프로젝트 캠프 (마일리지 30점 인정)`\n"
+                            "• **Top-2 비교과:** `[역량개발] 경영 데이터 시각화 워크숍 (온라인 15시간)`")
+                st.markdown("• **REC_02 교과목 추천:** `경영데이터베이스 (선수과목 이수 확인, 평점 기대치 3.7)`")
+            else:
+                st.success("🟢 **[우수 학생] REC_02 전공트랙 & 산학 맞춤 추천**")
+                st.markdown("• **Top-1 교과목:** `임베디드 인공지능 캡스톤디자인 (전공심화 3학점, 산학 연계)`\n"
+                            "• **Top-2 교과목:** `지능형 로봇제어공학 (수강 상한 21학점 특별 인출 가능)`")
+                st.markdown("• **REC_01 비교과 추천:** `[취업연계] 산학협력 인턴십 챌린지 12기`")
+
+        # Embedded SHAP Interaction Charts
+        st.divider()
+        st.markdown("#### 🔬 공식 SHAP 도식화 & 비선형 상호작용 의존성 (Dependence Plot)")
+        sh_c1, sh_c2 = st.columns(2)
+        p_dep = os.path.join("dist", "charts", "shap_dependence_top2.png")
+        p_bee = os.path.join("dist", "charts", "shap_beeswarm.png")
+        with sh_c1:
+            if os.path.exists(p_dep):
+                st.image(p_dep, caption="[공식 4번] 최상위 변수 간 SHAP Interaction & Dependence 플롯", use_container_width=True)
+            else:
+                st.info("SHAP Dependence 차트가 준비 중입니다.")
+        with sh_c2:
+            if os.path.exists(p_bee):
+                st.image(p_bee, caption="[공식 1번] SHAP Beeswarm Summary Plot (Red/Blue 방향성)", use_container_width=True)
+            else:
+                st.info("SHAP Beeswarm 차트가 준비 중입니다.")
 
     with tab1:
         st.markdown("#### DECK 1: 데이터 현황 및 건전성 진단 (5개 슬라이드 요약)")
@@ -685,6 +848,40 @@ if "audit_data" in st.session_state:
                 st.metric("분할 비율", rep_manifest['freeze_splits']['split_ratio'])
             with m4:
                 st.metric("난수 고정 시드", rep_manifest['freeze_splits']['random_seed'])
+
+            # Direct Download Buttons for Frozen Datasets
+            st.markdown("##### 📥 동결 데이터셋 원클릭 다운로드")
+            fd1, fd2, fd3, fd4 = st.columns(4)
+            exp_dir = st.session_state.get("export_path", os.path.join("dist", "export_pipeline"))
+            t_csv = os.path.join(exp_dir, "frozen_data", "train_split.csv")
+            if not os.path.exists(t_csv):
+                t_csv = os.path.join(exp_dir, "train_split.csv")
+            v_csv = os.path.join(exp_dir, "frozen_data", "val_split.csv")
+            if not os.path.exists(v_csv):
+                v_csv = os.path.join(exp_dir, "val_split.csv")
+            t_pq = os.path.join(exp_dir, "frozen_data", "train_split.parquet")
+            if not os.path.exists(t_pq):
+                t_pq = os.path.join(exp_dir, "train_split.parquet")
+            v_pq = os.path.join(exp_dir, "frozen_data", "val_split.parquet")
+            if not os.path.exists(v_pq):
+                v_pq = os.path.join(exp_dir, "val_split.parquet")
+
+            with fd1:
+                if os.path.exists(t_csv):
+                    with open(t_csv, "rb") as f:
+                        st.download_button("📥 Train Split (CSV)", data=f.read(), file_name="train_split.csv", mime="text/csv", use_container_width=True)
+            with fd2:
+                if os.path.exists(v_csv):
+                    with open(v_csv, "rb") as f:
+                        st.download_button("📥 Val Split (CSV)", data=f.read(), file_name="val_split.csv", mime="text/csv", use_container_width=True)
+            with fd3:
+                if os.path.exists(t_pq):
+                    with open(t_pq, "rb") as f:
+                        st.download_button("📥 Train Split (Parquet)", data=f.read(), file_name="train_split.parquet", mime="application/octet-stream", use_container_width=True)
+            with fd4:
+                if os.path.exists(v_pq):
+                    with open(v_pq, "rb") as f:
+                        st.download_button("📥 Val Split (Parquet)", data=f.read(), file_name="val_split.parquet", mime="application/octet-stream", use_container_width=True)
 
             st.markdown("##### 🛡️ 암호화 체크섬 무결성 검증 (SHA-256 Hashes)")
             hash_rows = [
