@@ -28,7 +28,9 @@ class XGBoostFeatureScout:
         learning_rate: float = 0.08,
         random_seed: int = 42,
         noise_threshold_pct: float = 1.5,
-        max_background_samples: int = 300
+        max_background_samples: int = 300,
+        max_shap_features: int = 30,
+        fast_screening: bool = False
     ):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -36,6 +38,8 @@ class XGBoostFeatureScout:
         self.random_seed = random_seed
         self.noise_threshold_pct = noise_threshold_pct
         self.max_background_samples = max_background_samples
+        self.max_shap_features = max_shap_features
+        self.fast_screening = fast_screening
         self.last_analysis_: Optional[Dict[str, Any]] = None
         self.last_model_: Optional[Any] = None
         self.last_shap_values_: Optional[np.ndarray] = None
@@ -73,9 +77,23 @@ class XGBoostFeatureScout:
             X_num, y, is_classification
         )
 
+        # 1-1. Optional 2-Stage Fast Screening for High-Dimensional Features (>50 features)
+        X_shap_input = X_num
+        if (self.fast_screening or n_features > 50) and n_features > self.max_shap_features:
+            importances = getattr(model, "feature_importances_", None)
+            if importances is not None and len(importances) == n_features:
+                top_k_indices = np.argsort(importances)[::-1][:self.max_shap_features]
+                selected_cols = [feature_names[i] for i in top_k_indices]
+                X_shap_input = X_num[selected_cols]
+                feature_names = selected_cols
+                # Re-fit refined model on selected top features to ensure exact feature match for TreeSHAP & Explainer
+                model, baseline_metric_name, baseline_score = self._fit_xgboost(
+                    X_shap_input, y, is_classification
+                )
+
         # 2. Extract SHAP Values using TreeSHAP (with FastMarginal fallback)
         shap_values, base_value, bg_data = self._compute_shap_values(
-            model, X_num, is_classification
+            model, X_shap_input, is_classification
         )
         self.last_model_ = model
         self.last_shap_values_ = shap_values
@@ -374,6 +392,30 @@ class XGBoostFeatureScout:
                     plot_paths["xgb_importance"] = xgb_path
             except Exception as e:
                 print(f"[WARN] XGBoost plot_importance 생성 실패: {e}")
+
+        # 4. Official SHAP Dependence Plot (Top 1 vs Top 2 Interaction)
+        if self.last_shap_values_ is not None and self.last_bg_data_ is not None and self.last_bg_data_.shape[1] >= 2:
+            try:
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+                import shap
+
+                plt.figure(figsize=(7.5, 4.5), dpi=150)
+                # Pass feature index 0 (top feature) and auto/index 1 for interaction
+                shap.dependence_plot(
+                    0, self.last_shap_values_, self.last_bg_data_,
+                    interaction_index="auto",
+                    show=False
+                )
+                plt.title("SHAP Interaction & Dependence (Top Features)", fontsize=11, fontweight="bold", pad=12)
+                plt.tight_layout()
+                dep_path = os.path.join(output_dir, "shap_dependence_top2.png")
+                plt.savefig(dep_path, bbox_inches="tight", facecolor="#FFFFFF")
+                plt.close()
+                plot_paths["shap_dependence_top2"] = dep_path
+            except Exception as e:
+                print(f"[WARN] SHAP Dependence 플롯 생성 실패: {e}")
 
         if self.last_analysis_ is not None:
             self.last_analysis_["native_plots"] = plot_paths

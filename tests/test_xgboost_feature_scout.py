@@ -250,3 +250,44 @@ def test_native_plots_and_excel_export(tmp_path):
     prs = Presentation(pptx_path)
     slide2_pictures = [s for s in prs.slides[1].shapes if s.shape_type == 13]
     assert len(slide2_pictures) == 2
+
+
+def test_shap_dependence_plot_export(tmp_path):
+    """Verifies that SHAP dependence interaction plot (Top 1 vs Top 2) is generated."""
+    out_dir = str(tmp_path)
+    X, y = make_classification(n_samples=120, n_features=5, n_informative=3, random_state=42)
+    df_X = pd.DataFrame(X, columns=[f"feat_{i}" for i in range(5)])
+    s_y = pd.Series(y, name="target")
+
+    scout = XGBoostFeatureScout(n_estimators=20, max_depth=3, random_seed=42)
+    scout.analyze(df_X, s_y, task_type="Binary_Classification")
+
+    plots = scout.export_native_plots(out_dir)
+    assert "shap_dependence_top2" in plots
+    assert os.path.exists(plots["shap_dependence_top2"])
+    assert os.path.getsize(plots["shap_dependence_top2"]) > 1000
+
+
+def test_fast_2stage_screening(tmp_path):
+    """Verifies that high-dimensional features (>50) are screened down to max_shap_features."""
+    n_features = 60
+    max_k = 15
+    X, y = make_classification(n_samples=100, n_features=n_features, n_informative=10, random_state=42)
+    df_X = pd.DataFrame(X, columns=[f"col_{i}" for i in range(n_features)])
+    s_y = pd.Series(y, name="target")
+
+    scout = XGBoostFeatureScout(
+        n_estimators=20,
+        max_depth=3,
+        random_seed=42,
+        fast_screening=True,
+        max_shap_features=max_k
+    )
+    res = scout.analyze(df_X, s_y, task_type="Binary_Classification")
+
+    assert res.get("status") != "SKIPPED"
+    assert res["engine"] == "XGBoost + TreeSHAP Feature Scout"
+    # Screened down to max_k features in TreeSHAP
+    assert len(res["top_features"]) == max_k
+    assert scout.last_shap_values_.shape[1] == max_k
+    assert scout.last_bg_data_.shape[1] == max_k
