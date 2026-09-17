@@ -21,7 +21,8 @@ from src.connectors.safe_connector import SafeDBConnector
 from src.profiler.fact_profiler import FactDataProfiler
 from src.profiler.feasibility_auditor import DataFeasibilityAuditor
 from src.pipeline.feature_pipeline import FeaturePipeline
-from src.pipeline.career_tree import CareerPathwayTree
+from src.pipeline.career_tree import CareerPathwayTree, EntityPathwayGraph
+from src.domains.catalog import default_catalog
 from src.ml_scout.engine import MLScoutEngine
 from src.ml_scout.persona_scout import PersonaFeatureWeightScout
 from src.serving.hybrid_recommender import HybridCareerRecommender
@@ -186,6 +187,24 @@ with st.sidebar:
                 target_column = sel_target
         except Exception:
             pass
+
+    st.divider()
+    st.markdown("#### 🎯 분석 및 추천 목표 태스크")
+    preset_options = default_catalog.get_display_options()
+    chosen_preset_label = st.selectbox(
+        "목표 태스크 프리셋 (Vertical Preset)",
+        options=list(preset_options.keys()),
+        index=0,
+        help="직무 추천, 교과 추천, 비교과 추천, 전과 추천, 위기학생 탐지, 모듈트랙 추천 등 9대 교육 태스크 및 범용 ML 프리셋을 선택할 수 있습니다."
+    )
+    current_preset = default_catalog.get_preset(preset_options[chosen_preset_label])
+    st.session_state["current_preset"] = current_preset
+
+    with st.expander("ℹ️ 선택된 태스크 메타데이터 요약", expanded=False):
+        st.caption(f"**설명:** {current_preset.description}")
+        st.caption(f"**권장 타겟 변수:** `{current_preset.target_column}`")
+        st.caption(f"**콜드스타트 기준:** 최소 `{current_preset.cold_start_threshold}건` 이상 활동")
+        st.caption(f"**No-Go 기준:** 매핑 불일치 >{int(current_preset.no_go_rules.get('mismatch_threshold', 0.15)*100)}%, 라벨 결측 >{int(current_preset.no_go_rules.get('missing_threshold', 0.25)*100)}%")
 
     st.divider()
     st.markdown("#### 🎯 비즈니스 도메인 레시피")
@@ -577,41 +596,49 @@ if "audit_data" in st.session_state:
                 st.info("SHAP Beeswarm 차트가 준비 중입니다.")
 
     with tab_career:
-        st.markdown("### 💼 [실전 직무 추천 AI] 데이터 정합성 감사 & 하이브리드 설명가능 추천")
-        st.caption("현업 직무코드 결함 No-Go 방어벽, 선배 이력 기반 역량 트리, 페르소나별 피처 가중치, 하이브리드 앙상블 XAI")
+        active_preset = st.session_state.get("current_preset", default_catalog.get_preset("job_recommendation"))
+        st.markdown(f"### {active_preset.icon} [{active_preset.name} AI] 데이터 정합성 감사 & 하이브리드 설명가능 추천")
+        st.caption(f"선택 태스크: **{active_preset.name} ({active_preset.task_id})** | 타겟 변수: `{active_preset.target_column}` | {active_preset.description}")
 
         # Section 1: Data Feasibility & No-Go Auditor
-        st.markdown("#### 🚨 1. 데이터 품질/정합성 감사 & 모델 학습 불가(No-Go) 판정소")
-        st.info("💡 **엔터프라이즈 거버넌스 원칙:** 정합성이 깨진 직무코드나 극심한 라벨 결측 시 모델 학습을 즉각 차단하고 원인 추적 SQL 쿼리를 발행합니다.")
+        st.markdown(f"#### 🚨 1. [{active_preset.name}] 데이터 품질/정합성 감사 & 모델 학습 불가(No-Go) 판정소")
+        st.info(f"💡 **엔터프라이즈 거버넌스 원칙:** {active_preset.name}에 필요한 '{active_preset.target_column}' 코드 결함이나 극심한 라벨 결측 시 모델 학습을 즉각 차단하고 원인 추적 SQL 쿼리를 발행합니다.")
 
         aud_col1, aud_col2 = st.columns([1, 1])
         with aud_col1:
             st.markdown("##### 🎛️ 데이터 결함 시뮬레이터")
-            sim_mismatch_pct = st.slider("가상 직무코드 불일치/결측 비율 (%)", min_value=0, max_value=60, value=38, step=2)
+            sim_mismatch_pct = st.slider("가상 코드 불일치/결측 비율 (%)", min_value=0, max_value=60, value=38, step=2)
             sim_min_samples = st.slider("클래스별 최소 유효 표본 수", min_value=1, max_value=25, value=2, step=1)
 
             # Build mock dataset based on slider
             mock_n = 100
             n_mismatch = int(mock_n * (sim_mismatch_pct / 100))
-            codes = ["UNKNOWN_CODE"] * n_mismatch + ["DS_JOB"] * (mock_n - n_mismatch)
+            codes = ["UNKNOWN_CODE"] * n_mismatch + ["VALID_CODE"] * (mock_n - n_mismatch)
             targets = [1] * sim_min_samples + [0] * (mock_n - sim_min_samples)
-            mock_df = pd.DataFrame({"student_id": range(mock_n), "job_code": codes, "target": targets})
+            mock_df = pd.DataFrame({"entity_id": range(mock_n), active_preset.target_column: codes, "target": targets})
 
-            auditor = DataFeasibilityAuditor(min_samples_per_class=10, max_code_mismatch_rate=0.15)
+            auditor = DataFeasibilityAuditor(
+                min_samples_per_class=active_preset.no_go_rules.get("min_samples_per_class", 5),
+                max_code_mismatch_rate=active_preset.no_go_rules.get("mismatch_threshold", 0.15)
+            )
             audit_res = auditor.audit_feasibility(
                 mock_df,
                 target_col="target",
-                code_col="job_code",
-                valid_codes=["DS_JOB", "BE_DEV", "FE_DEV"],
-                table_name="student_career_records"
+                code_col=active_preset.target_column,
+                valid_codes=["VALID_CODE"],
+                table_name=selected_table or "USER_ACTIVITY_LOG"
             )
 
             st.metric("종합 판정 등급", audit_res["verdict_badge"], delta="학습 차단 발동" if audit_res["verdict"] == "NO_GO" else "정상")
             st.dataframe(pd.DataFrame(audit_res["audit_table"]), use_container_width=True)
 
         with aud_col2:
-            st.markdown("##### 📜 DBA / 데이터 엔지니어용 검증 ANSI SQL 쿼리문")
-            st.code(audit_res["verification_sql"], language="sql")
+            st.markdown(f"##### 📜 [{active_preset.name}] 전용 DBA 검증 ANSI SQL")
+            preset_sql = active_preset.generate_audit_sql(
+                table_name=selected_table or "USER_ACTIVITY_LOG",
+                master_table=f"TB_{active_preset.entity_type.upper()}_MASTER"
+            )
+            st.code(preset_sql, language="sql")
             st.markdown("##### 🐍 판다스 로컬 검증 스니펫")
             st.code(audit_res["verification_pandas"], language="python")
 
@@ -736,6 +763,13 @@ if "audit_data" in st.session_state:
         with p_c4:
             st.metric("📈 동문 선호 인기도", f"{bd['popularity_contrib_pct']}%", f"가중치: {recommender.w_pop*100:.0f}%")
             st.progress(bd['popularity_contrib_pct'] / 100)
+
+        # Section 5: Vertical Task Catalog Registry Overview
+        st.divider()
+        st.markdown("#### 📚 9대 버티컬 태스크 카탈로그 레지스트리 (Catalog Overview)")
+        st.caption("Auto Data Analyzer 엔진에서 제공하는 9대 교육/취업 및 범용 비즈니스 프리셋 현황")
+        with st.expander("🔍 9대 버티컬 태스크 프리셋 목록 및 타겟/콜드스타트 기준표 보기", expanded=False):
+            st.dataframe(pd.DataFrame(default_catalog.to_dataframe_summary()), use_container_width=True)
 
     with tab1:
         st.markdown("#### DECK 1: 데이터 현황 및 건전성 진단 (5개 슬라이드 요약)")
