@@ -16,6 +16,7 @@ htmlcov/
 
 # Build & generated outputs
 dist/
+dist_test/
 build/
 *.egg-info/
 data/uploads/
