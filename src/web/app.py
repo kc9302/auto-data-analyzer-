@@ -23,6 +23,7 @@ from src.profiler.feasibility_auditor import DataFeasibilityAuditor
 from src.pipeline.feature_pipeline import FeaturePipeline
 from src.pipeline.career_tree import CareerPathwayTree, EntityPathwayGraph
 from src.pipeline.senior_matcher import SeniorProfileSimilarityMatcher
+from src.pipeline.academic_guardrails import AcademicRuleGuardrail
 from src.domains.catalog import default_catalog
 from src.ml_scout.engine import MLScoutEngine
 from src.ml_scout.persona_scout import PersonaFeatureWeightScout
@@ -722,18 +723,36 @@ if "audit_data" in st.session_state:
 
         st.divider()
 
-        # Section 2: Senior Profile Vector Similarity Matcher (Pure Data-Driven Alternative to Ontology)
-        st.markdown("#### 🎯 2. 선배 이력 프로필 벡터 유사도 매칭 (Top-K Senior Profile k-NN & Cosine Similarity)")
+        # Section 2: Senior Profile Vector Similarity Matcher & Recency Filter
+        st.markdown("#### 🎯 2. 선배 이력 프로필 벡터 유사도 매칭 (Top-K Senior Profile k-NN & Recency Filter)")
         st.caption("수동 유지보수가 불가능한 온톨로지 대신, 선배들의 실제 수강/활동 이력을 TF-IDF 벡터화하여 나와 가장 닮은 선배들의 취업 경로 및 추가 수강 과목을 데이터 기반으로 자동 미러링합니다.")
 
-        # Setup mock senior alumni database
+        # Setup mock senior alumni database with diverse graduation years (1993, 2002, 2023, 2024, 2025)
         senior_records = pd.DataFrame([
-            {"senior_id": "ALUMNI_01", "job_role": "데이터 사이언티스트", "courses": "기초파이썬, 머신러닝, 선형대수학, 데이터베이스, 통계학개론", "extracurriculars": "데이터캠프, 캐글챌린지", "major": "컴퓨터공학"},
-            {"senior_id": "ALUMNI_02", "job_role": "데이터 사이언티스트", "courses": "기초파이썬, 딥러닝응용, 통계학개론, 데이터베이스, 파이썬프로그래밍", "extracurriculars": "빅데이터경진대회", "major": "통계학"},
-            {"senior_id": "ALUMNI_03", "job_role": "백엔드 개발자", "courses": "자바프로그래밍, 스프링부트, 컴퓨터네트워크, 데이터베이스, 운영체제", "extracurriculars": "SW개발동아리, 오픈소스", "major": "컴퓨터공학"},
-            {"senior_id": "ALUMNI_04", "job_role": "AI 로보틱스 연구원", "courses": "로봇제어공학, 컴퓨터비전, 선형대수학, ROS기초, C++프로그래밍", "extracurriculars": "로봇경진대회", "major": "전자전기공학"},
+            {"senior_id": "ALUMNI_93", "job_role": "전산원", "courses": "포트란기초, 코볼실습, 전자계산학", "extracurriculars": "전산실봉사", "major": "전산학과", "grad_year": 1993},
+            {"senior_id": "ALUMNI_02", "job_role": "웹마스터", "courses": "HTML4, 펄스크립트, 비주얼베이직", "extracurriculars": "PC동호회", "major": "전자계산학과", "grad_year": 2002},
+            {"senior_id": "ALUMNI_23A", "job_role": "데이터 사이언티스트", "courses": "기초파이썬, 머신러닝, 선형대수학, 데이터베이스, 통계학개론", "extracurriculars": "데이터캠프, 캐글챌린지", "major": "컴퓨터공학", "grad_year": 2023},
+            {"senior_id": "ALUMNI_24A", "job_role": "데이터 사이언티스트", "courses": "기초파이썬, 딥러닝응용, 통계학개론, 데이터베이스, 파이썬프로그래밍", "extracurriculars": "빅데이터경진대회", "major": "통계학", "grad_year": 2024},
+            {"senior_id": "ALUMNI_24B", "job_role": "백엔드 개발자", "courses": "자바프로그래밍, 스프링부트, 컴퓨터네트워크, 데이터베이스, 운영체제", "extracurriculars": "SW개발동아리, 오픈소스", "major": "컴퓨터공학", "grad_year": 2024},
+            {"senior_id": "ALUMNI_25A", "job_role": "AI 로보틱스 연구원", "courses": "로봇제어공학, 컴퓨터비전, 선형대수학, ROS기초, C++프로그래밍", "extracurriculars": "로봇경진대회", "major": "전자전기공학", "grad_year": 2025},
         ])
-        senior_matcher = SeniorProfileSimilarityMatcher(min_history_threshold=3, top_k_seniors=3).fit(senior_records)
+
+        col_rc1, col_rc2 = st.columns([1.5, 1])
+        with col_rc1:
+            recency_cutoff = st.slider(
+                "📅 선배 데이터 반영 시점 컷오프 (최근 N개년 이내)",
+                min_value=1, max_value=35, value=5, step=1,
+                help="1991년 등 이미 폐지된 과목이나 옛 직무코드를 자동 격리하고, 최신 학칙/교육과정 선배 데이터만 선별 학습합니다."
+            )
+        with col_rc2:
+            st.metric("적용 기준 연도", f"{2026 - recency_cutoff}년 이후 졸업자", delta=f"최근 {recency_cutoff}개년 선별")
+
+        senior_matcher = SeniorProfileSimilarityMatcher(
+            min_history_threshold=3,
+            top_k_seniors=3,
+            recent_years_cutoff=recency_cutoff,
+            reference_year=2026
+        ).fit(senior_records, grad_year_col="grad_year")
 
         tree_c1, tree_c2 = st.columns([1, 1])
         with tree_c1:
@@ -763,6 +782,10 @@ if "audit_data" in st.session_state:
             st.markdown(f"**현재 이수 이력:** `{', '.join(test_courses) if test_courses else '없음'}` / 비교과: `{', '.join(test_extras) if test_extras else '없음'}`")
             st.metric("선배 매칭 진단 상태", eval_res["status_badge"], f"이수 건수: {eval_res['current_history_count']} / 최소 {eval_res['min_required_threshold']}건")
 
+            rec_audit = eval_res.get("recency_audit", {})
+            if rec_audit.get("obsolete_removed_count", 0) > 0:
+                st.info(f"💡 **노후 데이터 자동 격리:** 총 {rec_audit['raw_alumni_count']}건 중 {rec_audit['obsolete_removed_count']}건({rec_audit['obsolete_ratio_pct']}%)의 노후 데이터를 배제하고, 최신 {rec_audit['filtered_alumni_count']}건만 정밀 매칭했습니다.")
+
         with tree_c2:
             st.markdown("##### 💡 학생 맞춤형 액션 피드백")
             if eval_res["is_cold_start"]:
@@ -778,6 +801,39 @@ if "audit_data" in st.session_state:
                         st.write(f"• **공유된 핵심 과목:** `{', '.join(m['matched_courses'])}`")
                         st.write(f"• **선배들이 3~4학년 때 추가 수강한 추천 과목:** `{', '.join(m['recommended_next_courses'])}`")
                         st.write(f"• **매칭 근거:** {m['rationale']}")
+
+        # 2-Stage Academic Rule Guardrails Check
+        st.markdown("##### 🛡️ 2-Stage 초경량 학사 규정 가드레일 진단 (Academic Guardrails)")
+        st.caption("선수과목 미이수 교과를 원천 차단하고, 전필(전공필수) 결손을 우선 보완하며, 졸업이수 요건 충족률을 실시간 시뮬레이션합니다.")
+
+        guardrail = AcademicRuleGuardrail()
+        candidate_rec_courses = ["머신러닝", "딥러닝", "스프링부트"]
+        prereq_res = guardrail.check_prerequisites(test_courses, candidate_rec_courses)
+        mandatory_prioritized = guardrail.prioritize_mandatory_courses(test_courses, candidate_rec_courses, max_recs=3)
+        grad_sim = guardrail.simulate_graduation_credits(test_courses, [r["course"] for r in mandatory_prioritized])
+
+        g_col1, g_col2, g_col3 = st.columns(3)
+        with g_col1:
+            st.markdown("###### ⛔ 선수과목 검증 (Prerequisite Gate)")
+            if prereq_res["blocked_courses"]:
+                for b in prereq_res["blocked_courses"]:
+                    st.warning(f"• **차단:** `{b['course']}` ({b['reason']})")
+            else:
+                st.success("✓ 추천된 모든 후보 과목의 선수과목 요건 충족!")
+            for e in prereq_res["eligible_courses"]:
+                st.write(f"• **수강 가능:** `{e['course']}` ({e['type']}, {e['credits']}학점)")
+
+        with g_col2:
+            st.markdown("###### 🚨 전필 우선 보완 룰 (Mandatory First)")
+            for r in mandatory_prioritized:
+                st.info(f"• **{r['badge']}** `{r['course']}` ({r['credits']}학점)")
+
+        with g_col3:
+            st.markdown("###### 🎓 졸업이수 학점 시뮬레이터 (Credit Progress)")
+            st.metric("전필 충족률", f"{grad_sim['projected']['mandatory_pct']}%", f"{grad_sim['projected']['mandatory_credits']} / 18 학점")
+            st.progress(grad_sim['projected']['mandatory_pct'] / 100)
+            st.metric("전체 졸업학점", f"{grad_sim['projected']['total_pct']}%", f"{grad_sim['projected']['total_credits']} / 130 학점")
+            st.progress(grad_sim['projected']['total_pct'] / 100)
 
         st.divider()
 
