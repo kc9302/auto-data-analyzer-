@@ -44,3 +44,6 @@ tests/data/*.db
 # MLflow tracking
 mlruns/
 *.sqlite
+
+# Big data cache directory
+.cache/

@@ -5,6 +5,7 @@ from .career_tree import CareerPathwayTree, EntityPathwayGraph
 from .senior_matcher import SeniorProfileSimilarityMatcher
 from .academic_guardrails import AcademicRuleGuardrail
 from .task_pipeline_orchestrator import TaskPipelineOrchestrator
+from .cache_manager import LargeScaleCacheManager, DatasetFingerprinter, default_cache_manager
 
 __all__ = [
     "FeaturePipeline",
@@ -15,6 +16,9 @@ __all__ = [
     "EntityPathwayGraph",
     "SeniorProfileSimilarityMatcher",
     "AcademicRuleGuardrail",
-    "TaskPipelineOrchestrator"
+    "TaskPipelineOrchestrator",
+    "LargeScaleCacheManager",
+    "DatasetFingerprinter",
+    "default_cache_manager"
 ]
 
