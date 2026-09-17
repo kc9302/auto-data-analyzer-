@@ -682,6 +682,281 @@ class ExcelReportBuilder:
             except Exception:
                 pass
 
+    def build_pipeline_report(
+        self,
+        pipeline_result: Dict[str, Any],
+        output_xlsx_path: str
+    ) -> str:
+        """
+        Creates a dedicated professional Excel report (.xlsx) for TaskPipelineOrchestrator results.
+        Includes:
+        - Sheet 1: NoGo_정합성사전감사 (Feasibility checks, ANSI SQL, Audit matrix, Prescriptions)
+        - Sheet 2: 파레토_AutoML_명세 (Knee Point features, AutoML tournament leaderboard, MLflow, Cache stats)
+        """
+        os.makedirs(os.path.dirname(output_xlsx_path), exist_ok=True)
+        wb = openpyxl.Workbook()
+
+        # Sheet 1: No-Go Audit
+        ws1 = wb.active
+        ws1.title = "NoGo_정합성사전감사"
+        self._build_nogo_audit_sheet(ws1, pipeline_result)
+
+        # Sheet 2: Pareto & AutoML
+        ws2 = wb.create_sheet(title="파레토_AutoML_명세")
+        self._build_pareto_automl_sheet(ws2, pipeline_result)
+
+        for ws in wb.worksheets:
+            self._autofit_columns(ws)
+
+        wb.save(output_xlsx_path)
+        print(f"[OK] 태스크 파이프라인 전용 엑셀 분석 리포트 생성 완료: {output_xlsx_path}")
+        return output_xlsx_path
+
+    def _build_nogo_audit_sheet(self, ws, pipeline_result: Dict[str, Any]):
+        task_id = pipeline_result.get("task_id", "custom_task")
+        task_name = pipeline_result.get("task_name", "데이터 분석 태스크")
+        status = pipeline_result.get("status", "SUCCESS_GO")
+        is_nogo = (status == "HALTED_NO_GO")
+        verdict_badge = pipeline_result.get("verdict_badge", "🟢 GO (정합성 합격)")
+        audit = pipeline_result.get("feasibility_audit", {})
+        summary_reason = pipeline_result.get("summary_reason") or audit.get("summary_reason", "데이터 무결성 검증 완료")
+        sql_text = pipeline_result.get("verification_sql") or audit.get("verification_sql") or audit.get("preset_sql_template", "-- ANSI SQL Query")
+        recs = pipeline_result.get("actionable_recommendations") or audit.get("actionable_recommendations", [])
+        c_danger_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+
+        # Title Block
+        ws["A1"] = f"🚨 [{task_name}] 데이터 품질/정합성 사전감사 & No-Go 거버넌스 명세서"
+        ws["A1"].font = self.f_title
+        ws["A2"] = f"판정 등급: {verdict_badge} | 분석 태스크: {task_id} | 거버넌스 상태: {status}"
+        ws["A2"].font = self.f_subtitle
+
+        # Section 1: Executive Summary Card
+        ws["A4"] = "1. 📊 No-Go 사전감사 총괄 요약 지표"
+        ws["A4"].font = self.f_section
+
+        kpis = [
+            ("분석 태스크 명칭 (Task Name)", task_name),
+            ("태스크 고유 식별자 (Task ID)", task_id),
+            ("최종 정합성 거버넌스 판정", verdict_badge),
+            ("핵심 판정 요약 사유", summary_reason),
+            ("캐시 처리 상태", "⚡ L1/L2 캐시 적중 (초고속 반환)" if pipeline_result.get("cache_hit") else "💾 신규 연산 및 L2 Parquet 영구 저장 완료"),
+            ("총 파이프라인 소요시간", f"{pipeline_result.get('elapsed_sec', 0.0):.3f} 초")
+        ]
+        row = 5
+        for k, v in kpis:
+            ws.cell(row=row, column=1, value=k).font = self.f_bold
+            c_val = ws.cell(row=row, column=2, value=str(v))
+            c_val.font = self.f_normal
+            ws.cell(row=row, column=1).border = self.thin_border
+            c_val.border = self.thin_border
+            if "최종 정합성" in k:
+                c_val.font = self.f_bold
+                c_val.fill = c_danger_fill if is_nogo else self.c_succ_fill
+            row += 1
+
+        # Section 2: Audit Check Matrix Table
+        row += 1
+        ws.cell(row=row, column=1, value="2. 📋 데이터 정합성 세부 점검 매트릭스 (Audit Check Matrix)").font = self.f_section
+        row += 1
+
+        headers = ["점검 항목", "기준 조건 (Threshold)", "실측 측정값", "판정 상태", "세부 내용 및 영향도"]
+        for c, h in enumerate(headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = self.f_header
+            cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = self.thin_border
+        row += 1
+
+        checks = audit.get("checks", {})
+        audit_table = audit.get("audit_table", [])
+
+        if audit_table:
+            for item in audit_table:
+                ws.cell(row=row, column=1, value=item.get("check_item", "")).font = self.f_bold
+                ws.cell(row=row, column=2, value=item.get("threshold", "")).font = self.f_normal
+                ws.cell(row=row, column=3, value=item.get("actual_value", "")).font = self.f_normal
+
+                passed = item.get("passed", True)
+                status_badge = "🟢 통과 (PASS)" if passed else "🚨 결함 (FAIL)"
+                c_st = ws.cell(row=row, column=4, value=status_badge)
+                c_st.alignment = Alignment(horizontal="center")
+                c_st.font = self.f_bold
+                c_st.fill = self.c_succ_fill if passed else c_danger_fill
+
+                ws.cell(row=row, column=5, value=item.get("detail", "")).font = self.f_normal
+                for col_i in range(1, 6):
+                    ws.cell(row=row, column=col_i).border = self.thin_border
+                row += 1
+        elif checks:
+            for check_name, check_info in checks.items():
+                ws.cell(row=row, column=1, value=check_name).font = self.f_bold
+                ws.cell(row=row, column=2, value=str(check_info.get("threshold", "-"))).font = self.f_normal
+                ws.cell(row=row, column=3, value=str(check_info.get("actual", "-"))).font = self.f_normal
+
+                passed = check_info.get("passed", True)
+                status_badge = "🟢 통과 (PASS)" if passed else "🚨 결함 (FAIL)"
+                c_st = ws.cell(row=row, column=4, value=status_badge)
+                c_st.alignment = Alignment(horizontal="center")
+                c_st.font = self.f_bold
+                c_st.fill = self.c_succ_fill if passed else c_danger_fill
+
+                ws.cell(row=row, column=5, value=check_info.get("message", "")).font = self.f_normal
+                for col_i in range(1, 6):
+                    ws.cell(row=row, column=col_i).border = self.thin_border
+                row += 1
+        else:
+            ws.cell(row=row, column=1, value="정합성 점검 항목 정상 통과").font = self.f_muted
+            row += 1
+
+        # Section 3: DBA ANSI SQL
+        row += 1
+        ws.cell(row=row, column=1, value="3. 📜 DBA 및 데이터 엔지니어 결함 추적 ANSI SQL 쿼리문").font = self.f_section
+        row += 1
+        sql_lines = str(sql_text).strip().split("\n")
+        for line in sql_lines:
+            c_sql = ws.cell(row=row, column=1, value=line)
+            c_sql.font = Font(name="Consolas", size=9.0, color="0F172A")
+            c_sql.fill = self.c_sub_fill
+            row += 1
+
+        # Section 4: Actionable Prescriptions
+        row += 1
+        ws.cell(row=row, column=1, value="4. 💡 실무 엔지니어링 권고사항 및 해결 가이드 (Actionable Prescriptions)").font = self.f_section
+        row += 1
+        if recs:
+            for rec in recs:
+                ws.cell(row=row, column=1, value=f"• {rec}").font = self.f_bold
+                row += 1
+        else:
+            ws.cell(row=row, column=1, value="• 데이터 무결성이 검증되어 추가 보정 없이 상위 모델링 파이프라인으로 안전하게 진입합니다.").font = self.f_normal
+            row += 1
+
+    def _build_pareto_automl_sheet(self, ws, pipeline_result: Dict[str, Any]):
+        task_id = pipeline_result.get("task_id", "custom_task")
+        task_name = pipeline_result.get("task_name", "데이터 분석 태스크")
+        status = pipeline_result.get("status", "SUCCESS_GO")
+        is_nogo = (status == "HALTED_NO_GO")
+
+        orig_cnt = pipeline_result.get("original_features_count", "-")
+        sel_cnt = pipeline_result.get("selected_features_count", "-")
+        sel_feats = pipeline_result.get("selected_features", [])
+        knee_pt = pipeline_result.get("knee_point", "-")
+        automl = pipeline_result.get("automl_result", {})
+        best_model = automl.get("best_model", "N/A (No-Go)")
+        best_score = automl.get("best_score", 0.0)
+        mlflow = pipeline_result.get("mlflow_metadata", {})
+        pareto_summary = pipeline_result.get("pareto_summary", {})
+
+        # Title Block
+        ws["A1"] = f"⚡ [{task_name}] 파레토 가성비 피처셋 & AutoML 토너먼트 리더보드"
+        ws["A1"].font = self.f_title
+        ws["A2"] = f"Knee Point: {knee_pt}개 피처 | 최적 모델: {best_model} (F1 {best_score:.4f}) | 파이프라인 상태: {status}"
+        ws["A2"].font = self.f_subtitle
+
+        # Section 1: Pareto Optimization Summary Card
+        ws["A4"] = "1. 🎯 파레토 가성비 피처 최적화 총괄 요약"
+        ws["A4"].font = self.f_section
+
+        reduction_rate = (
+            f"{(1 - sel_cnt / max(1, orig_cnt)) * 100:.1f}%"
+            if isinstance(orig_cnt, (int, float)) and isinstance(sel_cnt, (int, float)) and orig_cnt > 0
+            else "-"
+        )
+        p_rows = [
+            ("원천 피처 개수 (Original Features)", f"{orig_cnt} 개"),
+            ("수학적 엘보우 최적 Knee Point (K)", f"{knee_pt} 개 피처"),
+            ("최종 확정 피처 개수 (Selected Features)", f"{sel_cnt} 개"),
+            ("차원 압축률 (Dimension Reduction Rate)", reduction_rate),
+            ("적용 파레토 프로필 (Selection Profile)", pareto_summary.get("profile", "lean_pareto")),
+            ("최우수 챔피언 모델 (Adopted ML Model)", best_model),
+            ("챔피언 검증 점수 (Best F1 Score)", f"{best_score:.4f}"),
+            ("MLflow Run ID", mlflow.get("run_id", "N/A")),
+            ("MLflow 실험명 (Experiment Name)", mlflow.get("experiment_name", f"Task_{task_id}"))
+        ]
+        row = 5
+        for k, v in p_rows:
+            ws.cell(row=row, column=1, value=k).font = self.f_bold
+            c_val = ws.cell(row=row, column=2, value=str(v))
+            c_val.font = self.f_normal
+            ws.cell(row=row, column=1).border = self.thin_border
+            c_val.border = self.thin_border
+            if "최종 확정" in k or "챔피언 검증" in k:
+                c_val.font = self.f_bold
+                c_val.fill = self.c_succ_fill
+            row += 1
+
+        # Section 2: Selected Features Table
+        row += 1
+        ws.cell(row=row, column=1, value="2. 🏆 최종 선정된 핵심 가성비 피처 목록 (Knee Point Features)").font = self.f_section
+        row += 1
+
+        f_headers = ["순위", "피처명 (Feature Name)", "선정 상태", "채택 사유 (Rationale)"]
+        for c, h in enumerate(f_headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = self.f_header
+            cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = self.thin_border
+        row += 1
+
+        if sel_feats:
+            for rank, f_name in enumerate(sel_feats, start=1):
+                ws.cell(row=row, column=1, value=rank).alignment = Alignment(horizontal="center")
+                ws.cell(row=row, column=2, value=f_name).font = self.f_bold
+                c_st = ws.cell(row=row, column=3, value="✓ Knee Point 확정")
+                c_st.alignment = Alignment(horizontal="center")
+                c_st.font = self.f_bold
+                c_st.fill = self.c_succ_fill
+                ws.cell(row=row, column=4, value="한계 이익(Marginal Gain) 극대화 및 최고 성능 보존").font = self.f_normal
+
+                for col_i in range(1, 5):
+                    ws.cell(row=row, column=col_i).border = self.thin_border
+                row += 1
+        else:
+            ws.cell(row=row, column=1, value="선정된 피처 없음 (No-Go 중단)").font = self.f_muted
+            row += 1
+
+        # Section 3: AutoML Tournament Leaderboard Table
+        row += 1
+        ws.cell(row=row, column=1, value="3. 🤖 AutoML 모델 토너먼트 벤치마크 리더보드").font = self.f_section
+        row += 1
+
+        l_headers = ["순위", "모델명 (Model)", "F1 점수", "정확도 / 점수", "채택 여부 (Verdict)"]
+        for c, h in enumerate(l_headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = self.f_header
+            cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = self.thin_border
+        row += 1
+
+        leaderboard = automl.get("leaderboard", [])
+        if isinstance(leaderboard, list) and leaderboard:
+            for rank, m in enumerate(leaderboard, start=1):
+                m_name = m.get("model", f"Model_{rank}")
+                f1_val = m.get("f1_weighted") or m.get("f1_score") or m.get("best_score", 0.0)
+                acc_val = m.get("accuracy", f1_val)
+                is_champ = (m_name == best_model or rank == 1)
+
+                ws.cell(row=row, column=1, value=rank).alignment = Alignment(horizontal="center")
+                ws.cell(row=row, column=2, value=m_name).font = self.f_bold if is_champ else self.f_normal
+                ws.cell(row=row, column=3, value=f"{float(f1_val):.4f}").alignment = Alignment(horizontal="right")
+                ws.cell(row=row, column=4, value=f"{float(acc_val):.4f}").alignment = Alignment(horizontal="right")
+
+                c_v = ws.cell(row=row, column=5, value="🏆 챔피언 채택" if is_champ else "후보 모델")
+                c_v.alignment = Alignment(horizontal="center")
+                if is_champ:
+                    c_v.fill = self.c_succ_fill
+                    c_v.font = self.f_bold
+
+                for col_i in range(1, 6):
+                    ws.cell(row=row, column=col_i).border = self.thin_border
+                row += 1
+        else:
+            ws.cell(row=row, column=1, value=f"단일 모델 학습 완료: {best_model} (F1 {best_score:.4f})").font = self.f_normal
+            row += 1
+
     def _autofit_columns(self, ws):
         """Auto-adjusts column widths with sensible margins."""
         for col in ws.columns:

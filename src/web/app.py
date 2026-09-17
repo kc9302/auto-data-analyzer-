@@ -734,6 +734,53 @@ if "audit_data" in st.session_state:
             if audit_res["reasons"]:
                 st.error("**🛑 학습 불가 치명적 사유:**\n" + "\n".join(f"• {r}" for r in audit_res["reasons"]))
 
+            # Instant Simulated Audit Export Buttons
+            sim_out_dir = os.path.join("dist", "task_pipeline_reports")
+            os.makedirs(sim_out_dir, exist_ok=True)
+            sim_pptx_path = os.path.join(sim_out_dir, f"sim_{active_preset.task_id}_audit.pptx")
+            sim_xlsx_path = os.path.join(sim_out_dir, f"sim_{active_preset.task_id}_audit.xlsx")
+
+            sim_payload = {
+                "task_id": active_preset.task_id,
+                "task_name": active_preset.name,
+                "status": "HALTED_NO_GO" if audit_res["verdict"] == "NO_GO" else "SUCCESS_GO",
+                "verdict_badge": audit_res["verdict_badge"],
+                "summary_reason": audit_res.get("summary_reason", "데이터 정합성 감사 시뮬레이션"),
+                "feasibility_audit": audit_res,
+                "verification_sql": audit_res.get("verification_sql") or preset_sql,
+                "actionable_recommendations": audit_res.get("actionable_recommendations", []),
+                "elapsed_sec": 0.04
+            }
+            try:
+                PptxDeckBuilder().build_task_pipeline_deck(sim_payload, sim_pptx_path)
+                ExcelReportBuilder().build_pipeline_report(sim_payload, sim_xlsx_path)
+            except Exception:
+                pass
+
+            s_btn1, s_btn2 = st.columns(2)
+            with s_btn1:
+                if os.path.exists(sim_pptx_path):
+                    with open(sim_pptx_path, "rb") as spf:
+                        st.download_button(
+                            label="📥 [PPTX] No-Go 감사 장표",
+                            data=spf.read(),
+                            file_name=f"audit_{active_preset.task_id}.pptx",
+                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            use_container_width=True,
+                            key="btn_sim_audit_pptx"
+                        )
+            with s_btn2:
+                if os.path.exists(sim_xlsx_path):
+                    with open(sim_xlsx_path, "rb") as sxf:
+                        st.download_button(
+                            label="📥 [XLSX] No-Go 감사 엑셀",
+                            data=sxf.read(),
+                            file_name=f"audit_{active_preset.task_id}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key="btn_sim_audit_xlsx"
+                        )
+
         st.divider()
 
         # Section 2: Senior Profile Vector Similarity Matcher & Recency Filter
@@ -1022,6 +1069,50 @@ if "audit_data" in st.session_state:
 
             if "mlflow_metadata" in res and "run_id" in res["mlflow_metadata"]:
                 st.caption(f"🔬 MLflow 실험 기록 완료: `Run ID: {res['mlflow_metadata']['run_id']}` (실험명: `{res['mlflow_metadata'].get('experiment_name')}`)")
+
+            # One-Click Export Center for Task Pipeline & No-Go Governance
+            st.markdown("---")
+            st.markdown("##### 📥 No-Go 감사 및 파이프라인 보고서 원클릭 다운로드 (PPTX & XLSX)")
+            st.caption("C-레벨 보고용 16:9 와이드스크린 발표 장표와 엔지니어용 세부 감사 명세서 엑셀을 즉시 추출합니다.")
+
+            pipe_out_dir = os.path.join("dist", "task_pipeline_reports")
+            os.makedirs(pipe_out_dir, exist_ok=True)
+            task_tag = res.get("task_id", "task")
+            pipe_pptx_path = os.path.join(pipe_out_dir, f"{task_tag}_governance_deck.pptx")
+            pipe_excel_path = os.path.join(pipe_out_dir, f"{task_tag}_audit_report.xlsx")
+
+            try:
+                PptxDeckBuilder().build_task_pipeline_deck(res, pipe_pptx_path)
+                ExcelReportBuilder().build_pipeline_report(res, pipe_excel_path)
+            except Exception as exp_err:
+                st.warning(f"보고서 파일 생성 중 경고: {exp_err}")
+
+            exp_c1, exp_c2, exp_c3 = st.columns([1.5, 1.5, 1])
+            with exp_c1:
+                if os.path.exists(pipe_pptx_path):
+                    with open(pipe_pptx_path, "rb") as pf:
+                        st.download_button(
+                            label="📊 [PPTX] 파이프라인 거버넌스 발표 장표",
+                            data=pf.read(),
+                            file_name=os.path.basename(pipe_pptx_path),
+                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            type="primary",
+                            use_container_width=True,
+                            key="btn_download_task_pipe_pptx"
+                        )
+            with exp_c2:
+                if os.path.exists(pipe_excel_path):
+                    with open(pipe_excel_path, "rb") as ef:
+                        st.download_button(
+                            label="📗 [XLSX] No-Go 감사 & 피처 명세 엑셀",
+                            data=ef.read(),
+                            file_name=os.path.basename(pipe_excel_path),
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key="btn_download_task_pipe_excel"
+                        )
+            with exp_c3:
+                st.info(f"✓ 리포트 패키징 완료\n({os.path.basename(pipe_pptx_path)})")
 
 
     with tab1:
