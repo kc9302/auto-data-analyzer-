@@ -14,6 +14,7 @@ from src.profiler.feasibility_auditor import DataFeasibilityAuditor
 from src.pipeline.feature_selector import FeatureSelector
 from src.ml_scout.engine import MLScoutEngine
 from src.ml_scout.mlflow_tracker import MLflowExperimentTracker
+from src.pipeline.cache_manager import LargeScaleCacheManager, default_cache_manager
 
 
 class TaskPipelineOrchestrator:
@@ -24,13 +25,15 @@ class TaskPipelineOrchestrator:
     3. Multi-Criteria Pareto Feature Selection (Knee Point determination)
     4. AutoML Model Tournament on Lean Feature Set
     5. MLflow Experiment Tracking & Governance Audit Trail
+    6. Multi-Tiered L1/L2 Pre-Caching (Parquet & JSON) for Big Data
     """
 
     def __init__(
         self,
         task_preset: Union[str, TaskPreset],
         selection_profile: str = "lean_pareto",
-        random_seed: int = 42
+        random_seed: int = 42,
+        cache_manager: Optional[LargeScaleCacheManager] = None
     ):
         if isinstance(task_preset, str):
             preset = default_catalog.get_preset(task_preset)
@@ -42,6 +45,7 @@ class TaskPipelineOrchestrator:
 
         self.selection_profile = selection_profile
         self.random_seed = random_seed
+        self.cache_manager = cache_manager or default_cache_manager
 
         # Initialize Auditor with preset's no_go_rules
         no_go = self.preset.no_go_rules or {}
@@ -80,6 +84,7 @@ class TaskPipelineOrchestrator:
         """
         Extracts target column and extracts/synthesizes candidate features
         matching the task preset's domain patterns.
+        Utilizes cached Parquet features if available.
         """
         if self.preset.target_column not in df.columns:
             raise KeyError(
@@ -88,6 +93,12 @@ class TaskPipelineOrchestrator:
             )
 
         y = df[self.preset.target_column].copy()
+
+        # Check L2 Parquet cache
+        if self.cache_manager:
+            cached_X = self.cache_manager.get_cached_engineered_features(self.preset.task_id, df)
+            if cached_X is not None and isinstance(cached_X, pd.DataFrame) and len(cached_X) == len(df):
+                return cached_X, y
 
         # Exclude target and identity columns
         ignore_cols = {
@@ -121,6 +132,10 @@ class TaskPipelineOrchestrator:
 
         # Handle missing and non-numeric types
         X = self._clean_and_impute(X)
+
+        # Cache engineered features as Parquet
+        if self.cache_manager:
+            self.cache_manager.cache_engineered_features(self.preset.task_id, df, X)
 
         return X, y
 
@@ -191,15 +206,25 @@ class TaskPipelineOrchestrator:
         """
         Executes multi-criteria Pareto feature selection.
         Identifies the mathematical elbow (Knee Point) for optimal feature ROI.
+        Applies adaptive stratified subsampling if dataset is massive (> 50,000 rows).
         """
         active_profile = profile or self.selection_profile
+
+        # Adaptive Subsampling for Big Data
+        X_fit = X
+        y_fit = y
+        if len(X) > 50000:
+            sample_size = min(10000, len(X))
+            X_fit = X.sample(n=sample_size, random_state=self.random_seed)
+            y_fit = y.loc[X_fit.index]
+
         selector = FeatureSelector(
             selection_profile=active_profile,
-            min_features=min(3, max(1, X.shape[1])),
-            max_features=min(20, X.shape[1]),
+            min_features=min(3, max(1, X_fit.shape[1])),
+            max_features=min(20, X_fit.shape[1]),
             random_seed=self.random_seed
         )
-        selector.fit(X, y)
+        selector.fit(X_fit, y_fit)
 
         pareto = selector.pareto_frontier_ or {}
         selected = selector.selected_features_ or list(X.columns[:3])
@@ -255,18 +280,29 @@ class TaskPipelineOrchestrator:
         master_codes: Optional[List[str]] = None,
         profile: Optional[str] = None,
         run_automl: bool = True,
-        log_mlflow: bool = True
+        log_mlflow: bool = True,
+        use_cache: bool = True
     ) -> Dict[str, Any]:
         """
-        Executes the comprehensive 5-Stage Task Pipeline:
+        Executes the comprehensive 5-Stage Task Pipeline with L1/L2 Caching:
+        0. L1/L2 Cache Hit Check (Sub-millisecond instant return)
         1. Feasibility & No-Go Pre-Audit
-        2. Task Feature Extraction & Synthesis
+        2. Task Feature Extraction & Synthesis (Parquet cache)
         3. Pareto Feature Selection (Knee Point determination)
         4. AutoML Tournament Benchmark
         5. MLflow Experiment Logging & Certification
         """
         start_time = time.time()
         active_profile = profile or self.selection_profile
+
+        # Check L1/L2 Cache first
+        if use_cache and self.cache_manager:
+            cached_res = self.cache_manager.get_cached_task_result(self.preset.task_id, df, active_profile)
+            if cached_res is not None and isinstance(cached_res, dict):
+                res_copy = dict(cached_res)
+                res_copy["cache_hit"] = True
+                res_copy["elapsed_sec"] = round(time.time() - start_time, 4)
+                return res_copy
 
         # Stage 1: Feasibility Audit
         audit = self.audit_feasibility(df, master_codes=master_codes)
@@ -275,6 +311,7 @@ class TaskPipelineOrchestrator:
                 "task_id": self.preset.task_id,
                 "task_name": self.preset.name,
                 "status": "HALTED_NO_GO",
+                "cache_hit": False,
                 "verdict_badge": audit.get("verdict_badge"),
                 "summary_reason": audit.get("summary_reason"),
                 "feasibility_audit": audit,
@@ -321,10 +358,11 @@ class TaskPipelineOrchestrator:
 
         elapsed = round(time.time() - start_time, 3)
 
-        return {
+        result_payload = {
             "task_id": self.preset.task_id,
             "task_name": self.preset.name,
             "status": "SUCCESS_GO",
+            "cache_hit": False,
             "verdict_badge": audit.get("verdict_badge", "🟢 GO (정합성 합격)"),
             "feasibility_audit": audit,
             "original_features_count": X_engineered.shape[1],
@@ -336,3 +374,9 @@ class TaskPipelineOrchestrator:
             "mlflow_metadata": mlflow_meta,
             "elapsed_sec": elapsed
         }
+
+        # Cache final result
+        if use_cache and self.cache_manager:
+            self.cache_manager.cache_task_result(self.preset.task_id, df, active_profile, result_payload)
+
+        return result_payload

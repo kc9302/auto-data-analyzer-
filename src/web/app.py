@@ -25,6 +25,7 @@ from src.pipeline.career_tree import CareerPathwayTree, EntityPathwayGraph
 from src.pipeline.senior_matcher import SeniorProfileSimilarityMatcher
 from src.pipeline.academic_guardrails import AcademicRuleGuardrail
 from src.pipeline.task_pipeline_orchestrator import TaskPipelineOrchestrator
+from src.pipeline.cache_manager import default_cache_manager
 from src.domains.catalog import default_catalog
 from src.ml_scout.engine import MLScoutEngine
 from src.ml_scout.persona_scout import PersonaFeatureWeightScout
@@ -229,6 +230,17 @@ with st.sidebar:
                 st.session_state["active_recipe"] = active_recipe
     except Exception:
         pass
+
+    # Large-scale Cache Telemetry
+    c_stats = default_cache_manager.get_cache_stats()
+    with st.expander(f"⚡ 대용량 캐시 ({c_stats['disk_size_mb']}MB)", expanded=False):
+        st.caption(f"**L1 메모리 아이템:** `{c_stats['memory_items_count']}개`")
+        st.caption(f"**L2 디스크 파일:** `{c_stats['disk_files_count']}개` (Parquet/JSON)")
+        st.caption(f"**캐시 디렉토리:** `{os.path.basename(c_stats['cache_dir'])}`")
+        if st.button("🧹 캐시 전체 초기화", key="btn_clear_cache", use_container_width=True):
+            del_cnt = default_cache_manager.clear_cache()
+            st.success(f"{del_cnt}개 캐시 파일이 삭제되었습니다.")
+            st.rerun()
 
     st.divider()
     run_btn = st.button("🚀 원클릭 분석 & 장표 생성", type="primary", use_container_width=True)
@@ -986,7 +998,10 @@ if "audit_data" in st.session_state:
 
         if "last_task_pipeline_result" in st.session_state:
             res = st.session_state["last_task_pipeline_result"]
-            st.success(f"🎉 [{res['task_name']}] 파이프라인 수행 완료! (소요시간: {res.get('elapsed_sec', 0)}초)")
+            if res.get("cache_hit"):
+                st.success(f"⚡ **[L1/L2 캐시 적중 (Cache Hit)]** 동일 원천 데이터 지문 일치 ➔ 연산 생략 및 Parquet 즉시 로드! (소요시간: {res.get('elapsed_sec', 0)}초)")
+            else:
+                st.info(f"💾 **[신규 연산 및 L2 캐싱 완료]** Parquet 압축 피처셋 및 JSON 메타데이터 캐시 저장 완료 (소요시간: {res.get('elapsed_sec', 0)}초)")
 
             st_c1, st_c2, st_c3, st_c4 = st.columns(4)
             with st_c1:
