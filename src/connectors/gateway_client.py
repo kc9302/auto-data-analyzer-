@@ -192,3 +192,56 @@ class DQInsightGatewayClient:
             comparison["api_error"] = api_result.get("error")
 
         return comparison
+
+    def batch_predict_at_risk(
+        self,
+        student_ids: List[str],
+        config_id: int = 304,
+        max_workers: int = 5
+    ) -> pd.DataFrame:
+        """
+        Performs concurrent batch inference for multiple students.
+        Integrates with StudentPrescriptionEngine to provide actionable care recommendations.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+        from src.ml_scout.prescriptive_engine import StudentPrescriptionEngine
+
+        prescriptor = StudentPrescriptionEngine()
+        results = []
+
+        def _worker(s_id: str):
+            res = self.predict_at_risk_student(student_id=s_id, config_id=config_id)
+            if res.get("success"):
+                prob = res.get("probability", 0.0)
+                factors = res.get("top_factors", [])
+                rx = prescriptor.prescribe(s_id, prob, factors)
+                top_str = ", ".join([f"{f['feature']}({f['contribution']:+.2f})" for f in factors[:2]])
+                return {
+                    "student_id": s_id,
+                    "risk_probability": round(prob, 4),
+                    "is_risk": res.get("is_risk", False),
+                    "tier_badge": rx["badge"],
+                    "primary_trigger": rx["primary_trigger"],
+                    "prescriptive_action": rx["prescriptive_action"],
+                    "academic_guardrail": rx["academic_guardrail"],
+                    "top_factors_summary": top_str,
+                    "status": "SUCCESS"
+                }
+            return {
+                "student_id": s_id,
+                "risk_probability": None,
+                "is_risk": None,
+                "tier_badge": "❓ 미확인",
+                "primary_trigger": "N/A",
+                "prescriptive_action": "게이트웨이 호출 실패",
+                "academic_guardrail": "N/A",
+                "top_factors_summary": "N/A",
+                "status": f"FAILED: {res.get('error')}"
+            }
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(_worker, str(sid)) for sid in student_ids]
+            for fut in futures:
+                results.append(fut.result())
+
+        return pd.DataFrame(results)

@@ -67,9 +67,48 @@ def run_cross_validation(output_path: str = "dist/dgu_analysis/gateway_cross_val
         for feat in top_features:
             print(f"      • {feat.get('feature', 'N/A'):<25}: SHAP {feat.get('mean_abs_shap', 0.0):.4f} ({feat.get('impact_pct', 0.0):.1f}%) | {feat.get('direction', '')}")
 
+    # 4-1. Prescription Generation for Live Gateway Result
+    from src.ml_scout.prescriptive_engine import StudentPrescriptionEngine
+    prescriptor = StudentPrescriptionEngine()
+    live_rx = prescriptor.prescribe(
+        student_id=sample_student_id,
+        risk_probability=live_infer.get("probability", 0.0),
+        top_factors=live_infer.get("top_factors", [])
+    )
+    print(f"\n[4] 위기학생 실시간 맞춤 처방 (Prescription):")
+    print(f"   • 등급 (Tier): {live_rx['badge']}")
+    print(f"   • 핵심 원인: {live_rx['primary_trigger']}")
+    print(f"   • 선제 처방: {live_rx['prescriptive_action']}")
+    print(f"   • 학사 가드레일: {live_rx['academic_guardrail']}")
+
+    # 4-2. AutoRecSysAdapter: Generate Enhanced recsys.yaml for dq-insight2
+    from src.pipeline.recsys_adapter import AutoRecSysAdapter
+    adapter = AutoRecSysAdapter(domain="university", project_name="dgu-atrisk-detect")
+    discovered_features = [f.get("feature") for f in top_features if f.get("feature")]
+    # Include gateway baseline features + auto-data-analyzer discovered features
+    enhanced_features = [
+        "GRADE", "PAY_DELAY_FLAG", "GPA_LATEST", "GPA_DELTA", "ACWARN_CNT",
+        "ATTENDANCE_RATE", "EXCUSED_ABSENCE_CNT", "COUNSEL_CNT", "DAYS_SINCE_LAST_COUNSEL",
+        "SCHOLARSHIP_YN", "INCOME_DECILE_EST", "LEAVE_CNT", "REWARD_PENALTY_CNT"
+    ]
+    for feat in discovered_features:
+        if feat.upper() not in [ef.upper() for ef in enhanced_features]:
+            enhanced_features.append(feat)
+
+    yaml_out_path = "dist/dgu_analysis/recsys_304_enhanced.yaml"
+    adapter.export_to_yaml(
+        selected_features=enhanced_features,
+        output_path=yaml_out_path,
+        id_field="STD_NO",
+        target_field="LABEL"
+    )
+    print(f"\n[5] dq-insight2용 차기 고도화 recsys.yaml 자동 생성 완료: {yaml_out_path}")
+    print(f"   • 피처 수: 기존 13개 ➔ 신규 행동 피처 반영 총 {len(enhanced_features)}개")
+
     # 5. Synthesis & Comparison Matrix
     comparison_summary = {
         "gateway_live_sample": live_infer,
+        "gateway_prescription": live_rx,
         "gateway_course_sample": course_infer,
         "local_audit_summary": {
             "dataset": "dgu_student_features.csv (3,500 students)",
@@ -78,6 +117,7 @@ def run_cross_validation(output_path: str = "dist/dgu_analysis/gateway_cross_val
             "best_model": best_model,
             "top_features": top_features
         },
+        "enhanced_recsys_yaml": yaml_out_path,
         "complementary_insights": [
             "1. 게이트웨이(#304)는 학사 시계열 정적 피처(GRADE, LEAVE_CNT, GPA_LATEST, ACWARN_CNT)를 중심으로 판정",
             "2. auto-data-analyzer는 실시간 행동 피처(gpa_drop_amount, attendance_rate, lms_access_days, extracurricular_hours)를 발굴하여 차별화된 조기경보 시그널 제공",
@@ -89,7 +129,7 @@ def run_cross_validation(output_path: str = "dist/dgu_analysis/gateway_cross_val
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(comparison_summary, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[4] 상호 보완 인사이트 도출:")
+    print(f"\n[6] 상호 보완 인사이트 도출:")
     for insight in comparison_summary["complementary_insights"]:
         print(f"   {insight}")
     print(f"\n[OK] 교차 검증 요약 저장 완료: {output_path}")
