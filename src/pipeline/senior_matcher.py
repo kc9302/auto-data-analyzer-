@@ -26,9 +26,17 @@ class SeniorProfileSimilarityMatcher:
     course/activity vector similarity.
     """
 
-    def __init__(self, min_history_threshold: int = 3, top_k_seniors: int = 5):
+    def __init__(
+        self,
+        min_history_threshold: int = 3,
+        top_k_seniors: int = 5,
+        recent_years_cutoff: Optional[int] = None,
+        reference_year: int = 2026
+    ):
         self.min_history_threshold = min_history_threshold
         self.top_k_seniors = top_k_seniors
+        self.recent_years_cutoff = recent_years_cutoff
+        self.reference_year = reference_year
         self.vectorizer_ = TfidfVectorizer(token_pattern=r"(?u)\b[\w-]+\b", lowercase=True)
         self.senior_df_: Optional[pd.DataFrame] = None
         self.senior_vectors_ = None
@@ -36,6 +44,12 @@ class SeniorProfileSimilarityMatcher:
         self.courses_col_ = "courses"
         self.extra_col_ = "extracurriculars"
         self.major_col_ = "major"
+        self.grad_year_col_ = "grad_year"
+        self.raw_alumni_count_ = 0
+        self.filtered_alumni_count_ = 0
+        self.obsolete_data_removed_count_ = 0
+        self.obsolete_ratio_pct_ = 0.0
+        self.cutoff_year_applied_ = None
         self.popular_courses_by_major_: Dict[str, List[Tuple[str, int]]] = defaultdict(list)
         self.all_known_courses_: Set[str] = set()
 
@@ -45,10 +59,12 @@ class SeniorProfileSimilarityMatcher:
         job_col: str = "job_role",
         courses_col: str = "courses",
         extracurricular_col: Optional[str] = "extracurriculars",
-        major_col: Optional[str] = "major"
+        major_col: Optional[str] = "major",
+        grad_year_col: Optional[str] = "grad_year",
+        recent_years_cutoff: Optional[int] = None
     ) -> "SeniorProfileSimilarityMatcher":
         """
-        Fits vectorizer and builds senior alumni vector database.
+        Fits vectorizer and builds senior alumni vector database with optional recency filtering.
         """
         if senior_df.empty or job_col not in senior_df.columns:
             return self
@@ -57,11 +73,33 @@ class SeniorProfileSimilarityMatcher:
         self.courses_col_ = courses_col
         self.extra_col_ = extracurricular_col
         self.major_col_ = major_col
+        self.grad_year_col_ = grad_year_col
+        if recent_years_cutoff is not None:
+            self.recent_years_cutoff = recent_years_cutoff
 
         clean_df = senior_df.copy()
         clean_df[job_col] = clean_df[job_col].fillna("UNKNOWN").astype(str)
 
-        # Build text documents for each senior alumni
+        # Recency Filtering (Removes obsolete 1990s curriculum records)
+        self.raw_alumni_count_ = len(clean_df)
+        self.obsolete_data_removed_count_ = 0
+        self.obsolete_ratio_pct_ = 0.0
+        self.cutoff_year_applied_ = None
+
+        if grad_year_col and grad_year_col in clean_df.columns and self.recent_years_cutoff:
+            clean_df[grad_year_col] = pd.to_numeric(clean_df[grad_year_col], errors="coerce")
+            cutoff_year = self.reference_year - self.recent_years_cutoff
+            self.cutoff_year_applied_ = cutoff_year
+
+            retained_df = clean_df[clean_df[grad_year_col] >= cutoff_year].copy()
+            if not retained_df.empty:
+                self.obsolete_data_removed_count_ = len(clean_df) - len(retained_df)
+                self.obsolete_ratio_pct_ = round((self.obsolete_data_removed_count_ / self.raw_alumni_count_) * 100, 1)
+                clean_df = retained_df
+
+        self.filtered_alumni_count_ = len(clean_df)
+
+        # Build text documents for each retained senior alumni
         docs = []
         major_course_counts = defaultdict(lambda: defaultdict(int))
 
@@ -237,7 +275,14 @@ class SeniorProfileSimilarityMatcher:
             "min_required_threshold": self.min_history_threshold,
             "message": f"동문 선배 {len(self.senior_df_)}명의 이력 데이터에서 가장 유사한 Top-{k} 선배의 커리어 경로를 도출했습니다.",
             "top_match_job": matches[0]["job_role"] if matches else None,
-            "job_matches": matches
+            "job_matches": matches,
+            "recency_audit": {
+                "raw_alumni_count": getattr(self, "raw_alumni_count_", len(self.senior_df_)),
+                "filtered_alumni_count": getattr(self, "filtered_alumni_count_", len(self.senior_df_)),
+                "obsolete_removed_count": getattr(self, "obsolete_data_removed_count_", 0),
+                "obsolete_ratio_pct": getattr(self, "obsolete_ratio_pct_", 0.0),
+                "cutoff_year": getattr(self, "cutoff_year_applied_", None)
+            }
         }
 
     def _parse_items(self, raw_val: Any) -> List[str]:
