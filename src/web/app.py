@@ -22,6 +22,7 @@ from src.profiler.fact_profiler import FactDataProfiler
 from src.profiler.feasibility_auditor import DataFeasibilityAuditor
 from src.pipeline.feature_pipeline import FeaturePipeline
 from src.pipeline.career_tree import CareerPathwayTree, EntityPathwayGraph
+from src.pipeline.senior_matcher import SeniorProfileSimilarityMatcher
 from src.domains.catalog import default_catalog
 from src.ml_scout.engine import MLScoutEngine
 from src.ml_scout.persona_scout import PersonaFeatureWeightScout
@@ -721,18 +722,18 @@ if "audit_data" in st.session_state:
 
         st.divider()
 
-        # Section 2: Career Pathway Tree & Cold-Start Guidance
-        st.markdown("#### 🌲 2. 선배 이력 기반 직무 역량 트리 & 정직한 콜드스타트 가이드 (Honest AI)")
-        st.caption("신입생/편입생에게는 억지 추천 대신 'OO과목 추가 이수 시 추천 잠금 해제' 알림을, 고학년에게는 선배 이수 체계 정밀 매칭을 제공합니다.")
+        # Section 2: Senior Profile Vector Similarity Matcher (Pure Data-Driven Alternative to Ontology)
+        st.markdown("#### 🎯 2. 선배 이력 프로필 벡터 유사도 매칭 (Top-K Senior Profile k-NN & Cosine Similarity)")
+        st.caption("수동 유지보수가 불가능한 온톨로지 대신, 선배들의 실제 수강/활동 이력을 TF-IDF 벡터화하여 나와 가장 닮은 선배들의 취업 경로 및 추가 수강 과목을 데이터 기반으로 자동 미러링합니다.")
 
-        # Setup mock career tree
+        # Setup mock senior alumni database
         senior_records = pd.DataFrame([
-            {"job_role": "데이터 사이언티스트", "courses": "기초파이썬, 머신러닝, 선형대수학, 데이터베이스, 통계학개론", "extracurriculars": "데이터캠프, 캐글챌린지", "major": "컴퓨터공학"},
-            {"job_role": "데이터 사이언티스트", "courses": "기초파이썬, 딥러닝응용, 통계학개론, 데이터베이스", "extracurriculars": "빅데이터경진대회", "major": "통계학"},
-            {"job_role": "백엔드 개발자", "courses": "자바프로그래밍, 스프링부트, 컴퓨터네트워크, 데이터베이스, 운영체제", "extracurriculars": "SW개발동아리, 오픈소스", "major": "컴퓨터공학"},
-            {"job_role": "AI 로보틱스 연구원", "courses": "로봇제어공학, 컴퓨터비전, 선형대수학, ROS기초, C++프로그래밍", "extracurriculars": "로봇경진대회", "major": "전자전기공학"},
+            {"senior_id": "ALUMNI_01", "job_role": "데이터 사이언티스트", "courses": "기초파이썬, 머신러닝, 선형대수학, 데이터베이스, 통계학개론", "extracurriculars": "데이터캠프, 캐글챌린지", "major": "컴퓨터공학"},
+            {"senior_id": "ALUMNI_02", "job_role": "데이터 사이언티스트", "courses": "기초파이썬, 딥러닝응용, 통계학개론, 데이터베이스, 파이썬프로그래밍", "extracurriculars": "빅데이터경진대회", "major": "통계학"},
+            {"senior_id": "ALUMNI_03", "job_role": "백엔드 개발자", "courses": "자바프로그래밍, 스프링부트, 컴퓨터네트워크, 데이터베이스, 운영체제", "extracurriculars": "SW개발동아리, 오픈소스", "major": "컴퓨터공학"},
+            {"senior_id": "ALUMNI_04", "job_role": "AI 로보틱스 연구원", "courses": "로봇제어공학, 컴퓨터비전, 선형대수학, ROS기초, C++프로그래밍", "extracurriculars": "로봇경진대회", "major": "전자전기공학"},
         ])
-        tree_engine = CareerPathwayTree(min_history_threshold=3).fit(senior_records)
+        senior_matcher = SeniorProfileSimilarityMatcher(min_history_threshold=3, top_k_seniors=3).fit(senior_records)
 
         tree_c1, tree_c2 = st.columns([1, 1])
         with tree_c1:
@@ -752,7 +753,7 @@ if "audit_data" in st.session_state:
                 test_extras = ["데이터캠프"]
                 test_grade = "3학년"
 
-            eval_res = tree_engine.evaluate_student(
+            eval_res = senior_matcher.evaluate_student(
                 student_courses=test_courses,
                 student_extracurriculars=test_extras,
                 student_major="컴퓨터공학",
@@ -760,7 +761,7 @@ if "audit_data" in st.session_state:
             )
 
             st.markdown(f"**현재 이수 이력:** `{', '.join(test_courses) if test_courses else '없음'}` / 비교과: `{', '.join(test_extras) if test_extras else '없음'}`")
-            st.metric("트리 진단 상태", eval_res["status_badge"], f"이수 건수: {eval_res['current_history_count']} / 최소 {eval_res['min_required_threshold']}건")
+            st.metric("선배 매칭 진단 상태", eval_res["status_badge"], f"이수 건수: {eval_res['current_history_count']} / 최소 {eval_res['min_required_threshold']}건")
 
         with tree_c2:
             st.markdown("##### 💡 학생 맞춤형 액션 피드백")
@@ -773,9 +774,10 @@ if "audit_data" in st.session_state:
                 st.success(f"**매칭 성공:** {eval_res['message']}")
                 st.markdown(f"🏆 **1순위 부합 직무:** `[{eval_res['top_match_job']}]`")
                 for m in eval_res["job_matches"][:3]:
-                    with st.expander(f"📌 {m['job_role']} (일치도 {int(m['tree_match_score']*100)}%)", expanded=True):
-                        st.write(f"• **일치된 핵심 과목:** `{', '.join(m['matched_courses'])}`")
-                        st.write(f"• **다음 단계 추천 과목:** `{', '.join(m['missing_next_courses'])}`")
+                    with st.expander(f"📌 {m['job_role']} (유사도 {int(m['similarity_score']*100)}% / 매칭 선배 {m['matching_senior_count']}명)", expanded=True):
+                        st.write(f"• **공유된 핵심 과목:** `{', '.join(m['matched_courses'])}`")
+                        st.write(f"• **선배들이 3~4학년 때 추가 수강한 추천 과목:** `{', '.join(m['recommended_next_courses'])}`")
+                        st.write(f"• **매칭 근거:** {m['rationale']}")
 
         st.divider()
 
