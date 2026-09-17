@@ -13,6 +13,7 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+review_report.md
 
 # Build & generated outputs
 dist/
