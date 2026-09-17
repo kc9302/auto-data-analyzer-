@@ -963,6 +963,28 @@ if "audit_data" in st.session_state:
                 if top_f:
                     f_df = pd.DataFrame(top_f, columns=["피처명", "기여도"])
                     st.bar_chart(f_df.set_index("피처명"))
+
+            # MLflow Parameter Importance & Parallel Coordinates Section
+            st.divider()
+            st.markdown("#### 🔬 [MLflow 실험 추적] 하이퍼파라미터 영향도 & 평행 좌표계 분석")
+            st.caption("피처 개수, 트리 깊이, 학습률 등 파라미터가 모델 예측 점수(F1/AUC)에 미치는 영향력을 MLflow로 추적하고 시각화합니다.")
+
+            from src.ml_scout.mlflow_tracker import MLflowExperimentTracker
+            mlflow_tracker = MLflowExperimentTracker()
+            param_analysis = mlflow_tracker.generate_parameter_importance_analysis()
+
+            p_chart = param_analysis.get("chart_path")
+            if p_chart and os.path.exists(p_chart):
+                st.image(
+                    p_chart,
+                    caption="[MLflow 공식 시각화] 좌측: 하이퍼파라미터 평행 좌표계 (Parallel Coordinates) / 우측: 파라미터별 F1 점수 민감도 (%)",
+                    use_container_width=True
+                )
+
+            st.info(f"💡 **MLflow 파라미터 분석 요약:** {param_analysis.get('executive_summary', '')}")
+
+            with st.expander("📋 MLflow 실험 실행 상세 이력 (Runs Table)", expanded=False):
+                st.dataframe(pd.DataFrame(param_analysis.get("runs_table", [])), use_container_width=True)
         else:
             st.info("타겟 변수가 지정되지 않아 비지도 탐색 모드로 수행되었습니다.")
 

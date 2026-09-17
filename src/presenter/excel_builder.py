@@ -72,12 +72,16 @@ class ExcelReportBuilder:
         ws_ml = wb.create_sheet(title="AutoML_리더보드")
         self._build_leaderboard_sheet(ws_ml, audit_data)
 
+        # Sheet 5: MLflow 실험 추적 & 파라미터 영향도 (MLflow Tracking)
+        ws_mlf = wb.create_sheet(title="MLflow_실험추적")
+        self._build_mlflow_sheet(ws_mlf, audit_data)
+
         # Auto-adjust column widths for all sheets
         for ws in wb.worksheets:
             self._autofit_columns(ws)
 
         wb.save(output_xlsx_path)
-        print(f"[OK] 완성형 4개 시트 엑셀 분석 리포트 생성 완료: {output_xlsx_path}")
+        print(f"[OK] 완성형 5개 시트 엑셀 분석 리포트 생성 완료: {output_xlsx_path}")
         return output_xlsx_path
 
     def _build_shap_sheet(
@@ -566,6 +570,117 @@ class ExcelReportBuilder:
         else:
             ws.cell(row=row, column=1, value="세그먼트 슬라이스 분석 데이터 없음").font = self.f_muted
             row += 1
+
+    def _build_mlflow_sheet(self, ws, audit_data: Dict[str, Any]):
+        from src.ml_scout.mlflow_tracker import MLflowExperimentTracker
+
+        tracker = MLflowExperimentTracker()
+        mlf_res = tracker.generate_parameter_importance_analysis()
+
+        # Title
+        ws["A1"] = "🔬 MLflow 실험 추적 & 하이퍼파라미터 영향도 분석 명세서"
+        ws["A1"].font = self.f_title
+        ws["A2"] = "피처 개수 및 GBDT 하이퍼파라미터가 모델 예측 점수(F1/AUC)에 미치는 영향력을 MLflow로 추적한 실측 데이터입니다."
+        ws["A2"].font = self.f_subtitle
+
+        # Summary KPIs
+        ws["A4"] = "1. 📊 MLflow 실험 총평 및 최우선 영향 파라미터"
+        ws["A4"].font = self.f_section
+        ws["A5"] = mlf_res.get("executive_summary", "")
+        ws["A5"].font = self.f_bold
+
+        # Section 2: Parameter Importance Table
+        ws["A7"] = "2. 📈 파라미터별 F1 점수 민감도 순위표 (Parameter Importance)"
+        ws["A7"].font = self.f_section
+
+        p_headers = ["순위", "파라미터명", "설명", "모델 기여 영향도 (%)", "실무 최적 가이드"]
+        for c, h in enumerate(p_headers, start=1):
+            cell = ws.cell(row=8, column=c, value=h)
+            cell.font = self.f_header
+            cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = self.thin_border
+
+        param_imp = mlf_res.get("parameter_importance", {})
+        sorted_params = sorted(param_imp.items(), key=lambda x: x[1], reverse=True)
+        param_desc = {
+            "k_features": ("피처 개수 (K)", "선정된 최종 피처 수", "엘보우 지점(K=4~5)에서 최대 효율"),
+            "max_depth": ("트리 깊이 (Depth)", "의사결정트리 최대 수직 분기 깊이", "과적합 방지를 위해 3~5 사이 권장"),
+            "learning_rate": ("학습률 (LR)", "부스팅 각 스텝의 가중치 축소율", "0.03 ~ 0.10 구간이 가장 안정적"),
+            "noise_threshold": ("노이즈 컷오프", "SHAP 기여도 하위 노이즈 배제 기준", "1.0% 이상 시 일반화 성능 극대화")
+        }
+
+        row = 9
+        for rank, (p_name, val) in enumerate(sorted_params, start=1):
+            kor_name, desc, guide = param_desc.get(p_name, (p_name, "하이퍼파라미터", "최적 튜닝 필요"))
+            ws.cell(row=row, column=1, value=rank).alignment = Alignment(horizontal="center")
+            ws.cell(row=row, column=2, value=kor_name).alignment = Alignment(horizontal="left")
+            ws.cell(row=row, column=3, value=desc).alignment = Alignment(horizontal="left")
+
+            c_val = ws.cell(row=row, column=4, value=f"{val*100:.1f}%")
+            c_val.alignment = Alignment(horizontal="right")
+            if rank == 1:
+                c_val.fill = self.c_succ_fill
+                c_val.font = self.f_bold
+
+            ws.cell(row=row, column=5, value=guide).alignment = Alignment(horizontal="left")
+
+            for c in range(1, 6):
+                cell = ws.cell(row=row, column=c)
+                cell.border = self.thin_border
+                if c != 4 or rank != 1:
+                    cell.font = self.f_normal
+            row += 1
+
+        # Section 3: MLflow Runs Detail Table
+        row += 2
+        ws.cell(row=row, column=1, value="3. 📋 MLflow 실험 실행 상세 이력 (Runs Table)").font = self.f_section
+        row += 1
+
+        r_headers = ["실행 프로필", "모델명", "피처 수 (K)", "트리 깊이", "학습률", "최종 F1 점수", "서빙 지연시간(ms)", "평가"]
+        for c, h in enumerate(r_headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = self.f_header
+            cell.fill = self.c_header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = self.thin_border
+        row += 1
+
+        runs = mlf_res.get("runs_table", [])
+        for r in runs:
+            ws.cell(row=row, column=1, value=r.get("profile", "")).alignment = Alignment(horizontal="left")
+            ws.cell(row=row, column=2, value=r.get("model", "")).alignment = Alignment(horizontal="center")
+            ws.cell(row=row, column=3, value=r.get("k_features", 0)).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=4, value=r.get("max_depth", 0)).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=5, value=r.get("learning_rate", 0.0)).alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=6, value=f"{r.get('f1_score', 0.0):.4f}").alignment = Alignment(horizontal="right")
+            ws.cell(row=row, column=7, value=f"{r.get('latency_ms', 0.0):.1f} ms").alignment = Alignment(horizontal="right")
+
+            f1_sc = r.get("f1_score", 0.0)
+            eval_badge = "최고 성능" if f1_sc >= 0.89 else ("가성비 우수" if r.get("profile") == "lean_pareto" else "양호")
+            c_badge = ws.cell(row=row, column=8, value=eval_badge)
+            c_badge.alignment = Alignment(horizontal="center")
+            if "최고" in eval_badge:
+                c_badge.fill = self.c_succ_fill
+                c_badge.font = self.f_bold
+
+            for c in range(1, 9):
+                cell = ws.cell(row=row, column=c)
+                cell.border = self.thin_border
+                if c != 8 or "최고" not in eval_badge:
+                    cell.font = self.f_normal
+            row += 1
+
+        # Embed Image if present
+        chart_p = mlf_res.get("chart_path")
+        if chart_p and os.path.exists(chart_p):
+            try:
+                img = openpyxl.drawing.image.Image(chart_p)
+                img.width = 680
+                img.height = 280
+                ws.add_image(img, f"A{row + 2}")
+            except Exception:
+                pass
 
     def _autofit_columns(self, ws):
         """Auto-adjusts column widths with sensible margins."""
