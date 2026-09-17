@@ -593,13 +593,27 @@ if "audit_data" in st.session_state:
                             is_r = res["is_risk"]
                             prob = res["probability"]
                             th = res["threshold"]
+                            factors = res.get("top_factors", [])
+
+                            from src.ml_scout.prescriptive_engine import StudentPrescriptionEngine
+                            rx = StudentPrescriptionEngine().prescribe(gw_std_id, prob, factors)
+
                             if is_r:
                                 st.error(f"🚨 **[위기학생 판정: 위험군 (TRUE)]** 위험 확률: **{prob:.4f}** (임계치: {th:.4f})")
                             else:
                                 st.success(f"🟢 **[위기학생 판정: 정상군 (FALSE)]** 위험 확률: **{prob:.4f}** (임계치: {th:.4f})")
 
+                            # Actionable Prescription Box
+                            st.markdown(f"""
+                            <div style="background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                                <h5 style="margin-top:0; color:#1E293B;">🎯 1:1 맞춤형 선제 처방 ({rx['badge']})</h5>
+                                <p style="margin:4px 0;"><b>• 선제 개입 조치:</b> {rx['prescriptive_action']}</p>
+                                <p style="margin:4px 0;"><b>• 학사 규정 가드레일:</b> {rx['academic_guardrail']}</p>
+                                <p style="margin:4px 0;"><b>• 추천 연계 프로그램:</b> {rx['recommended_programs']}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+
                             st.markdown("##### 🔬 게이트웨이 실시간 SHAP 기여 요인 (Top Factors):")
-                            factors = res.get("top_factors", [])
                             if factors:
                                 f_df = pd.DataFrame(factors)
                                 f_df.columns = ["피처명 (Feature)", "SHAP 기여도 (Contribution)"]
@@ -617,6 +631,18 @@ if "audit_data" in st.session_state:
                                 st.dataframe(it_df, use_container_width=True)
                         else:
                             st.error(f"게이트웨이 호출 실패: {res.get('error')}")
+
+        # Enhanced recsys.yaml Download
+        p_recsys_yaml = os.path.join("dist", "dgu_analysis", "recsys_304_enhanced.yaml")
+        if os.path.exists(p_recsys_yaml):
+            with open(p_recsys_yaml, "r", encoding="utf-8") as yf:
+                st.download_button(
+                    label="📄 [dq-insight2용] 차기 고도화 recsys_304_enhanced.yaml 다운로드",
+                    data=yf.read(),
+                    file_name="recsys_304_enhanced.yaml",
+                    mime="text/yaml",
+                    use_container_width=True
+                )
 
     with tab1:
         st.markdown("#### DECK 1: 데이터 현황 및 건전성 진단 (5개 슬라이드 요약)")
