@@ -173,6 +173,23 @@ class ExcelReportBuilder:
             except Exception as e:
                 print(f"[WARN] 엑셀 XGBoost 이미지 삽입 실패: {e}")
 
+        # 3. Official SHAP Dependence Scatter Plot (Top 1-2 Interaction)
+        dep_img_path = plots.get("shap_dependence")
+        if not dep_img_path and shap_img_path:
+            cand_dep = os.path.join(os.path.dirname(shap_img_path), "shap_dependence_top2.png")
+            if os.path.exists(cand_dep):
+                dep_img_path = cand_dep
+        if dep_img_path and os.path.exists(dep_img_path):
+            try:
+                ws["J38"] = "📊 [라이브러리 공식 도식화] Top 1-2위 변수 SHAP Interaction & Dependence 플롯"
+                ws["J38"].font = self.f_section
+                img_dep = OpenpyxlImage(dep_img_path)
+                img_dep.width = 520
+                img_dep.height = 300
+                ws.add_image(img_dep, "J39")
+            except Exception as e:
+                print(f"[WARN] 엑셀 SHAP Dependence 이미지 삽입 실패: {e}")
+
     def _build_prescriptions_sheet(self, ws, audit_data: Dict[str, Any]):
         shap_data = audit_data.get("xgboost_shap_analysis", {})
         recs = shap_data.get("recommendations", {})
@@ -258,6 +275,43 @@ class ExcelReportBuilder:
                 row += 1
         else:
             ws.cell(row=row, column=1, value="노이즈 의심 변수 없음 (전체 피처 유의미)").font = self.f_muted
+
+        # Section 4: Final Feature Selection Audit
+        sel_audit = audit_data.get("feature_selection_audit", {})
+        if sel_audit and "audit_trail" in sel_audit:
+            dim = sel_audit.get("dimension_reduction", {})
+            row += 2
+            ws.cell(row=row, column=1, value=f"4. 최종 모델 투입 피처 선정 명세표 ({dim.get('before_count', 0)}개 중 {dim.get('after_count', 0)}개 최종 선별, 압축률 {dim.get('reduction_pct', 0.0)}%)").font = self.f_section
+            row += 1
+            s_headers = ["순위", "피처명", "기여율 (%)", "누적 기여율 (%)", "최종 판정", "선정 / 탈락 세부 사유"]
+            for c, h in enumerate(s_headers, start=1):
+                cell = ws.cell(row=row, column=c, value=h)
+                cell.font = self.f_header
+                cell.fill = self.c_header_fill
+                cell.border = self.thin_border
+            row += 1
+
+            for item in sel_audit.get("audit_trail", []):
+                ws.cell(row=row, column=1, value=item.get("rank", 0)).alignment = Alignment(horizontal="center")
+                ws.cell(row=row, column=2, value=item.get("feature", "")).font = self.f_bold
+                ws.cell(row=row, column=3, value=item.get("impact_pct", 0.0)).alignment = Alignment(horizontal="right")
+                ws.cell(row=row, column=4, value=item.get("cumulative_pct", 0.0)).alignment = Alignment(horizontal="right")
+                
+                status_cell = ws.cell(row=row, column=5, value=item.get("status_badge", ""))
+                status_cell.alignment = Alignment(horizontal="center")
+                if "최종 선정" in item.get("status_badge", ""):
+                    status_cell.fill = self.c_succ_fill
+                    status_cell.font = self.f_bold
+                elif "노이즈" in item.get("status_badge", ""):
+                    status_cell.fill = self.c_warn_fill
+                    status_cell.font = self.f_bold
+                else:
+                    status_cell.font = self.f_normal
+
+                ws.cell(row=row, column=6, value=item.get("rationale", "")).font = self.f_normal
+                for c in range(1, 7):
+                    ws.cell(row=row, column=c).border = self.thin_border
+                row += 1
 
     def _build_health_sheet(self, ws, audit_data: Dict[str, Any]):
         health = audit_data.get("data_health", {})

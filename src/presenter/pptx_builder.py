@@ -350,15 +350,28 @@ class PptxDeckBuilder:
         synth_list = audit_data.get("feature_synthesis_audit", [])
         sel_synths = [s for s in synth_list if s.get("selected")]
         if sel_synths:
-            for s in sel_synths[:3]:
+            for s in sel_synths[:2]:
                 sp = ftf.add_paragraph()
                 sp.text = f"• [{s.get('type')}] {s.get('feature_name')}: {s.get('formula')}"
-                sp.font.size = Pt(8.5)
+                sp.font.size = Pt(8.0)
                 sp.font.color.rgb = self.c_accent
         else:
             sp = ftf.add_paragraph()
-            sp.text = "• 수치형 비율 및 왜도 보정 피처 6개 선별 투입"
-            sp.font.size = Pt(9)
+            sp.text = "• 수치형 비율 및 왜도 보정 피처 선별 투입"
+            sp.font.size = Pt(8.5)
+
+        sel_audit = audit_data.get("feature_selection_audit", {})
+        if sel_audit and "dimension_reduction" in sel_audit:
+            dim = sel_audit["dimension_reduction"]
+            fp3 = ftf.add_paragraph()
+            fp3.text = "\n3. SHAP 피처 선정 & 노이즈 배제"
+            fp3.font.size = Pt(10)
+            fp3.font.bold = True
+            fp3.font.color.rgb = self.c_primary
+            fp3_sub = ftf.add_paragraph()
+            fp3_sub.text = f"• {dim.get('before_count', 0)}개 중 {dim.get('after_count', 0)}개 최종 선별 (차원 {dim.get('reduction_pct', 0.0)}% 압축, 설명력 {dim.get('cumulative_coverage_pct', 0.0)}% 보존)"
+            fp3_sub.font.size = Pt(8.0)
+            fp3_sub.font.color.rgb = self.c_success
 
         # Right Column: A/B Test Bar Chart
         chart2_path = os.path.join(charts_dir, "ab_test_chart.png")

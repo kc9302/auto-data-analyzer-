@@ -12,6 +12,7 @@ from sklearn.preprocessing import RobustScaler
 from src.pipeline.feature_synthesizer import MissingGovernance, SmartFeatureSynthesizer
 from src.pipeline.feature_ab_tester import FeatureABTester
 from src.pipeline.xgboost_feature_scout import XGBoostFeatureScout
+from src.pipeline.feature_selector import FeatureSelector
 
 
 class LineageTracker:
@@ -50,7 +51,11 @@ class FeaturePipeline:
         pii_columns: Optional[List[str]] = None,
         test_size: float = 0.2,
         random_seed: int = 42,
-        group_column: Optional[str] = None
+        group_column: Optional[str] = None,
+        cumulative_shap_threshold: float = 0.95,
+        noise_threshold_pct: float = 1.0,
+        redundancy_threshold: float = 0.80,
+        max_selected_features: int = 20
     ):
         self.target_column = target_column
         self.pii_columns = pii_columns or []
@@ -63,6 +68,15 @@ class FeaturePipeline:
         self.missing_gov = MissingGovernance()
         self.synthesizer = SmartFeatureSynthesizer(max_synthetic_features=6)
         self.ab_tester = FeatureABTester(random_seed=random_seed)
+        self.selector = FeatureSelector(
+            cumulative_shap_threshold=cumulative_shap_threshold,
+            noise_threshold_pct=noise_threshold_pct,
+            redundancy_threshold=redundancy_threshold,
+            min_features=3,
+            max_features=max_selected_features,
+            enable_consensus=True,
+            random_seed=random_seed
+        )
 
         # Preprocessing states
         self.scaler: Optional[RobustScaler] = None
@@ -71,6 +85,7 @@ class FeaturePipeline:
         self.dropped_features_log: List[Dict[str, str]] = []
         self.ab_test_result: Dict[str, Any] = {}
         self.synthesis_audit: List[Dict[str, Any]] = []
+        self.feature_selection_audit: Dict[str, Any] = {}
         self.raw_input_columns_: List[str] = []
         self.xgb_shap_analysis: Dict[str, Any] = {}
         self.xgb_scout: Optional[XGBoostFeatureScout] = None
@@ -234,21 +249,41 @@ class FeaturePipeline:
             X_train_b[num_cols] = self.scaler.fit_transform(X_train_b[num_cols])
             X_test_b[num_cols] = self.scaler.transform(X_test_b[num_cols])
 
-        # Step 5: Multicollinearity Filtering (Correlation > 0.85)
-        corr_matrix = X_train_b.corr().abs()
-        upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
-        high_corr_drop = [c for c in upper_tri.columns if any(upper_tri[c] > 0.85)]
-        
-        if high_corr_drop:
-            X_train_b = X_train_b.drop(columns=high_corr_drop)
-            X_test_b = X_test_b.drop(columns=high_corr_drop)
-            for c in high_corr_drop:
+        # Step 5: Intelligent SHAP-Guided Feature Selection & Noise Pruning
+        if y_train is not None and not X_train_b.empty:
+            X_train_b = self.selector.fit_transform(X_train_b, y_train, task_type=task_type)
+            X_test_b = self.selector.transform(X_test_b)
+            self.selected_features = list(self.selector.selected_features_)
+            self.feature_selection_audit = self.selector.get_summary_report()
+
+            for dr in self.selector.dropped_features_:
+                reason = "FeatureSelector Pruned"
+                for rec in self.selector.selection_audit_:
+                    if rec["feature"] == dr:
+                        reason = rec["rationale"]
+                        break
                 self.dropped_features_log.append({
-                    "column": c,
-                    "reason": "Multicollinearity (Pearson r > 0.85)"
+                    "column": dr,
+                    "reason": reason
                 })
 
-        self.selected_features = list(X_train_b.columns)
+            red = self.selector.dimension_reduction_
+            self.tracker.record_step(
+                step_id=3,
+                step_name="SHAP-Guided Feature Selection",
+                strategy="Cumulative SHAP (95%) + Noise Pruning (<1.0%) + Redundancy Filter (|r|>0.80)",
+                features_affected=self.selector.selected_features_,
+                stats_before={"features_before": red["before_count"]},
+                stats_after={
+                    "features_selected": red["after_count"],
+                    "reduction_pct": red["reduction_pct"],
+                    "coverage_pct": red["cumulative_coverage_pct"]
+                },
+                rationale="TreeSHAP 기여도 및 비선형 상호작용 검증을 통과한 핵심 고레버리지 피처 최종 선별"
+            )
+        else:
+            self.selected_features = list(X_train_b.columns)
+            self.feature_selection_audit = {}
 
         # -------------------------------------------------------------
         # 3. Execute Systematic Feature A/B Test (Group A vs Group B)
@@ -262,7 +297,7 @@ class FeaturePipeline:
                 task_type=task_type
             )
             self.tracker.record_step(
-                step_id=3,
+                step_id=4,
                 step_name="Feature A/B Test Benchmark",
                 strategy="Stratified 5-Fold Paired t-Test (Baseline A vs Engineered B)",
                 features_affected=["All"],

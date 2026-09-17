@@ -127,7 +127,10 @@ def run_analyzer(
         top_names = [f["feature"] for f in xgb_info.get("top_drivers_summary", [])[:3]]
         noise_cnt = len(xgb_info.get("noise_candidates", []))
         print(f"[OK] 1차 피처 분석 완료 (XGBoost+TreeSHAP): Baseline {xgb_info.get('baseline_metric')} {xgb_info.get('baseline_score')} | Top 변수: {', '.join(top_names)} | 노이즈 의심: {noise_cnt}건")
-    print(f"[OK] Train 세트 크기: {X_train.shape} | Test 세트 크기: {X_test.shape}")
+    if pipeline.feature_selection_audit:
+        sel_dim = pipeline.feature_selection_audit.get("dimension_reduction", {})
+        print(f"[OK] SHAP 피처 선정 완료: {sel_dim.get('before_count')}개 -> {sel_dim.get('after_count')}개 선별 (차원 {sel_dim.get('reduction_pct')}% 압축, 설명력 {sel_dim.get('cumulative_coverage_pct')}% 보존)")
+    print(f"[OK] 최종 모델 투입 Train 세트 크기: {X_train.shape} | Test 세트 크기: {X_test.shape}")
 
     # 4. AutoML Model Scouting & Lifecycle Roadmap
     ml_results = {}
@@ -204,6 +207,7 @@ def run_analyzer(
         "feature_journey": lineage_events,
         "feature_ab_test": ab_res,
         "feature_synthesis_audit": pipeline.synthesis_audit,
+        "feature_selection_audit": pipeline.feature_selection_audit,
         "xgboost_shap_analysis": pipeline.xgb_shap_analysis,
         "missing_governance_log": pipeline.missing_gov.governance_log_,
         "ml_scout": ml_results,

@@ -239,7 +239,7 @@ def test_native_plots_and_excel_export(tmp_path):
 
     wb = openpyxl.load_workbook(excel_path)
     assert "1차_피처분석_SHAP" in wb.sheetnames
-    assert len(wb["1차_피처분석_SHAP"]._images) == 2
+    assert len(wb["1차_피처분석_SHAP"]._images) >= 2
 
     # 2. Test PPTX Deck Builder with native plots in Slide 2
     pptx_path = os.path.join(out_dir, "test_deck.pptx")

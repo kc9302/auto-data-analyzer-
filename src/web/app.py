@@ -307,6 +307,7 @@ if run_btn and connector and selected_table:
             "feature_journey": lineage_events,
             "feature_ab_test": pipeline.ab_test_result,
             "feature_synthesis_audit": pipeline.synthesis_audit,
+            "feature_selection_audit": pipeline.feature_selection_audit,
             "xgboost_shap_analysis": pipeline.xgb_shap_analysis,
             "ml_scout": ml_results,
             "reproducibility_manifest": code_forge.last_manifest
@@ -663,6 +664,47 @@ if "audit_data" in st.session_state:
                     st.markdown("**2) 왜도 보정(Log1p) 추천:**")
                     for l in l_list:
                         st.markdown(f"• `{l['suggested_name']}` = `{l['formula']}` (왜도: {l.get('skewness')})\n  > {l['rationale']}")
+
+            # Feature Selection Engine Section
+            sel_audit = data.get("feature_selection_audit", {})
+            if sel_audit and "dimension_reduction" in sel_audit:
+                st.divider()
+                st.markdown("#### 🎯 [최종 모델 투입] SHAP 기반 지능형 피처 선정 (Feature Selector)")
+                st.caption("XGBoost/TreeSHAP 기여도, 누적 커버리지(95%), 노이즈 배제 및 다중공선성 중복 제거를 거쳐 최종 모델에 투입될 핵심 피처셋을 선별했습니다.")
+
+                dim = sel_audit.get("dimension_reduction", {})
+                f_k1, f_k2, f_k3, f_k4 = st.columns(4)
+                with f_k1:
+                    st.metric("후보 피처 수 (Before)", f"{dim.get('before_count', 0)} 개")
+                with f_k2:
+                    st.metric("최종 선정 피처 수 (After)", f"{dim.get('after_count', 0)} 개", delta=f"{dim.get('pruned_count', 0)}개 배제 완료")
+                with f_k3:
+                    st.metric("차원 압축률 (Reduction)", f"{dim.get('reduction_pct', 0.0)}%", delta="경량화 & 과적합 방지")
+                with f_k4:
+                    st.metric("누적 설명력 보존율", f"{dim.get('cumulative_coverage_pct', 0.0)}%", delta="핵심 시그널 100% 포착")
+
+                st.success(f"💡 **피처 선정 총평:** {sel_audit.get('summary_sentence', '')}")
+
+                # Audit Table
+                audit_trail = sel_audit.get("audit_trail", [])
+                if audit_trail:
+                    st.markdown("##### 📋 피처별 최종 선정 / 탈락 전수 감사 명세 (Audit Trail)")
+                    a_df = pd.DataFrame(audit_trail)[["rank", "feature", "impact_pct", "cumulative_pct", "status_badge", "rationale"]]
+                    a_df.columns = ["순위", "피처명", "기여율(%)", "누적 기여율(%)", "최종 판정", "선정 / 탈락 세부 사유"]
+                    st.dataframe(a_df, use_container_width=True)
+
+                # Interactive Parameter Simulator
+                with st.expander("🎛️ 피처 선정 정책 파라미터 시뮬레이터 (Interactive Threshold Simulator)", expanded=False):
+                    st.caption("누적 SHAP 설명력과 노이즈 컷오프 기준을 가상으로 변경하여 최종 피처셋 구성을 시뮬레이션할 수 있습니다.")
+                    sim_col_a, sim_col_b = st.columns(2)
+                    with sim_col_a:
+                        sim_cum = st.slider("가상 누적 SHAP 목표 (%)", min_value=70, max_value=99, value=95, step=1)
+                    with sim_col_b:
+                        sim_noise = st.slider("가상 노이즈 컷오프 (%)", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
+
+                    if audit_trail:
+                        sim_selected = [r for r in audit_trail if r["cumulative_pct"] <= sim_cum and r["impact_pct"] >= sim_noise]
+                        st.info(f"선택한 조건 (누적 {sim_cum}%, 노이즈 {sim_noise}%) 적용 시: **총 {len(sim_selected)}개** 피처 선별 (압축률 {round((1 - len(sim_selected)/max(len(audit_trail), 1))*100, 1)}%)")
         else:
             st.info("타겟 컬럼이 지정되지 않았거나 1차 피처 분석 데이터가 생성되지 않았습니다.")
 
