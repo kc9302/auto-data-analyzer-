@@ -39,3 +39,6 @@ desktop.ini
 # Mock databases
 tests/data/*.db
 
+# MLflow tracking
+mlruns/
+*.sqlite
