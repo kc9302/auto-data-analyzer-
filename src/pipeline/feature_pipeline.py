@@ -55,13 +55,15 @@ class FeaturePipeline:
         cumulative_shap_threshold: float = 0.95,
         noise_threshold_pct: float = 1.0,
         redundancy_threshold: float = 0.80,
-        max_selected_features: int = 20
+        max_selected_features: int = 20,
+        selection_profile: str = "lean_pareto"
     ):
         self.target_column = target_column
         self.pii_columns = pii_columns or []
         self.test_size = test_size
         self.random_seed = random_seed
         self.group_column = group_column
+        self.selection_profile = selection_profile
         self.tracker = LineageTracker()
 
         # Advanced sub-modules
@@ -75,6 +77,7 @@ class FeaturePipeline:
             min_features=3,
             max_features=max_selected_features,
             enable_consensus=True,
+            selection_profile=selection_profile,
             random_seed=random_seed
         )
 
