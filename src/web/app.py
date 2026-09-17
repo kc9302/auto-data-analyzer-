@@ -569,6 +569,55 @@ if "audit_data" in st.session_state:
             else:
                 st.info("SHAP Beeswarm 차트가 준비 중입니다.")
 
+        # Real-time DQ Insight2 Gateway Live Test Section
+        st.divider()
+        st.markdown("#### ⚡ [Live Gateway 연동] dq-insight2-gateway 실시간 추론 & 설명력 테스트")
+        st.caption("개발 서버 게이트웨이(192.168.110.125:8090/18080)와 실시간 통신하여 위기학생 탐지(#304) 및 추천(#253)을 즉시 호출합니다.")
+
+        from src.connectors.gateway_client import DQInsightGatewayClient
+        gw_client = DQInsightGatewayClient()
+
+        gw_col1, gw_col2 = st.columns([1, 2])
+        with gw_col1:
+            gw_task = st.selectbox("게이트웨이 연동 기능 선택", ["위기학생 탐지 (config_id: 304)", "교과 추천 (config_id: 253)"])
+            default_std_id = "1995211382" if "304" in gw_task else "2025123009"
+            gw_std_id = st.text_input("조회 학번 (User ID)", value=default_std_id)
+            gw_call_btn = st.button("📡 게이트웨이 API 호출", use_container_width=True)
+
+        with gw_col2:
+            if gw_call_btn:
+                with st.spinner("게이트웨이 실시간 호출 중..."):
+                    if "304" in gw_task:
+                        res = gw_client.predict_at_risk_student(student_id=gw_std_id)
+                        if res.get("success"):
+                            is_r = res["is_risk"]
+                            prob = res["probability"]
+                            th = res["threshold"]
+                            if is_r:
+                                st.error(f"🚨 **[위기학생 판정: 위험군 (TRUE)]** 위험 확률: **{prob:.4f}** (임계치: {th:.4f})")
+                            else:
+                                st.success(f"🟢 **[위기학생 판정: 정상군 (FALSE)]** 위험 확률: **{prob:.4f}** (임계치: {th:.4f})")
+
+                            st.markdown("##### 🔬 게이트웨이 실시간 SHAP 기여 요인 (Top Factors):")
+                            factors = res.get("top_factors", [])
+                            if factors:
+                                f_df = pd.DataFrame(factors)
+                                f_df.columns = ["피처명 (Feature)", "SHAP 기여도 (Contribution)"]
+                                st.dataframe(f_df, use_container_width=True)
+                        else:
+                            st.error(f"게이트웨이 호출 실패: {res.get('error')}")
+                    else:
+                        res = gw_client.recommend_courses(student_id=gw_std_id, limit=5)
+                        if res.get("success"):
+                            st.success(f"✓ 교과 추천 {len(res.get('items', []))}건 수신 성공")
+                            items = res.get("items", [])
+                            if items:
+                                it_df = pd.DataFrame(items)[["course_id", "course_name", "score", "reason"]]
+                                it_df.columns = ["과목코드", "과목명", "추천 점수", "추천 사유"]
+                                st.dataframe(it_df, use_container_width=True)
+                        else:
+                            st.error(f"게이트웨이 호출 실패: {res.get('error')}")
+
     with tab1:
         st.markdown("#### DECK 1: 데이터 현황 및 건전성 진단 (5개 슬라이드 요약)")
         c_left, c_right = st.columns(2)
