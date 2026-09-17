@@ -4,6 +4,7 @@ from .feature_selector import FeatureSelector
 from .career_tree import CareerPathwayTree, EntityPathwayGraph
 from .senior_matcher import SeniorProfileSimilarityMatcher
 from .academic_guardrails import AcademicRuleGuardrail
+from .task_pipeline_orchestrator import TaskPipelineOrchestrator
 
 __all__ = [
     "FeaturePipeline",
@@ -13,6 +14,7 @@ __all__ = [
     "CareerPathwayTree",
     "EntityPathwayGraph",
     "SeniorProfileSimilarityMatcher",
-    "AcademicRuleGuardrail"
+    "AcademicRuleGuardrail",
+    "TaskPipelineOrchestrator"
 ]
 

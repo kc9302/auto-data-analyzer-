@@ -24,6 +24,7 @@ from src.pipeline.feature_pipeline import FeaturePipeline
 from src.pipeline.career_tree import CareerPathwayTree, EntityPathwayGraph
 from src.pipeline.senior_matcher import SeniorProfileSimilarityMatcher
 from src.pipeline.academic_guardrails import AcademicRuleGuardrail
+from src.pipeline.task_pipeline_orchestrator import TaskPipelineOrchestrator
 from src.domains.catalog import default_catalog
 from src.ml_scout.engine import MLScoutEngine
 from src.ml_scout.persona_scout import PersonaFeatureWeightScout
@@ -902,6 +903,110 @@ if "audit_data" in st.session_state:
         st.caption("Auto Data Analyzer 엔진에서 제공하는 9대 교육/취업 및 범용 비즈니스 프리셋 현황")
         with st.expander("🔍 9대 버티컬 태스크 프리셋 목록 및 타겟/콜드스타트 기준표 보기", expanded=False):
             st.dataframe(pd.DataFrame(default_catalog.to_dataframe_summary()), use_container_width=True)
+
+        # Section 6: End-to-End Task-Preset Pareto Pipeline Execution
+        st.divider()
+        st.markdown(f"#### 🚀 [{active_preset.get_display_label()}] 전용 피처 엔지니어링 & 파레토 AutoML 파이프라인")
+        st.caption("선택한 버티컬 태스크의 타겟 변수 및 도메인 패턴에 맞춰 1단계 No-Go 감사부터 파레토 피처 최적화, AutoML 토너먼트까지 원클릭으로 가동합니다.")
+
+        btn_col, opt_col = st.columns([2, 1])
+        with opt_col:
+            selected_exec_profile = st.selectbox(
+                "파레토 피처 프로필",
+                ["lean_pareto (가성비 초경량)", "max_performance (최고 성능)", "explainable (설명 규제)"],
+                index=0,
+                key="task_pipeline_exec_profile"
+            )
+            clean_profile = selected_exec_profile.split()[0]
+        with btn_col:
+            st.write("")
+            run_task_pipeline_clicked = st.button(
+                f"⚡ {active_preset.name} 특화 5단계 파이프라인 가동",
+                type="primary",
+                use_container_width=True,
+                key="btn_run_task_pipeline_exec"
+            )
+
+        if run_task_pipeline_clicked:
+            with st.spinner(f"[{active_preset.name}] 데이터 적합성 감사 및 파레토 최적화 수행 중..."):
+                orchestrator = TaskPipelineOrchestrator(
+                    task_preset=active_preset,
+                    selection_profile=clean_profile,
+                    random_seed=42
+                )
+                
+                # Check if current loaded df has target_column
+                exec_df = None
+                if "df" in locals() and isinstance(df, pd.DataFrame) and active_preset.target_column in df.columns:
+                    exec_df = df
+                else:
+                    # Generate demo dataset for this preset
+                    import numpy as np
+                    n_demo = 150
+                    np.random.seed(42)
+                    if active_preset.task_id == "at_risk_detection":
+                        att = np.random.uniform(55, 100, n_demo)
+                        fg = np.random.poisson(0.8, n_demo)
+                        tgpa = np.random.uniform(1.3, 4.3, n_demo)
+                        prob = ((att < 75).astype(int) + (fg > 1).astype(int) + (tgpa < 2.0).astype(int) >= 1).astype(int)
+                        exec_df = pd.DataFrame({
+                            "student_id": [f"STD_{i:04d}" for i in range(n_demo)],
+                            "attendance_rate": att,
+                            "f_grade_count": fg,
+                            "term_gpa": tgpa,
+                            "tuition_paid": np.random.choice([0, 1], n_demo, p=[0.1, 0.9]),
+                            "is_academic_probation": prob
+                        })
+                    else:
+                        gpa = np.random.uniform(2.5, 4.5, n_demo)
+                        c_py = np.random.choice([0, 1], n_demo)
+                        c_sql = np.random.choice([0, 1], n_demo)
+                        c_algo = np.random.choice([0, 1], n_demo)
+                        ec = np.random.poisson(1.5, n_demo)
+                        proj = np.random.poisson(1.0, n_demo)
+                        targets = ["AI_ENGINEER" if (p and a) else ("DATA_ANALYST" if s else "SW_DEVELOPER") for p, s, a in zip(c_py, c_sql, c_algo)]
+                        exec_df = pd.DataFrame({
+                            "student_id": [f"STD_{i:04d}" for i in range(n_demo)],
+                            "gpa": gpa,
+                            "course_python": c_py,
+                            "course_sql": c_sql,
+                            "course_algo": c_algo,
+                            "extracurricular_cnt": ec,
+                            "project_cnt": proj,
+                            active_preset.target_column: targets
+                        })
+
+                res = orchestrator.execute_end_to_end(
+                    exec_df,
+                    profile=clean_profile,
+                    run_automl=True,
+                    log_mlflow=True
+                )
+                st.session_state["last_task_pipeline_result"] = res
+
+        if "last_task_pipeline_result" in st.session_state:
+            res = st.session_state["last_task_pipeline_result"]
+            st.success(f"🎉 [{res['task_name']}] 파이프라인 수행 완료! (소요시간: {res.get('elapsed_sec', 0)}초)")
+
+            st_c1, st_c2, st_c3, st_c4 = st.columns(4)
+            with st_c1:
+                st.metric("1단계 No-Go 사전감사", res.get("verdict_badge", "🟢 GO"))
+            with st_c2:
+                st.metric("2단계 원천 피처수", f"{res.get('original_features_count', '-')}개")
+            with st_c3:
+                st.metric("3단계 파레토 확정 피처 (Knee Point)", f"{res.get('selected_features_count', '-')}개")
+            with st_c4:
+                best_mod = res.get("automl_result", {}).get("best_model", "Baseline")
+                best_sc = res.get("automl_result", {}).get("best_score", 0.0)
+                st.metric("4단계 최적 모델 F1", f"{best_sc:.4f}", best_mod)
+
+            st.markdown("##### 📌 확정된 가성비 핵심 피처 (Knee Point Features)")
+            sel_feats = res.get("selected_features", [])
+            tag_badges = " ".join([f"`{f}`" for f in sel_feats])
+            st.markdown(f"> 🏆 **선정 피처 목록 ({len(sel_feats)}개)**: {tag_badges}")
+
+            if "mlflow_metadata" in res and "run_id" in res["mlflow_metadata"]:
+                st.caption(f"🔬 MLflow 실험 기록 완료: `Run ID: {res['mlflow_metadata']['run_id']}` (실험명: `{res['mlflow_metadata'].get('experiment_name')}`)")
 
 
     with tab1:
