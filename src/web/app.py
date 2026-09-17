@@ -24,6 +24,7 @@ from src.pipeline.feature_pipeline import FeaturePipeline
 from src.pipeline.career_tree import CareerPathwayTree, EntityPathwayGraph
 from src.pipeline.senior_matcher import SeniorProfileSimilarityMatcher
 from src.pipeline.academic_guardrails import AcademicRuleGuardrail
+from src.pipeline.regulation_parser import DynamicRegulationParser, default_regulation_parser
 from src.pipeline.task_pipeline_orchestrator import TaskPipelineOrchestrator
 from src.pipeline.cache_manager import default_cache_manager
 from src.domains.catalog import default_catalog
@@ -866,7 +867,39 @@ if "audit_data" in st.session_state:
         st.markdown("##### 🛡️ 2-Stage 초경량 학사 규정 가드레일 진단 (Academic Guardrails)")
         st.caption("선수과목 미이수 교과를 원천 차단하고, 전필(전공필수) 결손을 우선 보완하며, 졸업이수 요건 충족률을 실시간 시뮬레이션합니다.")
 
-        guardrail = AcademicRuleGuardrail()
+        # Client Regulation File Uploader & Live Rule Loader
+        with st.expander("📂 고객사 학사 요람 / 규정 파일(CSV/Excel/JSON/TXT) 업로드 및 동적 룰 주입", expanded=False):
+            up_col1, up_col2 = st.columns([2, 1])
+            with up_col1:
+                reg_file = st.file_uploader(
+                    "학사 요람 / 교육과정 규정집 파일 업로드",
+                    type=["csv", "xlsx", "xls", "json", "txt"],
+                    key="academic_reg_file_uploader"
+                )
+            with up_col2:
+                st.caption("📥 샘플 규정 템플릿 다운로드:")
+                t_csv = DynamicRegulationParser.generate_template("csv")
+                t_json = json.dumps(DynamicRegulationParser.generate_template("json"), indent=2, ensure_ascii=False)
+                st.download_button("📄 표준 교과목표 (CSV)", data=t_csv, file_name="curriculum_template.csv", mime="text/csv", use_container_width=True)
+                st.download_button("📜 표준 학사규정 (JSON)", data=t_json, file_name="academic_rules.json", mime="application/json", use_container_width=True)
+
+            if reg_file is not None:
+                try:
+                    parsed_res = default_regulation_parser.parse_file(reg_file, filename=reg_file.name)
+                    st.session_state["custom_guardrail_rules"] = parsed_res
+                    st.success(f"✓ '{reg_file.name}' 파싱 성공! (선수과목 룰: {len(parsed_res['prerequisites'])}개, 과목분류: {len(parsed_res['course_types'])}개)")
+                    with st.expander("🔍 파싱된 규정 상세 명세 보기", expanded=False):
+                        st.json(parsed_res)
+                except Exception as e:
+                    st.error(f"규정 파일 파싱 중 오류: {e}")
+
+        # Bind active guardrail
+        if "custom_guardrail_rules" in st.session_state:
+            guardrail = default_regulation_parser.create_guardrail(st.session_state["custom_guardrail_rules"])
+            st.info("💡 **동적 고객사 규정 적용 중:** 업로드된 교육과정 파일 기반으로 가드레일이 실시간 동작하고 있습니다.")
+        else:
+            guardrail = AcademicRuleGuardrail()
+
         candidate_rec_courses = ["머신러닝", "딥러닝", "스프링부트"]
         prereq_res = guardrail.check_prerequisites(test_courses, candidate_rec_courses)
         mandatory_prioritized = guardrail.prioritize_mandatory_courses(test_courses, candidate_rec_courses, max_recs=3)
