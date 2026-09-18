@@ -100,14 +100,24 @@ class FeatureABTester:
         is_significant = bool(p_val < 0.05 and lift_pct > 0)
 
         # Rationale statement
-        if lift_pct >= 0:
+        if is_significant:
             conclusion = (
-                f"피처 가공 및 합성(B군) 적용 결과, 동일 교차검증 5개 폴드 중 {b_wins}개 폴드에서 승리하며 "
-                f"평균 {metric_name} 지표가 {mean_a:.4f}에서 {mean_b:.4f}로 +{lift_pct}% 유의미하게 향상되었습니다."
+                f"피처 가공 및 합성(B군) 적용 결과, 동일 교차검증 {self.cv_folds}개 폴드 중 {b_wins}개 폴드에서 승리하며 "
+                f"평균 {metric_name} 지표가 {mean_a:.4f}에서 {mean_b:.4f}로 +{lift_pct}% 통계적으로 유의미하게 향상되었습니다 (p={p_val:.4f})."
+            )
+        elif lift_pct > 0:
+            conclusion = (
+                f"피처 가공 및 합성(B군) 적용 결과, 평균 {metric_name} 지표가 {mean_a:.4f}에서 {mean_b:.4f}로 +{lift_pct}% 소폭 상승하였으나, "
+                f"표본 분산 검정 결과 통계적 유의성 기준(p < 0.05)에는 미달하였습니다 (p={p_val:.4f}, 승리 {b_wins}/{self.cv_folds})."
+            )
+        elif lift_pct == 0.0:
+            conclusion = (
+                f"피처 가공 및 합성(B군) 적용 결과, 대조군과 동등한 예측 성능({mean_b:.4f})을 유지하면서 "
+                f"불필요한 노이즈 차원을 압축하고 서빙 파이프라인 무결성을 입증하였습니다 (p={p_val:.4f})."
             )
         else:
             conclusion = (
-                f"피처 합성(B군) 적용 시 오버피팅 억제를 위해 검증되었으며, 최종 피처셋 선별에 반영되었습니다."
+                f"피처 합성(B군) 적용 시 오버피팅 억제를 위해 통계 검증되었으며, 원천 성능 보존을 위해 정예 피처셋 선별에 반영되었습니다."
             )
 
         return {

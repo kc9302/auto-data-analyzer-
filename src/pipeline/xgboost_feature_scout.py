@@ -108,7 +108,7 @@ class XGBoostFeatureScout:
         feature_directions = {}
         feature_corrs = {}
         for idx, col in enumerate(feature_names):
-            vals = X_num[col].values
+            vals = bg_data[col].values if (bg_data is not None and col in bg_data.columns) else X_num[col].values[:len(shap_values)]
             s_vals = shap_values[:, idx]
             # Avoid divide by zero if std is zero
             std_v = np.std(vals)
@@ -299,7 +299,7 @@ class XGBoostFeatureScout:
             else:
                 base_val = float(ev)
 
-            return vals, base_val
+            return vals, base_val, bg_data
 
         except Exception:
             # Graceful Fallback to FastMarginalExplainer
