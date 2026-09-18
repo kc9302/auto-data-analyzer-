@@ -101,8 +101,11 @@ class ExcelReportBuilder:
         ws["A2"] = f"XGBoost 베이스라인 {shap_data.get('baseline_metric', 'Score')}: {shap_data.get('baseline_score', 0.0):.4f} | 엔진: {shap_data.get('engine', 'XGBoost + TreeSHAP')} | 분석일시: {audit_data.get('generated_at', '')[:19]}"
         ws["A2"].font = self.f_subtitle
 
+        from src.domains.feature_catalog import FeatureMetadataCatalog
+        catalog = FeatureMetadataCatalog.get_default()
+
         # Table Header
-        headers = ["순위", "피처명", "기여율 (%)", "평균 절대 SHAP", "영향 방향성", "상관계수", "비즈니스 해석", "노이즈 여부"]
+        headers = ["순위", "피처명", "피처 한글명", "원천 출처 마트 DB", "신호 구분", "기여율 (%)", "평균 절대 SHAP", "영향 방향성", "상관계수", "비즈니스 해석", "노이즈 여부"]
         start_row = 4
         for col_idx, h in enumerate(headers, start=1):
             cell = ws.cell(row=start_row, column=col_idx, value=h)
@@ -120,15 +123,24 @@ class ExcelReportBuilder:
             is_noise = f["feature"] in noise_names
             noise_text = "⚠️ 제외 권고" if is_noise else "정상 채택"
 
+            feat_name = f["feature"]
+            meta = catalog.get_info(feat_name)
+            kor_name = meta.get("korean_name", feat_name)
+            source_mart = meta.get("source_mart", "-")
+            signal_grp = meta.get("signal_group", "-")
+
             ws.cell(row=curr_row, column=1, value=f["rank"]).alignment = Alignment(horizontal="center")
-            ws.cell(row=curr_row, column=2, value=f["feature"]).alignment = Alignment(horizontal="left")
-            ws.cell(row=curr_row, column=3, value=f["impact_pct"]).alignment = Alignment(horizontal="right")
-            ws.cell(row=curr_row, column=4, value=f["mean_abs_shap"]).alignment = Alignment(horizontal="right")
-            ws.cell(row=curr_row, column=5, value=f["direction"]).alignment = Alignment(horizontal="center")
-            ws.cell(row=curr_row, column=6, value=f["correlation"]).alignment = Alignment(horizontal="right")
-            ws.cell(row=curr_row, column=7, value=f["interpretation"]).alignment = Alignment(horizontal="left")
+            ws.cell(row=curr_row, column=2, value=feat_name).alignment = Alignment(horizontal="left")
+            ws.cell(row=curr_row, column=3, value=kor_name).alignment = Alignment(horizontal="left")
+            ws.cell(row=curr_row, column=4, value=source_mart).alignment = Alignment(horizontal="left")
+            ws.cell(row=curr_row, column=5, value=signal_grp).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=6, value=f["impact_pct"]).alignment = Alignment(horizontal="right")
+            ws.cell(row=curr_row, column=7, value=f["mean_abs_shap"]).alignment = Alignment(horizontal="right")
+            ws.cell(row=curr_row, column=8, value=f["direction"]).alignment = Alignment(horizontal="center")
+            ws.cell(row=curr_row, column=9, value=f["correlation"]).alignment = Alignment(horizontal="right")
+            ws.cell(row=curr_row, column=10, value=f["interpretation"]).alignment = Alignment(horizontal="left")
             
-            c_noise = ws.cell(row=curr_row, column=8, value=noise_text)
+            c_noise = ws.cell(row=curr_row, column=11, value=noise_text)
             c_noise.alignment = Alignment(horizontal="center")
             if is_noise:
                 c_noise.fill = self.c_warn_fill
@@ -136,9 +148,9 @@ class ExcelReportBuilder:
             else:
                 c_noise.font = self.f_normal
 
-            for c in range(1, 9):
+            for c in range(1, 12):
                 cell = ws.cell(row=curr_row, column=c)
-                if c != 8:
+                if c != 11:
                     cell.font = self.f_normal
                 cell.border = self.thin_border
             curr_row += 1
@@ -287,7 +299,10 @@ class ExcelReportBuilder:
             row += 2
             ws.cell(row=row, column=1, value=f"4. 최종 모델 투입 피처 선정 명세표 ({dim.get('before_count', 0)}개 중 {dim.get('after_count', 0)}개 최종 선별, 압축률 {dim.get('reduction_pct', 0.0)}%)").font = self.f_section
             row += 1
-            s_headers = ["순위", "피처명", "기여율 (%)", "누적 기여율 (%)", "최종 판정", "선정 / 탈락 세부 사유"]
+            from src.domains.feature_catalog import FeatureMetadataCatalog
+            catalog = FeatureMetadataCatalog.get_default()
+
+            s_headers = ["순위", "피처명", "피처 한글명", "원천 출처 마트 DB", "신호 구분", "기여율 (%)", "누적 기여율 (%)", "최종 판정", "선정 / 탈락 세부 사유"]
             for c, h in enumerate(s_headers, start=1):
                 cell = ws.cell(row=row, column=c, value=h)
                 cell.font = self.f_header
@@ -296,12 +311,21 @@ class ExcelReportBuilder:
             row += 1
 
             for item in sel_audit.get("audit_trail", []):
+                feat_name = item.get("feature", "")
+                meta = catalog.get_info(feat_name)
+                kor_name = meta.get("korean_name", feat_name)
+                source_mart = meta.get("source_mart", "-")
+                signal_grp = meta.get("signal_group", "-")
+
                 ws.cell(row=row, column=1, value=item.get("rank", 0)).alignment = Alignment(horizontal="center")
-                ws.cell(row=row, column=2, value=item.get("feature", "")).font = self.f_bold
-                ws.cell(row=row, column=3, value=item.get("impact_pct", 0.0)).alignment = Alignment(horizontal="right")
-                ws.cell(row=row, column=4, value=item.get("cumulative_pct", 0.0)).alignment = Alignment(horizontal="right")
+                ws.cell(row=row, column=2, value=feat_name).font = self.f_bold
+                ws.cell(row=row, column=3, value=kor_name).font = self.f_normal
+                ws.cell(row=row, column=4, value=source_mart).font = self.f_normal
+                ws.cell(row=row, column=5, value=signal_grp).alignment = Alignment(horizontal="center")
+                ws.cell(row=row, column=6, value=item.get("impact_pct", 0.0)).alignment = Alignment(horizontal="right")
+                ws.cell(row=row, column=7, value=item.get("cumulative_pct", 0.0)).alignment = Alignment(horizontal="right")
                 
-                status_cell = ws.cell(row=row, column=5, value=item.get("status_badge", ""))
+                status_cell = ws.cell(row=row, column=8, value=item.get("status_badge", ""))
                 status_cell.alignment = Alignment(horizontal="center")
                 if "최종 선정" in item.get("status_badge", ""):
                     status_cell.fill = self.c_succ_fill
@@ -312,8 +336,8 @@ class ExcelReportBuilder:
                 else:
                     status_cell.font = self.f_normal
 
-                ws.cell(row=row, column=6, value=item.get("rationale", "")).font = self.f_normal
-                for c in range(1, 7):
+                ws.cell(row=row, column=9, value=item.get("rationale", "")).font = self.f_normal
+                for c in range(1, 10):
                     ws.cell(row=row, column=c).border = self.thin_border
                 row += 1
 

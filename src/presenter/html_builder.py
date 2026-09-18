@@ -36,14 +36,25 @@ class HtmlReportBuilder:
 
         # Build 1st-Stage Feature Scout (XGBoost + TreeSHAP) Section HTML
         shap_rows = ""
+        from src.domains.feature_catalog import FeatureMetadataCatalog
+        catalog = FeatureMetadataCatalog.get_default()
+
         if shap_res and "top_features" in shap_res:
-            for item in shap_res.get("top_features", [])[:8]:
+            for item in shap_res.get("top_features", [])[:10]:
                 dir_color = "bg-rose-100 text-rose-800" if "Positive" in item.get("direction", "") else ("bg-sky-100 text-sky-800" if "Negative" in item.get("direction", "") else "bg-slate-100 text-slate-700")
                 bar_bg = "bg-rose-500" if "Positive" in item.get("direction", "") else ("bg-sky-500" if "Negative" in item.get("direction", "") else "bg-slate-400")
                 pct = item.get("impact_pct", 0)
+                feat_raw = item.get("feature", "")
+                meta = catalog.get_info(feat_raw)
+                kor_name = meta.get("korean_name", feat_raw)
+                source_mart = meta.get("source_mart", "-")
                 shap_rows += f"""<tr>
                   <td class='p-2.5 font-bold text-slate-800 text-xs'>{item.get('rank')}</td>
-                  <td class='p-2.5 font-semibold text-slate-900'>{item.get('feature')}</td>
+                  <td class='p-2.5 font-semibold text-slate-900'>
+                    <div>{feat_raw}</div>
+                    <div class='text-xs text-indigo-600 font-normal mt-0.5'>{kor_name}</div>
+                    <div class='text-[10px] text-slate-400 font-mono'>{source_mart}</div>
+                  </td>
                   <td class='p-2.5'>
                     <div class='flex items-center gap-2'>
                       <div class='w-28 bg-slate-100 rounded-full h-2 overflow-hidden'>

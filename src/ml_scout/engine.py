@@ -222,6 +222,13 @@ class MLScoutEngine:
         return "Classification"
 
     def run_scout(self, X_train: pd.DataFrame, y_train: pd.Series) -> Dict[str, Any]:
+        # Sanitize column names for LightGBM JSON compatibility
+        import re
+        def clean_col(c):
+            return re.sub(r'[\[\]\{\}:,"\s]', '_', str(c))
+        X_train = X_train.copy()
+        X_train.columns = [clean_col(c) for c in X_train.columns]
+
         task_type = self.detect_task_type(y_train)
         dna = self.dna_profiler.diagnose(X_train, y_train)
         results = []
