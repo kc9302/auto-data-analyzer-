@@ -1,0 +1,36 @@
+# ==============================================================================
+# [DB 접속 설정 템플릿]
+# 사용법: 
+# 1. 본 템플릿 파일을 복사하여 'configs/db_config.yaml' 또는 원하는 이름으로 저장합니다.
+# 2. 본인의 DB 접속 정보(호스트, 포트, 계정, 패스워드 등)를 아래에 입력합니다.
+# 3. 실행: uv run python -m src.main --config configs/db_config.yaml
+# ==============================================================================
+
+database:
+  # 데이터베이스 종류 선택: postgresql, mysql, oracle, mssql, sqlite
+  engine: postgresql
+  
+  # 접속 호스트 (로컬이면 localhost 또는 IP 주소)
+  host: localhost
+  
+  # 포트 번호 (PostgreSQL 기본: 5432, MySQL: 3306, Oracle: 1521)
+  port: 5432
+  
+  # 데이터베이스 명
+  database: postgres
+  
+  # 접속 계정 및 비밀번호
+  username: your_username
+  password: "your_password"
+  
+  # PostgreSQL 스키마 (기본: public)
+  schema: public
+  
+  # 분석 대상 기본 테이블명 및 예측 타깃 컬럼명
+  table: your_table_name
+  target: your_target_column
+
+# ------------------------------------------------------------------------------
+# [실행 예시]
+# uv run python -m src.main --config configs/db_config.yaml --table aihub_table_qa_mart --target is_impossible --out-dir dist_table_qa
+# ------------------------------------------------------------------------------
