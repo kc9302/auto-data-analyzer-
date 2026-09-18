@@ -659,6 +659,26 @@ class PptxDeckBuilder:
 
         self._add_footer(s6, audit_data)
 
+        # Ensure all paragraphs and runs strictly use Malgun Gothic to prevent font fallback glitch
+        for slide in self.prs.slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    for paragraph in shape.text_frame.paragraphs:
+                        if not paragraph.font.name:
+                            paragraph.font.name = "Malgun Gothic"
+                        for run in paragraph.runs:
+                            if not run.font.name:
+                                run.font.name = "Malgun Gothic"
+                elif shape.has_table:
+                    for row in shape.table.rows:
+                        for cell in row.cells:
+                            for paragraph in cell.text_frame.paragraphs:
+                                if not paragraph.font.name:
+                                    paragraph.font.name = "Malgun Gothic"
+                                for run in paragraph.runs:
+                                    if not run.font.name:
+                                        run.font.name = "Malgun Gothic"
+
         # Save presentation
         self.prs.save(output_pptx_path)
         print(f"[OK] 필수 6장 고품질 비주얼 PPTX 장표 생성 완료: {output_pptx_path}")

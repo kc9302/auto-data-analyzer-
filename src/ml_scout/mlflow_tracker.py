@@ -145,6 +145,10 @@ class MLflowExperimentTracker:
         tot_corr = corr_series.sum() or 1.0
         param_importance = {col: round(float(val / tot_corr), 3) for col, val in corr_series.items()}
 
+        # Configure robust Korean font for matplotlib
+        plt.rcParams["font.family"] = ["Malgun Gothic", "NanumGothic", "DejaVu Sans", "sans-serif"]
+        plt.rcParams["axes.unicode_minus"] = False
+
         # 2. Render 2-Row Executive Visualization
         fig, (ax_pc, ax_bar) = plt.subplots(1, 2, figsize=(14, 5.5), dpi=150)
         fig.patch.set_facecolor("#F8FAFC")

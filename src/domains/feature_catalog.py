@@ -46,7 +46,7 @@ class FeatureMetadataCatalog:
                 "feature_name": clean_name,
                 "korean_name": clean_name,
                 "origin_type": "합성 · 학생×아이템 교차 신호",
-                "source_mart": "DM_STUDENT_COURSE_HIST x DM_COURSE_INFO",
+                "source_mart": "파생(교차) (기반: RISSA_MART.DM_STUDENT_COURSE_HIST x DM_COURSE_INFO)",
                 "signal_group": "교차 신호 (추천 상호작용)",
                 "domain_section": "교과/비교과"
             }
@@ -55,7 +55,7 @@ class FeatureMetadataCatalog:
                 "feature_name": clean_name,
                 "korean_name": clean_name,
                 "origin_type": "아이템 마스터 집계",
-                "source_mart": "DM_COURSE_INFO / V_DGU_COURSE_ITEMS",
+                "source_mart": "RISSA_MART.DM_COURSE_INFO / RISSA_MART.V_DGU_COURSE_ITEMS",
                 "signal_group": "과목/아이템 속성",
                 "domain_section": "교과"
             }
@@ -64,7 +64,7 @@ class FeatureMetadataCatalog:
                 "feature_name": clean_name,
                 "korean_name": clean_name,
                 "origin_type": "학생 마스터 원천",
-                "source_mart": "DM_STUDENT_INFO / V_DGU_COURSE_USERS",
+                "source_mart": "RISSA_MART.DM_STUDENT_INFO / RISSA_MART.V_DGU_COURSE_USERS",
                 "signal_group": "학생 프로필",
                 "domain_section": "학적/성적"
             }
