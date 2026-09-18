@@ -604,7 +604,8 @@ class PptxDeckBuilder:
 
         from src.ml_scout.mlflow_tracker import MLflowExperimentTracker
         tracker = MLflowExperimentTracker()
-        mlf_res = tracker.generate_parameter_importance_analysis()
+        ml_scout_res = audit_data.get("ml_scout", {})
+        mlf_res = tracker.generate_parameter_importance_analysis(ml_scout_res=ml_scout_res)
         chart_p = mlf_res.get("chart_path")
 
         if chart_p and os.path.exists(chart_p):

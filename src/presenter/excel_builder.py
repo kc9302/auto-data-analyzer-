@@ -599,7 +599,8 @@ class ExcelReportBuilder:
         from src.ml_scout.mlflow_tracker import MLflowExperimentTracker
 
         tracker = MLflowExperimentTracker()
-        mlf_res = tracker.generate_parameter_importance_analysis()
+        ml_scout_res = audit_data.get("ml_scout", {})
+        mlf_res = tracker.generate_parameter_importance_analysis(ml_scout_res=ml_scout_res)
 
         # Title
         ws["A1"] = "🔬 MLflow 실험 추적 & 하이퍼파라미터 영향도 분석 명세서"

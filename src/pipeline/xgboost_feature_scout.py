@@ -337,7 +337,8 @@ class XGBoostFeatureScout:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        plt.rcParams["font.family"] = ["Malgun Gothic", "NanumGothic", "DejaVu Sans", "sans-serif"]
+        plt.rcParams["font.sans-serif"] = ["Malgun Gothic", "NanumGothic", "DejaVu Sans", "sans-serif"]
+        plt.rcParams["font.family"] = "sans-serif"
         plt.rcParams["axes.unicode_minus"] = False
 
         # 1. Official SHAP Beeswarm Summary Plot
