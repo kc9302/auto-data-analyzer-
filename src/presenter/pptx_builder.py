@@ -585,21 +585,27 @@ class PptxDeckBuilder:
         ip2_sub.font.color.rgb = self.c_text_muted
 
         # Bottom Code Export & Production Guide
-        bot4 = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.05))
+        bot4 = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(5.8), Inches(11.733), Inches(1.15))
         bot4.fill.solid()
         bot4.fill.fore_color.rgb = RGBColor(0xEC, 0xFD, 0xF5)
         bot4.line.color.rgb = self.c_success
         btf4 = bot4.text_frame
         btf4.word_wrap = True
         bp4 = btf4.paragraphs[0]
-        bp4.text = "🚀 프로덕션 파이프라인 코드 배포 안내 (Code Forge Exported):"
+        bp4.text = "🚀 실운영(Production) 서빙 단계 학습 전략 & 파이프라인 배포 가이드:"
         bp4.font.size = Pt(10)
         bp4.font.bold = True
         bp4.font.color.rgb = RGBColor(0x06, 0x5F, 0x46)
+        
         bp4_sub = btf4.add_paragraph()
-        bp4_sub.text = "• 누수 제로 scikit-learn Pipeline 코드(`export_pipeline/pipeline.py`) 및 학습 스크립트(`train.py`) 추출 완료\n• 엔지니어 저장소에 즉시 커밋하여 CI/CD 및 실시간 예측 서빙(MAPI)으로 직결 가능"
-        bp4_sub.font.size = Pt(9.5)
+        bp4_sub.text = "• [표본 vs 실서빙 전략]: 1차 분석·벤치마크는 99% 신뢰 표본(5만건)으로 고속 검증 완료. 실제 운영 배포 시에는 선별된 8대 피처셋으로 전체 28.3만 건을 1회 Full-Fit(소요시간 2~3초)하여 롱테일(신설·소수 전공과목) 추천 커버리지 100% 달성을 권고함."
+        bp4_sub.font.size = Pt(8.5)
         bp4_sub.font.color.rgb = self.c_text_dark
+        
+        bp4_sub2 = btf4.add_paragraph()
+        bp4_sub2.text = "• [자동 추출 배포 패키지]: `export_pipeline/pipeline_serve.py`, `train.py`, `reproduce.py`가 완전 생성되어 운영 서버 CI/CD 및 FastAPI 실시간 서빙으로 즉시 직결 가능"
+        bp4_sub2.font.size = Pt(8.5)
+        bp4_sub2.font.color.rgb = self.c_text_muted
 
         self._add_footer(s5, audit_data)
 

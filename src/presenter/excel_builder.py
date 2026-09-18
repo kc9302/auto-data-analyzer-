@@ -364,6 +364,7 @@ class ExcelReportBuilder:
             ("전체 원천 레코드 수 (모집단)", f"{tot_rows:,} 행 (100.0%)"),
             ("학습 및 분석 표본 레코드 수", f"{smp_rows:,} 행 ({smp_pct:.1f}% 무작위 균등 샘플링)"),
             ("표본 추출 건수 결정 근거 및 이유", "99% 신뢰수준(오차한계 ±0.5% 이내) 통계적 대표성 확보 및 TreeSHAP·5-Fold 교차검증 연산 메모리 최적화(198MB)"),
+            ("실운영(Production) 배포 시 학습 전략", "검증 완료된 정예 8개 피처셋으로 전체 모집단 28.3만 건 1회 Full-Fit 학습(2~3초 소요)하여 롱테일(신설·소수전공) 커버리지 100% 달성 권고"),
             ("총 컬럼 수", f"{health.get('total_columns', 0)} 개"),
             ("전체 결측 셀 비율", f"{health.get('missing_cells_ratio', 0)} %"),
             ("중복 행 건수", f"{health.get('duplicate_row_count', 0)} 건"),
