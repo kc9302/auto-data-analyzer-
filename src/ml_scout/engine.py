@@ -242,15 +242,18 @@ class MLScoutEngine:
             # If collaborative filtering feature exists, evaluate WARMING Item-CF as a dedicated benchmark model
             itemcf_cols = [c for c in X_train.columns if "ITEMCF" in c.upper() or "CF_" in c.upper()]
             if itemcf_cols:
-                class ItemCFEstimator:
-                    def __init__(self, cf_col):
+                from sklearn.base import BaseEstimator, ClassifierMixin
+                class ItemCFEstimator(BaseEstimator, ClassifierMixin):
+                    def __init__(self, cf_col=""):
                         self.cf_col = cf_col
+                        self.classes_ = np.array([0, 1])
                         self.threshold_ = 0.5
+
                     def fit(self, X, y):
+                        self.classes_ = np.unique(y) if y is not None else np.array([0, 1])
                         scores = X[self.cf_col].fillna(0).values
-                        # calibrate optimal threshold
                         best_f1, best_t = 0.0, 0.5
-                        for t in np.linspace(scores.min(), scores.max(), 10):
+                        for t in np.linspace(float(scores.min()), float(scores.max()), 10):
                             pred = (scores >= t).astype(int)
                             from sklearn.metrics import f1_score
                             sc = f1_score(y, pred, average="weighted", zero_division=0)
@@ -258,14 +261,20 @@ class MLScoutEngine:
                                 best_f1, best_t = sc, t
                         self.threshold_ = best_t
                         return self
+
                     def predict(self, X):
                         scores = X[self.cf_col].fillna(0).values
                         return (scores >= self.threshold_).astype(int)
+
+                    def decision_function(self, X):
+                        return X[self.cf_col].fillna(0).values.astype(float)
+
                     def predict_proba(self, X):
                         scores = X[self.cf_col].fillna(0).values
-                        s_min, s_max = scores.min(), scores.max()
-                        prob = (scores - s_min) / (s_max - s_min + 1e-9)
-                        return np.vstack([1 - prob, prob]).T
+                        s_min, s_max = float(scores.min()), float(scores.max())
+                        denom = (s_max - s_min) if (s_max - s_min) > 1e-9 else 1.0
+                        prob = np.clip((scores - s_min) / denom, 0.0, 1.0)
+                        return np.vstack([1.0 - prob, prob]).T
 
                 models["Item-based CF (WARMING item_cf)"] = ItemCFEstimator(itemcf_cols[0])
 
@@ -319,15 +328,22 @@ class MLScoutEngine:
                     "model": name,
                     "train_time_sec": elapsed,
                     "is_baseline": is_base,
-                    "model_category": "Baseline (통계 대조군)" if is_base else ("Deep Learning" if "Deep" in name else ("GBDT" if "GBM" in name or "Hist" in name else ("Ensemble" if "Forest" in name or "Trees" in name else "Linear")))
+                    "model_category": "Baseline (통계 대조군)" if is_base else ("Collaborative Filtering" if "CF" in name else ("Deep Learning" if "Deep" in name else ("GBDT" if "GBM" in name or "Hist" in name else ("Ensemble" if "Forest" in name or "Trees" in name else "Linear"))))
                 }
                 for m in scoring:
                     key_name = f"test_{m}"
                     if key_name in scores:
-                        res[m] = round(float(np.mean(scores[key_name])), 4)
+                        res[m] = round(float(np.nanmean(scores[key_name])), 4)
                 results.append(res)
             except Exception as e:
-                results.append({"model": name, "error": str(e), "is_baseline": "Baseline" in name})
+                elapsed = round(time.time() - start_t, 2)
+                results.append({
+                    "model": name,
+                    "train_time_sec": elapsed,
+                    "error": str(e),
+                    "is_baseline": "Baseline" in name,
+                    "model_category": "Collaborative Filtering" if "CF" in name else "Machine Learning"
+                })
 
         # Sort leaderboard
         sort_key = primary_metric if primary_metric in scoring else list(scoring)[0]

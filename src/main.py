@@ -141,9 +141,10 @@ def run_analyzer(
         print(f"[OK] 문제 유형 판별: {ml_results['task_type']}")
         print(f"[OK] 데이터 DNA 단계: {ml_results.get('data_dna', {}).get('current_phase')}")
         print(f"[OK] 1위 최적 승자 모델: {ml_results['best_model']}")
-        for r in ml_results["leaderboard"]:
+        for r in ml_results.get("leaderboard", []):
             perf = r.get("f1_weighted") or r.get("accuracy") or r.get("r2") or r.get("neg_root_mean_squared_error", 0.0)
-            print(f"   [{r['rank']}위] {r['model']} ({r.get('model_category')}): 성능 {perf:.4f} (학습 {r['train_time_sec']}초)")
+            train_sec = r.get("train_time_sec", 0.0)
+            print(f"   [{r.get('rank', '-')}위] {r['model']} ({r.get('model_category', 'ML')}): 성능 {perf:.4f} (학습 {train_sec}초)")
 
     # 5. Export Production Clean Python Code, FastAPI Serving Package & Data Freezing
     print("\n[Step 5] 프로덕션 레디 클린 파이썬, 서빙 패키지 및 데이터 동결(Freezing) 추출 중...")
