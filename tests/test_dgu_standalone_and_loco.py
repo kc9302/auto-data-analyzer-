@@ -148,14 +148,27 @@ def test_public_sector_doc_builder():
     assert "제4장. [산출물 4] 추천 마이크로서비스 API 인터페이스 명세서" in md
     assert "제5장. [산출물 5] 학사 가드레일 및 공공 AI 윤리·공정성 점검표" in md
     assert "제6장. [산출물 6] 기술 및 개발 감리원 최종 권고사항 이행 결과표" in md
+    assert "제7장. [산출물 7] 전체 시스템 아키텍처 및 데이터 분석 방법론 명세" in md
 
 
-def test_recsys_recipe_engine_healthcheck():
-    """서빙 라우터 내 헬스체크 및 에러 가드레일 코드 생성 검증"""
+def test_recsys_recipe_engine_healthcheck_and_metrics():
+    """서빙 라우터 내 헬스체크, 메트릭스 및 에러 가드레일 코드 생성 검증"""
     router_code = DGURecSysRecipeEngine.generate_serving_router_code()
     assert "@router.get('/healthz', tags=['Ops'])" in router_code
+    assert "@router.get('/metrics', tags=['Ops'])" in router_code
     assert "HTTP_400_BAD_REQUEST" in router_code
     assert "HTTP_500_INTERNAL_SERVER_ERROR" in router_code
+
+
+def test_benjamini_hochberg_fdr():
+    """통계 감리 100점 요건: 다중비교 Benjamini-Hochberg FDR 보정 검증"""
+    p_vals = [0.0001, 0.002, 0.04, 0.06, 0.12]
+    fdr_results = DGUModelTournament.benjamini_hochberg_fdr(p_vals, alpha=0.05)
+    assert len(fdr_results) == 5
+    for res in fdr_results:
+        assert "fdr_q_value" in res
+        assert res["fdr_q_value"] >= res["raw_p_value"]
+    assert fdr_results[0]["is_significant_fdr"] is True
 
 
 def test_standalone_pipeline_e2e(tmp_path):
