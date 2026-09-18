@@ -1,4 +1,76 @@
 {
+  "X_COHORT_RATE": {
+    "feature_name": "X_COHORT_RATE",
+    "korean_name": "동일 학번/코호트 이수 비율",
+    "origin_type": "합성 · 학생×아이템 교차 신호",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_COURSE_RECORD (학생×수강)",
+    "signal_group": "동기 집단 행동",
+    "domain_section": "교과추천"
+  },
+  "X_DEPT_RATE_is_missing": {
+    "feature_name": "X_DEPT_RATE_is_missing",
+    "korean_name": "학과별 수강률 결측 여부 지시자",
+    "origin_type": "결측 거버넌스 파생 지시자",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_COURSE_RECORD",
+    "signal_group": "결측 지시자",
+    "domain_section": "교과추천"
+  },
+  "X_ITEMCF_MEAN": {
+    "feature_name": "X_ITEMCF_MEAN",
+    "korean_name": "Item-CF 동시수강 협업필터링 점수",
+    "origin_type": "합성 · 추천 알고리즘 피처화",
+    "source_mart": "[분석용 VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS",
+    "signal_group": "협업 필터링 유사도",
+    "domain_section": "교과추천"
+  },
+  "ratio_X_OBJ_GRADE_DIFF_div_X_COHORT_RATE": {
+    "feature_name": "ratio_X_OBJ_GRADE_DIFF_div_X_COHORT_RATE",
+    "korean_name": "목표-취득학점차 대비 동기이수율 비율",
+    "origin_type": "스마트 상호작용 피처 (비율)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_COURSE_RECORD x FACT_GPA",
+    "signal_group": "학업 성취 격차",
+    "domain_section": "교과추천"
+  },
+  "I_ENR_2025_1": {
+    "feature_name": "I_ENR_2025_1",
+    "korean_name": "최근학기(2025-1) 강좌 수강생 규모",
+    "origin_type": "아이템 마스터 집계",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_LECTURE_OFFERING (개설교과)",
+    "signal_group": "과목 최신 인기도",
+    "domain_section": "교과추천"
+  },
+  "I_GRADE1_SHARE": {
+    "feature_name": "I_GRADE1_SHARE",
+    "korean_name": "1학년 수강생 점유 비중",
+    "origin_type": "아이템 마스터 집계",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_LECTURE_OFFERING",
+    "signal_group": "과목 저학년 지향도",
+    "domain_section": "교과추천"
+  },
+  "X_USER_DEPT_HIST_SHARE_is_missing": {
+    "feature_name": "X_USER_DEPT_HIST_SHARE_is_missing",
+    "korean_name": "학과 선배 이수비중 결측 여부 지시자",
+    "origin_type": "결측 거버넌스 파생 지시자",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_COURSE_RECORD",
+    "signal_group": "결측 지시자",
+    "domain_section": "교과추천"
+  },
+  "U_SCHGRD": {
+    "feature_name": "U_SCHGRD",
+    "korean_name": "학생 학년 (1~4학년)",
+    "origin_type": "마트 원천 컬럼 그대로",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (학생기본학적)",
+    "signal_group": "학생 기본 학적",
+    "domain_section": "교과추천"
+  },
+  "X_TAKEN_BEFORE": {
+    "feature_name": "X_TAKEN_BEFORE",
+    "korean_name": "동일 교과목 과거 기이수 여부",
+    "origin_type": "합성 · 학생×아이템 교차 신호",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_COURSE_RECORD",
+    "signal_group": "수강 이력 반복",
+    "domain_section": "교과추천"
+  },
   "STS_10_N": {
     "feature_name": "STS_10_N",
     "korean_name": "학적변동 대분류 DB085.10(재학 이벤트) 건수. 1건뿐이면 2024-2 재학 이벤트 부재",

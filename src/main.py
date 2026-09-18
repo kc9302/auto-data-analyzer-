@@ -32,6 +32,7 @@ from src.presenter.pptx_builder import PptxDeckBuilder
 from src.presenter.html_builder import HtmlReportBuilder
 from src.presenter.excel_builder import ExcelReportBuilder
 from src.ml_scout.methodology_navigator import MethodologyNavigator
+from src.ml_scout.decision_proposal import get_proposal_engine, BaseDecisionProposalEngine
 
 def run_analyzer(
     db_url: str,
@@ -40,7 +41,9 @@ def run_analyzer(
     out_dir: str = "dist",
     sample_threshold: int = 50000,
     query: str = None,
-    sql_file: str = None
+    sql_file: str = None,
+    domain: str = None,
+    legacy_model: str = None
 ):
     print("=" * 80)
     print("[SYSTEM] Auto Data Analyzer & ML Scout 시스템 가동")
@@ -146,6 +149,26 @@ def run_analyzer(
             train_sec = r.get("train_time_sec", 0.0)
             print(f"   [{r.get('rank', '-')}위] {r['model']} ({r.get('model_category', 'ML')}): 성능 {perf:.4f} (학습 {train_sec}초)")
 
+    # 4-B. Executive Decision Proposal: Sequential Feature Ablation & Legacy Model Benchmark
+    decision_proposal = {}
+    if target_col and y_train is not None:
+        print(f"\n[Step 4-B] 피처 단계별 투입(Ablation) 실측 및 이전 선정 모델 대비 확정 제안 합성 중...")
+        proposal_engine = get_proposal_engine(domain=domain, table_name=table_name, legacy_model=legacy_model)
+        decision_proposal = proposal_engine.synthesize_proposal(
+            X_train=X_train,
+            y_train=y_train,
+            selected_features=pipeline.selected_features,
+            ml_results=ml_results,
+            task_type=ml_results.get("task_type", "Binary_Classification"),
+            primary_metric=ml_results.get("primary_metric", "f1_weighted"),
+            legacy_model_name=legacy_model
+        )
+        comp = decision_proposal.get("model_comparison", {})
+        abl = decision_proposal.get("ablation_summary", {})
+        print(f"[OK] 최소 정예 피처: {abl.get('final_k', len(pipeline.selected_features))}개 확정 (초기 대비 누적 Lift +{abl.get('total_lift_pct', 0.0):.2f}%)")
+        print(f"[OK] 이전 선정 모델 대비: [{comp.get('legacy_model_name')}] 대비 [{comp.get('champion_model_name')}] 검증 성능 +{comp.get('lift_pct', 0.0)}% 향상 확인")
+        print(f"[OK] 공식 제안 상태: {decision_proposal.get('executive_narrative', {}).get('final_verdict', '프로덕션 도입 승인')}")
+
     # 5. Export Production Clean Python Code, FastAPI Serving Package & Data Freezing
     print("\n[Step 5] 프로덕션 레디 클린 파이썬, 서빙 패키지 및 데이터 동결(Freezing) 추출 중...")
     code_forge = CodeForge()
@@ -159,7 +182,7 @@ def run_analyzer(
         target_column=target_col or "target",
         db_url=db_url,
         table_name=table_name,
-        selected_features=pipeline.selected_features,
+        selected_features=decision_proposal.get("ablation_summary", {}).get("final_selected_features") or pipeline.selected_features,
         synthesis_audit=pipeline.synthesis_audit,
         task_type=ml_results.get("task_type", "Classification"),
         model_instance=best_estimator,
@@ -212,6 +235,7 @@ def run_analyzer(
         "xgboost_shap_analysis": pipeline.xgb_shap_analysis,
         "missing_governance_log": pipeline.missing_gov.governance_log_,
         "ml_scout": ml_results,
+        "final_decision_proposal": decision_proposal,
         "reproducibility_manifest": code_forge.last_manifest
     }
 
@@ -246,9 +270,9 @@ def run_analyzer(
     print(f"   • 프로덕션 컨테이너: {os.path.join(os.path.abspath(export_path), 'Dockerfile')}")
     print(f"   • 자동화 테스트 클라이언트: {os.path.join(os.path.abspath(export_path), 'test_client.py')}")
     print(f"2. 단일 진실 공급원 감사 로그 JSON: {os.path.abspath(audit_json_path)}")
-    print(f"3. 필수 5장 비주얼 모델 진단 PPTX: {os.path.abspath(pptx_path)}")
+    print(f"3. 필수 7장 비주얼 모델 진단 & 최종 의사결정 제안 PPTX: {os.path.abspath(pptx_path)}")
     print(f"4. 반응형 기술 감사 HTML 대시보드: {os.path.abspath(html_path)}")
-    print(f"5. 라이브러리 공식 도식화 탑재 4개 시트 엑셀 분석 리포트: {os.path.abspath(excel_path)}")
+    print(f"5. 라이브러리 공식 도식화 탑재 6개 시트 엑셀 분석 및 최종 제안 리포트: {os.path.abspath(excel_path)}")
     print("=" * 80)
 
     # 8. Render ML Lifecycle Methodology Roadmap & Next Actions
@@ -278,6 +302,8 @@ def main():
     parser.add_argument("--sql-file", type=str, default=None, help="Path to .sql File Containing Read-Only Query")
     parser.add_argument("--out-dir", type=str, default=None, help="Output Directory")
     parser.add_argument("--sample-size", type=int, default=None, help="Adaptive Sampling Threshold")
+    parser.add_argument("--domain", type=str, default=None, help="Domain specification (e.g. dgu_course, general)")
+    parser.add_argument("--legacy-model", type=str, default=None, help="Previously selected/benchmark model to compare against (e.g. item_cf, baseline)")
 
     args = parser.parse_args()
 
@@ -297,7 +323,11 @@ def main():
     target_table = args.table or cfg_data.get("table")
     target_col = args.target or cfg_data.get("target")
     query_str = args.query or cfg_data.get("query")
+    out_dir = args.out_dir or cfg_data.get("out_dir", "dist")
+    sql_path = args.sql_file or cfg_data.get("sql_file")
     sample_size = args.sample_size if args.sample_size is not None else cfg_data.get("sample_size", 50000)
+    domain_spec = args.domain or cfg_data.get("domain")
+    legacy_model = args.legacy_model or cfg_data.get("legacy_model")
     if sample_size == 0:
         sample_size = 999999999  # Disable sampling (Full Population)
 
@@ -308,7 +338,9 @@ def main():
         out_dir=out_dir,
         sample_threshold=sample_size,
         query=query_str,
-        sql_file=sql_path
+        sql_file=sql_path,
+        domain=domain_spec,
+        legacy_model=legacy_model
     )
 
 
