@@ -104,6 +104,30 @@ def test_two_tier_loco_and_borda_consensus():
     assert criteria["primary_metric"] == "5-Fold CV Weighted F1 Drop (ΔF1)"
     assert criteria["shap_weight"] == 0.60
     assert criteria["loco_weight"] == 0.40
+    # SVD 조건수 κ <= 15.0 보장 확인
+    assert selector.final_condition_number_ <= 15.0
+
+
+def test_nadeau_bengio_ttest_and_svd():
+    """Nadeau & Bengio 보정 t-검정 및 SVD 조건수 수리적 무결성 테스트"""
+    # 1. Nadeau & Bengio 보정 검정: 일반 검정 대비 보정 분산이 더 커서 p-value가 보수적으로 산출되는지 검증
+    scores_baseline = [0.20, 0.22, 0.21, 0.23, 0.20]
+    scores_champion = [0.32, 0.35, 0.33, 0.36, 0.34]
+    stat_res = DGUModelTournament.nadeau_bengio_corrected_ttest(
+        scores_a=scores_baseline,
+        scores_b=scores_champion,
+        n_train=2800,
+        n_val=700
+    )
+    assert stat_res["is_statistically_significant"] is True
+    assert stat_res["corrected_pval"] >= stat_res["standard_pval"]  # 보정 p-val이 1종 오류 방지를 위해 더 보수적임
+    assert stat_res["correction_factor"] == 0.45  # (1/5 + 700/2800) = 0.20 + 0.25 = 0.45
+
+    # 2. SVD 조건수 연산 테스트
+    import numpy as np
+    # 완벽 직교 행렬: cond = 1.0
+    mat_ortho = np.eye(4)
+    assert abs(DGUTwoTierLOCOFeatureSelector._compute_condition_number(mat_ortho) - 1.0) < 1e-3
 
 
 def test_public_sector_doc_builder():
