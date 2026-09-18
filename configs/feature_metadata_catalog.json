@@ -3,7 +3,7 @@
     "feature_name": "STS_10_N",
     "korean_name": "학적변동 대분류 DB085.10(재학 이벤트) 건수. 1건뿐이면 2024-2 재학 이벤트 부재",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "RISSA_MART.FACT_STUDENT_STATUS",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_STUDENT_STATUS (학적변동원장 재학이벤트)",
     "signal_group": "학적변동",
     "domain_section": "위기학생"
   },
@@ -11,7 +11,7 @@
     "feature_name": "STS_LEAVE_DAYS",
     "korean_name": "누적 휴학 일수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "RISSA_MART.FACT_STUDENT_STATUS",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_STUDENT_STATUS (학적변동원장 누적휴학일수)",
     "signal_group": "학적변동",
     "domain_section": "위기학생"
   },
@@ -27,7 +27,7 @@
     "feature_name": "MJR_PASS_N",
     "korean_name": "다전공·전공변동 승인 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "RISSA_MART.FACT_MAJOR_CHANGE",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_MAJOR_CHANGE (전공변동/다전공신청)",
     "signal_group": "진로설정·트랙",
     "domain_section": "위기학생"
   },
@@ -35,7 +35,7 @@
     "feature_name": "ENT_YY",
     "korean_name": "입학 연도",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.DIM_STUDENT",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (학생기본학적)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "위기학생"
   },
@@ -43,7 +43,7 @@
     "feature_name": "GPA_APPL_SUM",
     "korean_name": "전 학기 신청학점 합",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "RISSA_MART.FACT_GPA_SEMESTER",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_GPA_SEMESTER (학기별성적원장 신청학점합)",
     "signal_group": "성적(학기별)",
     "domain_section": "위기학생"
   },
@@ -395,7 +395,7 @@
     "feature_name": "X_COHORT_RATE",
     "korean_name": "나와 같은 입학학과·같은 학년인 학생들(동일 집단) 중 작년 같은 학기에 이 과목을 들은 비율",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT 코호트 집계)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -403,7 +403,7 @@
     "feature_name": "X_ITEMCF_MEAN",
     "korean_name": "내 기수강 과목들과 후보 과목의 코사인 유사도 평균(2025 수강 행렬)",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD 동시수강 코사인유사도)",
     "signal_group": "협업 신호(과목 유사도)",
     "domain_section": "교과"
   },
@@ -411,7 +411,7 @@
     "feature_name": "X_DEPT_RATE",
     "korean_name": "같은 입학학과 학생 중 2025년 이 과목 수강 비율",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT 학과별이수율)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -419,7 +419,7 @@
     "feature_name": "X_USER_DEPT_HIST_SHARE",
     "korean_name": "내 기수강 과목 중 후보 과목 개설학과 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD 개설학과이수비중)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -427,7 +427,7 @@
     "feature_name": "X_TAKEN_BEFORE",
     "korean_name": "이미 수강한 과목 여부",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_COURSE_RECORD (참조 VIEW: V_DGU_COURSE_INTERACTIONS_0813 기이수여부)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -435,7 +435,7 @@
     "feature_name": "X_ITEMCF_MAX",
     "korean_name": "위 유사도 최대값",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD 최대 코사인유사도)",
     "signal_group": "협업 신호(과목 유사도)",
     "domain_section": "교과"
   },
@@ -443,7 +443,7 @@
     "feature_name": "I_ENR_2025_1",
     "korean_name": "2025-1 수강 건수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING 개설강좌 집계)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -451,7 +451,7 @@
     "feature_name": "I_DEPT_N_2025",
     "korean_name": "2025년 수강 학생의 학과 수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING 수강학생학과수)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -459,7 +459,7 @@
     "feature_name": "U_RCT_DIV_CD",
     "korean_name": "학생·모집 구분 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813 모집구분코드)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -467,7 +467,7 @@
     "feature_name": "X_IN_CURI_LIST",
     "korean_name": "후보 과목 편성 대상학과 목록에 내 학과 포함 여부",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.BRIDGE_CURRICULUM (교육과정 편성표)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -475,7 +475,7 @@
     "feature_name": "I_ENR_2025",
     "korean_name": "2025년 수강 건수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING 연간수강생수)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -483,7 +483,7 @@
     "feature_name": "I_GRADE1_SHARE",
     "korean_name": "과목/프로그램·1학년비중 비중",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING 1학년수강비중)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -491,7 +491,7 @@
     "feature_name": "I_OPEN_DPTMJR_CD",
     "korean_name": "과목/프로그램·개설 학과전공 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -499,7 +499,7 @@
     "feature_name": "U_ENT_CORS_CD",
     "korean_name": "학생·입학 과정 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -507,7 +507,7 @@
     "feature_name": "I_DETL_CURI_CD",
     "korean_name": "과목/프로그램·세부 교육과정 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -515,7 +515,7 @@
     "feature_name": "X_SAME_DEPT_NOW",
     "korean_name": "개설학과 = 현 학과",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT x DIM_COURSE (개설학과=현소속학과)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -523,7 +523,7 @@
     "feature_name": "I_CURI_DETL_CURI_CD",
     "korean_name": "교육과정·세부 교육과정 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -531,7 +531,7 @@
     "feature_name": "U_ENT_YY",
     "korean_name": "학생·입학 연도",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813 입학연도)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -539,7 +539,7 @@
     "feature_name": "U_ENT_DETL_DIV_CD",
     "korean_name": "학생·입학 세부 구분 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -547,7 +547,7 @@
     "feature_name": "I_USERS_2025",
     "korean_name": "2025년 수강 학생수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -555,7 +555,7 @@
     "feature_name": "U_REQ_CD",
     "korean_name": "학생·입학요건 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -563,7 +563,7 @@
     "feature_name": "U_DEPT_NOW",
     "korean_name": "학생·학과 현재",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813 현재소속학과)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -571,7 +571,7 @@
     "feature_name": "U_ENT_ORGN_CLSF_CD",
     "korean_name": "학생·입학 조직 분류 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -579,7 +579,7 @@
     "feature_name": "I_GRADE4_SHARE",
     "korean_name": "과목/프로그램·4학년비중 비중",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -587,7 +587,7 @@
     "feature_name": "U_GPA_SCHGRD",
     "korean_name": "2025-2 성적·학년",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_GPA_SEMESTER (참조 VIEW: V_DGU_COURSE_INTERACTIONS_0813 직전성적/학년)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -595,7 +595,7 @@
     "feature_name": "U_RCT_DIV_NM",
     "korean_name": "학생·모집 구분 명",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -603,7 +603,7 @@
     "feature_name": "X_USER_CPDIVGRP_HIST_SHARE",
     "korean_name": "내 기수강 과목 중 같은 이수구분군(전공/교양) 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -611,7 +611,7 @@
     "feature_name": "I_OFR_SCHGRD5_FULL_PCNT",
     "korean_name": "개설정보·5학년 정원 인원",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -619,7 +619,7 @@
     "feature_name": "U_REQ_NM",
     "korean_name": "학생·입학요건 명",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -627,7 +627,7 @@
     "feature_name": "U_GPA_SUM_DPT_PCNT",
     "korean_name": "2025-2 성적·합계 학과 인원",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -635,7 +635,7 @@
     "feature_name": "I_CURI_CPDIV_CD",
     "korean_name": "교육과정·이수구분 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -643,7 +643,7 @@
     "feature_name": "U_RCT_SEL_CD",
     "korean_name": "학생·모집 전형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -651,7 +651,7 @@
     "feature_name": "I_CPDIV_CD",
     "korean_name": "과목/프로그램·이수구분 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -659,7 +659,7 @@
     "feature_name": "X_OBJ_GRADE_DIFF",
     "korean_name": "과목 대상학년 − 내 목표학년",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -667,7 +667,7 @@
     "feature_name": "U_ENT_DPTMJR_CD",
     "korean_name": "학생·입학 학과전공 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -675,7 +675,7 @@
     "feature_name": "U_H_VALUE_MEAN",
     "korean_name": "학생 이력·평점 평균",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -683,7 +683,7 @@
     "feature_name": "I_GRADE3_SHARE",
     "korean_name": "과목/프로그램·3학년비중 비중",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -691,7 +691,7 @@
     "feature_name": "I_EVAL_RESP_SUM",
     "korean_name": "과목/프로그램·강의평가 응답 합계",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -699,7 +699,7 @@
     "feature_name": "U_ENT_FORT_CD",
     "korean_name": "학생·입학 입학형태 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -707,7 +707,7 @@
     "feature_name": "U_TRK_MD_TRACK_N",
     "korean_name": "트랙·MD 트랙 건수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "진로설정·트랙",
     "domain_section": "교과"
   },
@@ -715,7 +715,7 @@
     "feature_name": "I_OBJ_SCHGRD_CD",
     "korean_name": "과목/프로그램·대상 학년 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -723,7 +723,7 @@
     "feature_name": "I_CURI_OBJ_SCHGRD_CD",
     "korean_name": "교육과정·대상 학년 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -731,7 +731,7 @@
     "feature_name": "I_OFR_CPDIV_CD",
     "korean_name": "개설정보·이수구분 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -739,7 +739,7 @@
     "feature_name": "U_EXT_APPLY_N",
     "korean_name": "비교과·신청 건수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -747,7 +747,7 @@
     "feature_name": "U_FREE_MJR_CLSF_CD",
     "korean_name": "학생·자율전공 전공 분류 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -755,7 +755,7 @@
     "feature_name": "U_GPA_AGGR_GAIN_CDT",
     "korean_name": "2025-2 성적·누계 취득 학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.FACT_GPA_SEMESTER (참조 VIEW: V_DGU_COURSE_INTERACTIONS_0813 누계취득학점)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -763,7 +763,7 @@
     "feature_name": "U_GPA_AGGR_APPL_CDT",
     "korean_name": "2025-2 성적·누계 신청 학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -771,7 +771,7 @@
     "feature_name": "I_VALUE_2025",
     "korean_name": "2025년 평균 평점",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -779,7 +779,7 @@
     "feature_name": "U_CAR_FIRST_SEM",
     "korean_name": "진로설정·최초 학기",
     "origin_type": "합성 · 진로설정 기록 요약",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "진로설정·트랙",
     "domain_section": "교과"
   },
@@ -787,7 +787,7 @@
     "feature_name": "I_GRADE2_SHARE",
     "korean_name": "과목/프로그램·2학년비중 비중",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -795,7 +795,7 @@
     "feature_name": "I_BASKET_2025",
     "korean_name": "2025년 장바구니 건수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -803,7 +803,7 @@
     "feature_name": "I_OFR_SCHGRD6_FULL_PCNT",
     "korean_name": "개설정보·6학년 정원 인원",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -811,7 +811,7 @@
     "feature_name": "U_MOD_FORT_CD",
     "korean_name": "학생·변경 입학형태 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -819,7 +819,7 @@
     "feature_name": "I_OFR_OBJ_SCHGRD_CD",
     "korean_name": "개설정보·대상 학년 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -827,7 +827,7 @@
     "feature_name": "X_IN_USER_TRACK",
     "korean_name": "내가 신청한 트랙·MD 구성 과목 여부",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.MART_TRACK_COURSE / BRIDGE_COURSE_MODULE (트랙/MD과목)",
     "signal_group": "교차 신호(트랙×과목)",
     "domain_section": "교과"
   },
@@ -835,7 +835,7 @@
     "feature_name": "U_COMP_MEAN",
     "korean_name": "역량·평균",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -843,7 +843,7 @@
     "feature_name": "I_ORGN_MCLSF_CD",
     "korean_name": "과목/프로그램·조직 MCLSF 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -851,7 +851,7 @@
     "feature_name": "I_OFR_PROF_ASGN_ERA_CD",
     "korean_name": "개설정보·교수 배정 시기 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -859,7 +859,7 @@
     "feature_name": "U_H_VALUE_STD",
     "korean_name": "학생 이력·평점 표준편차",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -867,7 +867,7 @@
     "feature_name": "U_GRADE_HIST",
     "korean_name": "학생·학년 이력",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -875,7 +875,7 @@
     "feature_name": "I_OFR_OBJ_CORS_CD",
     "korean_name": "개설정보·대상 과정 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -883,7 +883,7 @@
     "feature_name": "I_OPEN_SEM_CD",
     "korean_name": "과목/프로그램·개설 학기 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -891,7 +891,7 @@
     "feature_name": "X_SAME_DEPT_ENT",
     "korean_name": "개설학과 = 입학학과",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -899,7 +899,7 @@
     "feature_name": "U_GPA_DPT_RANK",
     "korean_name": "2025-2 성적·학과 석차",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -907,7 +907,7 @@
     "feature_name": "U_GPA_AGGR_AVG_MRK",
     "korean_name": "2025-2 성적·누계 평균 평점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -915,7 +915,7 @@
     "feature_name": "X_CAREER_DUTY_DEPT_AFF",
     "korean_name": "내 진로 직무코드를 가진 학생들의 2025 수강 학과 분포에서 이 학과 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(진로×학과)",
     "domain_section": "교과"
   },
@@ -923,7 +923,7 @@
     "feature_name": "U_GPA_DPTMJR_CD",
     "korean_name": "2025-2 성적·학과전공 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -931,7 +931,7 @@
     "feature_name": "I_OFR_TCHR_BDGT_DEPT_CD",
     "korean_name": "개설정보·교원 예산 학과 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -939,7 +939,7 @@
     "feature_name": "U_H_DEPT_N",
     "korean_name": "학생 이력·학과 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -947,7 +947,7 @@
     "feature_name": "U_H_ENROLL_N",
     "korean_name": "학생 이력·수강 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -955,7 +955,7 @@
     "feature_name": "U_H_LAST_N",
     "korean_name": "학생 이력·최근 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -963,7 +963,7 @@
     "feature_name": "U_EXT_COMPLETED_N",
     "korean_name": "비교과·수료 건수",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -971,7 +971,7 @@
     "feature_name": "U_GPA_AVG_MRK",
     "korean_name": "2025-2 성적·평균 평점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -979,7 +979,7 @@
     "feature_name": "X_CAREER_TYPE_DEPT_AFF",
     "korean_name": "내 대표 진로유형 학생들의 수강 학과 분포에서 이 학과 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(진로×학과)",
     "domain_section": "교과"
   },
@@ -987,7 +987,7 @@
     "feature_name": "U_H_CDT_SUM",
     "korean_name": "학생 이력·학점 합계",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -995,7 +995,7 @@
     "feature_name": "U_EXT_MILEAGE",
     "korean_name": "비교과·마일리지",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -1003,7 +1003,7 @@
     "feature_name": "I_OFR_ETC_EVAL2_RATE",
     "korean_name": "개설정보·기타 기타평가2 비율",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1011,7 +1011,7 @@
     "feature_name": "I_CURI_OPEN_ORGN_CLSF_CD",
     "korean_name": "교육과정·개설 조직 분류 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1019,7 +1019,7 @@
     "feature_name": "I_EGCERT_FCTR_DETL_CD",
     "korean_name": "과목/프로그램·공학인증 요소 세부 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1027,7 +1027,7 @@
     "feature_name": "U_CAR_REP_TYPE",
     "korean_name": "진로설정·대표 유형",
     "origin_type": "합성 · 진로설정 기록 요약",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "진로설정·트랙",
     "domain_section": "교과"
   },
@@ -1035,7 +1035,7 @@
     "feature_name": "U_ENT_SCHGRD",
     "korean_name": "학생·입학 학년",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -1043,7 +1043,7 @@
     "feature_name": "U_COMP_CODAD102",
     "korean_name": "역량·핵심역량2",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -1051,7 +1051,7 @@
     "feature_name": "I_OFR_MMJR_FULL_PCNT",
     "korean_name": "개설정보·복수전공 정원 인원",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1059,7 +1059,7 @@
     "feature_name": "I_GRADE5_SHARE",
     "korean_name": "과목/프로그램·5학년비중 비중",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -1067,7 +1067,7 @@
     "feature_name": "U_COMP_CONAD105",
     "korean_name": "역량·진로역량5",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -1075,7 +1075,7 @@
     "feature_name": "U_ENT_DT",
     "korean_name": "학생·입학 일자",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -1083,7 +1083,7 @@
     "feature_name": "U_COMP_CODAD101",
     "korean_name": "역량·핵심역량1",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -1091,7 +1091,7 @@
     "feature_name": "I_CURI_DPT_CNT",
     "korean_name": "교육과정·학과 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1099,7 +1099,7 @@
     "feature_name": "U_H_BASKET_N",
     "korean_name": "학생 이력·장바구니 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -1107,7 +1107,7 @@
     "feature_name": "I_OFR_OPEN_ORGN_CLSF_CD",
     "korean_name": "개설정보·개설 조직 분류 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1115,7 +1115,7 @@
     "feature_name": "U_H_ITEM_N",
     "korean_name": "학생 이력·과목 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -1123,7 +1123,7 @@
     "feature_name": "X_PREREQ_SATISFIED",
     "korean_name": "선수과목 이수 여부(선수 규정 있는 과목만)",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×과목, 동일 집단 기준)",
     "domain_section": "교과"
   },
@@ -1131,7 +1131,7 @@
     "feature_name": "U_GPA_AGGR_FCDT",
     "korean_name": "2025-2 성적·누계 F학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1139,7 +1139,7 @@
     "feature_name": "I_RECOD_EVAL_METH_CD",
     "korean_name": "과목/프로그램·성적 강의평가 방법 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1147,7 +1147,7 @@
     "feature_name": "I_CURI_EGCERT_FCTR_DETL_CD",
     "korean_name": "교육과정·공학인증 요소 세부 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1155,7 +1155,7 @@
     "feature_name": "I_EVAL_SATIS_AVG",
     "korean_name": "과목/프로그램·강의평가 만족도 평균",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1163,7 +1163,7 @@
     "feature_name": "I_OFR_LESN_LANG_TYP_CD",
     "korean_name": "개설정보·수업 언어 유형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1171,7 +1171,7 @@
     "feature_name": "U_GPA_GAIN_CDT",
     "korean_name": "2025-2 성적·취득 학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1179,7 +1179,7 @@
     "feature_name": "U_H_EVAL_MEAN",
     "korean_name": "학생 이력·강의평가 평균",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -1187,7 +1187,7 @@
     "feature_name": "I_OFR_ETC_EVAL2_PRFCT_SCO",
     "korean_name": "개설정보·기타 기타평가2 만점 점수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1195,7 +1195,7 @@
     "feature_name": "U_PRET_OBJ_YN",
     "korean_name": "학생·선수 대상 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -1203,7 +1203,7 @@
     "feature_name": "U_COMP_CODAD103",
     "korean_name": "역량·핵심역량3",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -1211,7 +1211,7 @@
     "feature_name": "U_GPA_APPL_SBJ_CNT",
     "korean_name": "2025-2 성적·신청 과목 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1219,7 +1219,7 @@
     "feature_name": "I_CDT",
     "korean_name": "과목/프로그램·학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1227,7 +1227,7 @@
     "feature_name": "U_GPA_DPT_AGGR_RANK",
     "korean_name": "2025-2 성적·학과 누계 석차",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1235,7 +1235,7 @@
     "feature_name": "I_OFR_LESN_STY_CD",
     "korean_name": "개설정보·수업 방식 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1243,7 +1243,7 @@
     "feature_name": "U_GPA_SCHLR_INC_GRD_CD",
     "korean_name": "2025-2 성적·장학 소득 등급 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1251,7 +1251,7 @@
     "feature_name": "I_CURI_THRY_HCNT",
     "korean_name": "교육과정·이론 시수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1259,7 +1259,7 @@
     "feature_name": "U_COMP_CONAD102",
     "korean_name": "역량·진로역량2",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "비교과·역량",
     "domain_section": "교과"
   },
@@ -1267,7 +1267,7 @@
     "feature_name": "U_GPA_ACWARN_TOT_CNT",
     "korean_name": "2025-2 성적·학사경고 누적 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1275,7 +1275,7 @@
     "feature_name": "I_OTDPT_RATE",
     "korean_name": "타학과 수강 비율",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -1283,7 +1283,7 @@
     "feature_name": "I_OFR_MNCLS_ALL_FULL_PCNT",
     "korean_name": "개설정보·소수전공 전체 정원 인원",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1291,7 +1291,7 @@
     "feature_name": "I_OFR_SESN_SEM_TKCRS_AMT",
     "korean_name": "개설정보·계절 학기 수강 금액",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1299,7 +1299,7 @@
     "feature_name": "I_OFR_PROF_CHG_TYP_CD",
     "korean_name": "개설정보·교수 변경 유형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1307,7 +1307,7 @@
     "feature_name": "I_OFR_LESN_LANG_CD",
     "korean_name": "개설정보·수업 언어 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1315,7 +1315,7 @@
     "feature_name": "U_ENT_DIV_CD",
     "korean_name": "학생·입학 구분 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -1323,7 +1323,7 @@
     "feature_name": "I_OFR_EGCERT_FCTR_DETL_CD",
     "korean_name": "개설정보·공학인증 요소 세부 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1331,7 +1331,7 @@
     "feature_name": "I_OFR_TCHR_EXCP_YN",
     "korean_name": "개설정보·교원 예외 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1339,7 +1339,7 @@
     "feature_name": "U_GPA_AGGR_PER_SCO",
     "korean_name": "2025-2 성적·누계 백분위 점수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "교과"
   },
@@ -1347,7 +1347,7 @@
     "feature_name": "I_CURI_PRAC_HCNT",
     "korean_name": "교육과정·실습 시수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1355,7 +1355,7 @@
     "feature_name": "I_OFR_ETC_EVAL4_PRFCT_SCO",
     "korean_name": "개설정보·기타 기타평가4 만점 점수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1363,7 +1363,7 @@
     "feature_name": "I_OFR_CDT",
     "korean_name": "개설정보·학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1371,7 +1371,7 @@
     "feature_name": "I_OFR_EVAL_EXCP_LESN_YN",
     "korean_name": "개설정보·강의평가 예외 수업 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1379,7 +1379,7 @@
     "feature_name": "I_GRADE6_SHARE",
     "korean_name": "과목/프로그램·6학년비중 비중",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(2025 수강 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 인기(작년)",
     "domain_section": "교과"
   },
@@ -1387,7 +1387,7 @@
     "feature_name": "I_CURI_CDT",
     "korean_name": "교육과정·학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1395,7 +1395,7 @@
     "feature_name": "I_OFR_NOTI_YN",
     "korean_name": "개설정보·공지 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1403,7 +1403,7 @@
     "feature_name": "I_OFR_ETC_EVAL3_RATE",
     "korean_name": "개설정보·기타 기타평가3 비율",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1411,7 +1411,7 @@
     "feature_name": "I_CURI_EGCERT_FCTR_CD",
     "korean_name": "교육과정·공학인증 요소 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1419,7 +1419,7 @@
     "feature_name": "I_OFR_ACTV_LESN_YN",
     "korean_name": "개설정보·활동형 수업 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1427,7 +1427,7 @@
     "feature_name": "I_PRAC_HCNT",
     "korean_name": "과목/프로그램·실습 시수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1435,7 +1435,7 @@
     "feature_name": "U_H_SEM_N",
     "korean_name": "학생 이력·학기 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "교과"
   },
@@ -1443,7 +1443,7 @@
     "feature_name": "I_CURI_RECOD_GRD_TYP_CD",
     "korean_name": "교육과정·성적 등급 유형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1451,7 +1451,7 @@
     "feature_name": "I_CURI_RECOD_EVAL_METH_CD",
     "korean_name": "교육과정·성적 강의평가 방법 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1459,7 +1459,7 @@
     "feature_name": "I_OFR_LESN_TYP_CD",
     "korean_name": "개설정보·수업 유형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1467,7 +1467,7 @@
     "feature_name": "I_LESN_TYP_CD",
     "korean_name": "과목/프로그램·수업 유형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1475,7 +1475,7 @@
     "feature_name": "I_THRY_HCNT",
     "korean_name": "과목/프로그램·이론 시수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1483,7 +1483,7 @@
     "feature_name": "U_ENT_TOPIK_GAIN_DT",
     "korean_name": "학생·입학 TOPIK 취득 일자",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -1491,7 +1491,7 @@
     "feature_name": "U_FRGN_YN",
     "korean_name": "학생·외국인 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_USERS_0813",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "교과"
   },
@@ -1499,7 +1499,7 @@
     "feature_name": "I_OFR_EXAM_EVAL_METH_CD",
     "korean_name": "개설정보·시험 강의평가 방법 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1507,7 +1507,7 @@
     "feature_name": "I_OFR_ATNT_CMPL_SEM_TRM_CD",
     "korean_name": "개설정보·출석 이수 학기 기준 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1515,7 +1515,7 @@
     "feature_name": "I_EGCERT_YN",
     "korean_name": "과목/프로그램·공학인증 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_ITEMS_0813",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "과목 정보",
     "domain_section": "교과"
   },
@@ -1523,7 +1523,7 @@
     "feature_name": "X_USER_MGMT_SHARE",
     "korean_name": "내 과거 비교과 신청 중 이 프로그램 관리부서 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×프로그램/전공)",
     "domain_section": "비교과"
   },
@@ -1531,7 +1531,7 @@
     "feature_name": "X_USER_DETAIL_SHARE",
     "korean_name": "내 과거 신청 중 이 세부유형 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×프로그램/전공)",
     "domain_section": "비교과"
   },
@@ -1539,7 +1539,7 @@
     "feature_name": "I_QUOTA_MEAN",
     "korean_name": "과목/프로그램·정원 평균",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1547,7 +1547,7 @@
     "feature_name": "I_DETAIL_CD",
     "korean_name": "과목/프로그램·세부유형 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1555,7 +1555,7 @@
     "feature_name": "I_QUOTA_SUM",
     "korean_name": "과목/프로그램·정원 합계",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1563,7 +1563,7 @@
     "feature_name": "I_MANAGEMENT_CD",
     "korean_name": "과목/프로그램·관리부서 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1571,7 +1571,7 @@
     "feature_name": "I_LECTURE_START_TIME",
     "korean_name": "과목/프로그램·강좌 시작 시각",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1579,7 +1579,7 @@
     "feature_name": "I_APPLY_END",
     "korean_name": "과목/프로그램·신청 종료",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1587,7 +1587,7 @@
     "feature_name": "U_CH_VALUE_MEAN",
     "korean_name": "수강 요약·평점 평균",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "비교과"
   },
@@ -1595,7 +1595,7 @@
     "feature_name": "I_LECTURE_END_TIME",
     "korean_name": "과목/프로그램·강좌 종료 시각",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1603,7 +1603,7 @@
     "feature_name": "X_COHORT_CAT_RATE",
     "korean_name": "나와 같은 입학학과·같은 학년인 학생들(동일 집단)이 작년에 이 카테고리를 신청한 비율",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(동일 집단×카테고리)",
     "domain_section": "비교과"
   },
@@ -1611,7 +1611,7 @@
     "feature_name": "I_JOBCOMP3_CD",
     "korean_name": "과목/프로그램·직무역량3 코드",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1619,7 +1619,7 @@
     "feature_name": "X_GRADE_MATCH",
     "korean_name": "프로그램 대상학년에 내 학년 포함",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×프로그램/전공)",
     "domain_section": "비교과"
   },
@@ -1627,7 +1627,7 @@
     "feature_name": "U_CH_ENROLL_N",
     "korean_name": "수강 요약·수강 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "비교과"
   },
@@ -1635,7 +1635,7 @@
     "feature_name": "I_APPLY_START",
     "korean_name": "과목/프로그램·신청 시작",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1643,7 +1643,7 @@
     "feature_name": "U_XH_12M_N",
     "korean_name": "비교과 이력·최근12개월 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1651,7 +1651,7 @@
     "feature_name": "U_CH_BASKET_N",
     "korean_name": "수강 요약·장바구니 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 수강 이력",
     "domain_section": "비교과"
   },
@@ -1659,7 +1659,7 @@
     "feature_name": "X_USER_CAT_SHARE",
     "korean_name": "내 과거 신청 중 이 카테고리 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×프로그램/전공)",
     "domain_section": "비교과"
   },
@@ -1667,7 +1667,7 @@
     "feature_name": "U_XH_DAYS_SINCE_LAST",
     "korean_name": "비교과 이력·일수 경과 최근",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1675,7 +1675,7 @@
     "feature_name": "X_PLAN_BEFORE",
     "korean_name": "같은 프로그램 과거 신청 여부",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×프로그램/전공)",
     "domain_section": "비교과"
   },
@@ -1683,7 +1683,7 @@
     "feature_name": "I_LECTURE_START",
     "korean_name": "과목/프로그램·강좌 시작",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1691,7 +1691,7 @@
     "feature_name": "I_LECTURE_END",
     "korean_name": "과목/프로그램·강좌 종료",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1699,7 +1699,7 @@
     "feature_name": "I_PLAN_PRIOR_N",
     "korean_name": "같은 프로그램 과거 신청 건수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(과거 신청 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 과거 신청",
     "domain_section": "비교과"
   },
@@ -1707,7 +1707,7 @@
     "feature_name": "U_CAR_DUTY_CODE",
     "korean_name": "진로설정·직무 코드",
     "origin_type": "합성 · 진로설정 기록 요약",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "진로설정·트랙",
     "domain_section": "비교과"
   },
@@ -1715,7 +1715,7 @@
     "feature_name": "I_JOBCOMP2_CD",
     "korean_name": "과목/프로그램·직무역량2 코드",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1723,7 +1723,7 @@
     "feature_name": "U_COMPGAP_CODAD104",
     "korean_name": "역량 편차·핵심역량4",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1731,7 +1731,7 @@
     "feature_name": "U_XH_ITEM_N",
     "korean_name": "비교과 이력·과목 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1739,7 +1739,7 @@
     "feature_name": "I_LECTURE_DAYS",
     "korean_name": "운영 기간 일수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(과거 신청 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 과거 신청",
     "domain_section": "비교과"
   },
@@ -1747,7 +1747,7 @@
     "feature_name": "I_APPLY_DAYS",
     "korean_name": "신청 기간 일수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(과거 신청 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 과거 신청",
     "domain_section": "비교과"
   },
@@ -1755,7 +1755,7 @@
     "feature_name": "U_XH_APPLY_N",
     "korean_name": "비교과 이력·신청 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1763,7 +1763,7 @@
     "feature_name": "U_COMPGAP_CODAD103",
     "korean_name": "역량 편차·핵심역량3",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1771,7 +1771,7 @@
     "feature_name": "I_JOBCOMP1_CD",
     "korean_name": "과목/프로그램·직무역량1 코드",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1779,7 +1779,7 @@
     "feature_name": "I_APPLY_START_OFFSET",
     "korean_name": "신청 시작일 − 목표구간 시작일",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(과거 신청 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 과거 신청",
     "domain_section": "비교과"
   },
@@ -1787,7 +1787,7 @@
     "feature_name": "U_XH_CAT_N",
     "korean_name": "비교과 이력·범주 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1795,7 +1795,7 @@
     "feature_name": "I_PLAN_PRIOR_USERS",
     "korean_name": "같은 프로그램 과거 신청 학생수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(과거 신청 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 과거 신청",
     "domain_section": "비교과"
   },
@@ -1803,7 +1803,7 @@
     "feature_name": "U_XH_MILEAGE",
     "korean_name": "비교과 이력·마일리지",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1811,7 +1811,7 @@
     "feature_name": "I_CATEGORY_CD",
     "korean_name": "과목/프로그램·카테고리 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1819,7 +1819,7 @@
     "feature_name": "U_COMP_N",
     "korean_name": "역량·건수",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1827,7 +1827,7 @@
     "feature_name": "U_XH_COMPLETED_N",
     "korean_name": "비교과 이력·수료 건수",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1835,7 +1835,7 @@
     "feature_name": "X_COMPGAP_DOT",
     "korean_name": "내 역량 편차와 역량배분의 가중 평균",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(역량×프로그램)",
     "domain_section": "비교과"
   },
@@ -1843,7 +1843,7 @@
     "feature_name": "U_COMPGAP_CODAD102",
     "korean_name": "역량 편차·핵심역량2",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1851,7 +1851,7 @@
     "feature_name": "U_XH_CATSHARE_LP02",
     "korean_name": "비교과 이력·카테고리비중 LP02",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1859,7 +1859,7 @@
     "feature_name": "U_COMPGAP_CODAD101",
     "korean_name": "역량 편차·핵심역량1",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1867,7 +1867,7 @@
     "feature_name": "U_XH_DAYS_SINCE_FIRST",
     "korean_name": "비교과 이력·일수 경과 최초",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1875,7 +1875,7 @@
     "feature_name": "U_XH_CATSHARE_LP06",
     "korean_name": "비교과 이력·카테고리비중 LP06",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1883,7 +1883,7 @@
     "feature_name": "U_XH_CATSHARE_LP05",
     "korean_name": "비교과 이력·카테고리비중 LP05",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1891,7 +1891,7 @@
     "feature_name": "I_LEARNSYS_CD",
     "korean_name": "과목/프로그램·학습체계 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1899,7 +1899,7 @@
     "feature_name": "U_XH_COMPLETE_RATE",
     "korean_name": "비교과 이력·수료 비율",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1907,7 +1907,7 @@
     "feature_name": "U_XH_CATSHARE_LP08",
     "korean_name": "비교과 이력·카테고리비중 LP08",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1915,7 +1915,7 @@
     "feature_name": "U_COMPGAP_CONAD101",
     "korean_name": "역량 편차·진로역량1",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1923,7 +1923,7 @@
     "feature_name": "U_COMPGAP_CONAD103",
     "korean_name": "역량 편차·진로역량3",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1931,7 +1931,7 @@
     "feature_name": "U_GPA_APPL_CDT",
     "korean_name": "2025-2 성적·신청 학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813(GPA_*)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "직전 학기 성적·학적",
     "domain_section": "비교과"
   },
@@ -1939,7 +1939,7 @@
     "feature_name": "U_CNTY_CD",
     "korean_name": "학생·국적 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.DIM_STUDENT(V_DGU_COURSE_USERS_0813)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "비교과"
   },
@@ -1947,7 +1947,7 @@
     "feature_name": "U_CNS_JOB_N",
     "korean_name": "학생·상담 취업 건수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "상담",
     "domain_section": "비교과"
   },
@@ -1955,7 +1955,7 @@
     "feature_name": "U_XH_CATSHARE_LP03",
     "korean_name": "비교과 이력·카테고리비중 LP03",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1963,7 +1963,7 @@
     "feature_name": "U_COMPGAP_CODAD105",
     "korean_name": "역량 편차·핵심역량5",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1971,7 +1971,7 @@
     "feature_name": "U_COMPGAP_CONAD105",
     "korean_name": "역량 편차·진로역량5",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -1979,7 +1979,7 @@
     "feature_name": "U_XH_CATSHARE_LP01",
     "korean_name": "비교과 이력·카테고리비중 LP01",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -1987,7 +1987,7 @@
     "feature_name": "I_COMP_W3",
     "korean_name": "과목/프로그램·역량 가중치3",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -1995,7 +1995,7 @@
     "feature_name": "U_COMP_CONAD103",
     "korean_name": "역량·진로역량3",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -2003,7 +2003,7 @@
     "feature_name": "X_COMP_DOT",
     "korean_name": "내 역량점수와 프로그램 역량배분(COMP_W)의 가중 평균",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(역량×프로그램)",
     "domain_section": "비교과"
   },
@@ -2011,7 +2011,7 @@
     "feature_name": "I_TARGETGRADE",
     "korean_name": "과목/프로그램·대상학년",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -2019,7 +2019,7 @@
     "feature_name": "I_PLAN_PRIOR_COMPLETE",
     "korean_name": "같은 프로그램 과거 수료율",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(과거 신청 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 과거 신청",
     "domain_section": "비교과"
   },
@@ -2027,7 +2027,7 @@
     "feature_name": "U_XH_CATSHARE_LP14",
     "korean_name": "비교과 이력·카테고리비중 LP14",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -2035,7 +2035,7 @@
     "feature_name": "U_COMP_CODAD104",
     "korean_name": "역량·핵심역량4",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "비교과"
   },
@@ -2043,7 +2043,7 @@
     "feature_name": "I_COMP_W2",
     "korean_name": "과목/프로그램·역량 가중치2",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -2051,7 +2051,7 @@
     "feature_name": "I_OPENYEAR",
     "korean_name": "과목/프로그램·개설연도",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -2059,7 +2059,7 @@
     "feature_name": "I_N_LECTURE",
     "korean_name": "과목/프로그램·건수 강좌",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -2067,7 +2067,7 @@
     "feature_name": "U_TPFS_OBJ_YN",
     "korean_name": "학생·등록금특례 대상 여부",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.DIM_STUDENT(V_DGU_COURSE_USERS_0813)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "비교과"
   },
@@ -2075,7 +2075,7 @@
     "feature_name": "I_COMP_W5",
     "korean_name": "과목/프로그램·역량 가중치5",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "RISSA_MART.V_DGU_EXTRA_ITEMS",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "프로그램 정보",
     "domain_section": "비교과"
   },
@@ -2083,7 +2083,7 @@
     "feature_name": "U_XH_CATSHARE_LP04",
     "korean_name": "비교과 이력·카테고리비중 LP04",
     "origin_type": "합성 · 학생 이력을 학기·건수로 집계",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 비교과 이력",
     "domain_section": "비교과"
   },
@@ -2091,7 +2091,7 @@
     "feature_name": "I_UPP_DEPT_CD",
     "korean_name": "과목/프로그램·상위 학과 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "다전공"
   },
@@ -2099,7 +2099,7 @@
     "feature_name": "I_I_PRIOR_SELECT_2223",
     "korean_name": "2022~23 다전공 선택 건수",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(선배 선택 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 인기(선배 선택)",
     "domain_section": "다전공"
   },
@@ -2107,7 +2107,7 @@
     "feature_name": "X_PRIMARY_TRANSITION_RATE",
     "korean_name": "내 주전공에서 2022~23 이 전공을 선택한 비율",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×전공)",
     "domain_section": "다전공"
   },
@@ -2115,7 +2115,7 @@
     "feature_name": "X_USER_ITEMDEPT_HIST_SHARE",
     "korean_name": "내 기수강 과목 중 후보 전공 학과 개설 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×전공)",
     "domain_section": "다전공"
   },
@@ -2123,7 +2123,7 @@
     "feature_name": "X_UPP_TRANSITION_RATE",
     "korean_name": "내 주전공 상위조직 기준 위 비율",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×전공)",
     "domain_section": "다전공"
   },
@@ -2131,7 +2131,7 @@
     "feature_name": "U_PRIMARY_UPP_DEPT_CD",
     "korean_name": "학생·주전공 상위 학과 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "선택 시점 학생 상태",
     "domain_section": "다전공"
   },
@@ -2139,7 +2139,7 @@
     "feature_name": "I_ENG_DESCRIPTION_COURSE_CNT",
     "korean_name": "과목/프로그램·영문 설명 과목 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "다전공"
   },
@@ -2147,7 +2147,7 @@
     "feature_name": "I_CURRICULUM_COURSE_CNT",
     "korean_name": "과목/프로그램·교육과정 과목 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "다전공"
   },
@@ -2155,7 +2155,7 @@
     "feature_name": "I_AVG_COURSE_CREDIT",
     "korean_name": "과목/프로그램·평균 과목 학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "다전공"
   },
@@ -2163,7 +2163,7 @@
     "feature_name": "X_CAREER_DUTY_DEPT_SHARE",
     "korean_name": "이 학과 학생 중 내 진로 직무코드 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(진로×학과)",
     "domain_section": "다전공"
   },
@@ -2171,7 +2171,7 @@
     "feature_name": "X_CAREER_TYPE_DEPT_LIFT",
     "korean_name": "이 학과의 내 진로유형 비중 ÷ 전체 비중",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(진로×학과)",
     "domain_section": "다전공"
   },
@@ -2179,7 +2179,7 @@
     "feature_name": "I_KOR_DESCRIPTION_COURSE_CNT",
     "korean_name": "과목/프로그램·국문 설명 과목 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "다전공"
   },
@@ -2187,7 +2187,7 @@
     "feature_name": "X_SAME_UPP_DEPT",
     "korean_name": "후보 전공 상위조직 = 내 주전공 상위조직",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×전공)",
     "domain_section": "다전공"
   },
@@ -2195,7 +2195,7 @@
     "feature_name": "U_CUM_EARNED_CREDITS",
     "korean_name": "학생·누적 취득 학점",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "선택 시점 학생 상태",
     "domain_section": "다전공"
   },
@@ -2203,7 +2203,7 @@
     "feature_name": "U_PRIMARY_MAJOR_CD",
     "korean_name": "학생·주전공 MAJOR 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "선택 시점 학생 상태",
     "domain_section": "다전공"
   },
@@ -2211,7 +2211,7 @@
     "feature_name": "X_DIV_COLLEGE",
     "korean_name": "모집 계열(인문/자연)×후보 단과대",
     "origin_type": "합성 · 학생×아이템 교차(마트 두 테이블을 곱해 계산)",
-    "source_mart": "파생(교차) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_INTERACTIONS_0813 (기반 마트: FACT_COURSE_RECORD x DIM_STUDENT)",
     "signal_group": "교차 신호(학생×전공)",
     "domain_section": "주전공"
   },
@@ -2219,7 +2219,7 @@
     "feature_name": "I_ITEM_ID_CAT",
     "korean_name": "전공 자체(37수준, 인기 학습)",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(선배 선택 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 인기(선배 선택)",
     "domain_section": "주전공"
   },
@@ -2227,7 +2227,7 @@
     "feature_name": "I_I_ASSIGN_CONFIRMED_2124",
     "korean_name": "2021~24 전공배정 확정 건수(선배 선택 인기)",
     "origin_type": "합성 · 아이템 인기를 과거 기록으로 집계",
-    "source_mart": "파생(선배 선택 집계) (기반: RISSA_MART)",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 인기(선배 선택)",
     "domain_section": "주전공"
   },
@@ -2235,7 +2235,7 @@
     "feature_name": "U_GAP_CODAD102",
     "korean_name": "역량 편차·핵심역량2",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "주전공"
   },
@@ -2243,7 +2243,7 @@
     "feature_name": "I_CURRICULUM_COURSE_COUNT",
     "korean_name": "과목/프로그램·교육과정 과목 수",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "주전공"
   },
@@ -2251,7 +2251,7 @@
     "feature_name": "U_GAP_CODAD103",
     "korean_name": "역량 편차·핵심역량3",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "주전공"
   },
@@ -2259,7 +2259,7 @@
     "feature_name": "U_SEX_CD",
     "korean_name": "학생·성별 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "RISSA_MART.DIM_STUDENT",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "학생 기본(입학 때 정해진 값)",
     "domain_section": "주전공"
   },
@@ -2267,7 +2267,7 @@
     "feature_name": "I_REGISTRATION_AFFILIATION_CODE",
     "korean_name": "과목/프로그램·등록 소속 코드",
     "origin_type": "마트 원천 컬럼 그대로",
-    "source_mart": "아이템 뷰",
+    "source_mart": "[VIEW] RISSA_MART.V_DGU_COURSE_ITEMS_0813 (기반 마트: DIM_LECTURE_OFFERING)",
     "signal_group": "전공 정보",
     "domain_section": "주전공"
   },
@@ -2275,8 +2275,16 @@
     "feature_name": "U_COMP_CONAD104",
     "korean_name": "역량·진로역량4",
     "origin_type": "합성 · 역량 점수를 코드별로 피벗",
-    "source_mart": "파생 (기반: RISSA_MART)",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813)",
     "signal_group": "역량진단",
     "domain_section": "주전공"
+  },
+  "U_SCHGRD": {
+    "feature_name": "U_SCHGRD",
+    "korean_name": "학생 목표 학년",
+    "origin_type": "마트 원천 컬럼 그대로",
+    "source_mart": "[마트 물리테이블] RISSA_MART.DIM_STUDENT (참조 VIEW: V_DGU_COURSE_USERS_0813 학생목표학년)",
+    "signal_group": "학생 프로필",
+    "domain_section": "교과"
   }
 }

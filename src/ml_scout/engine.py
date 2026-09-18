@@ -237,13 +237,46 @@ class MLScoutEngine:
             models = {
                 "Baseline (Global Stat)": DummyClassifier(strategy="prior"),
                 "Baseline (Segment Rule)": DecisionTreeClassifier(max_depth=1, random_state=self.random_seed),
+            }
+
+            # If collaborative filtering feature exists, evaluate WARMING Item-CF as a dedicated benchmark model
+            itemcf_cols = [c for c in X_train.columns if "ITEMCF" in c.upper() or "CF_" in c.upper()]
+            if itemcf_cols:
+                class ItemCFEstimator:
+                    def __init__(self, cf_col):
+                        self.cf_col = cf_col
+                        self.threshold_ = 0.5
+                    def fit(self, X, y):
+                        scores = X[self.cf_col].fillna(0).values
+                        # calibrate optimal threshold
+                        best_f1, best_t = 0.0, 0.5
+                        for t in np.linspace(scores.min(), scores.max(), 10):
+                            pred = (scores >= t).astype(int)
+                            from sklearn.metrics import f1_score
+                            sc = f1_score(y, pred, average="weighted", zero_division=0)
+                            if sc > best_f1:
+                                best_f1, best_t = sc, t
+                        self.threshold_ = best_t
+                        return self
+                    def predict(self, X):
+                        scores = X[self.cf_col].fillna(0).values
+                        return (scores >= self.threshold_).astype(int)
+                    def predict_proba(self, X):
+                        scores = X[self.cf_col].fillna(0).values
+                        s_min, s_max = scores.min(), scores.max()
+                        prob = (scores - s_min) / (s_max - s_min + 1e-9)
+                        return np.vstack([1 - prob, prob]).T
+
+                models["Item-based CF (WARMING item_cf)"] = ItemCFEstimator(itemcf_cols[0])
+
+            models.update({
                 "LogisticRegression": LogisticRegression(max_iter=1000, random_state=self.random_seed),
                 "RandomForest": RandomForestClassifier(n_estimators=100, random_state=self.random_seed),
                 "ExtraTrees": ExtraTreesClassifier(n_estimators=100, random_state=self.random_seed),
                 "HistGradientBoosting": HistGradientBoostingClassifier(random_state=self.random_seed),
                 "LightGBM": LGBMClassifier(n_estimators=100, random_state=self.random_seed, verbose=-1),
                 "TabularDeepNet (MLP)": MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=300, random_state=self.random_seed, early_stopping=True)
-            }
+            })
             cv = StratifiedKFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_seed)
             primary_metric = "f1_weighted"
             scoring = ["f1_weighted", "roc_auc", "accuracy"]
@@ -411,6 +444,8 @@ class MLScoutEngine:
             # Role & Category
             if m_name == self.best_model_name:
                 r["model_role"] = "🏆 챔피언 채택 (Champion)"
+            elif "item_cf" in m_name.lower():
+                r["model_role"] = "🤝 WARMING 채택 모델 (Item-CF)"
             elif m_name == "Baseline (Global Stat)":
                 r["model_role"] = "📊 비교 대조군 (전체 통계/인기도)"
             elif m_name == "Baseline (Segment Rule)":
@@ -421,7 +456,9 @@ class MLScoutEngine:
                 r["model_role"] = "🥉 대안 벤치마크 (Alternative)"
 
             # Algorithm Family
-            if "GBM" in m_name or "Hist" in m_name:
+            if "item_cf" in m_name.lower():
+                r["algorithm_family"] = "협업 필터링 (Collaborative Filtering)"
+            elif "GBM" in m_name or "Hist" in m_name:
                 r["algorithm_family"] = "GBDT 부스팅 트리"
             elif "Deep" in m_name or "MLP" in m_name:
                 r["algorithm_family"] = "테이블 딥러닝 (MLP)"
@@ -435,7 +472,9 @@ class MLScoutEngine:
                 r["algorithm_family"] = "머신러닝 알고리즘"
 
             # Complexity
-            if "Global Stat" in m_name:
+            if "item_cf" in m_name.lower():
+                r["complexity"] = "보통 (동시수강 행렬 연산)"
+            elif "Global Stat" in m_name:
                 r["complexity"] = "최소 (O(1) 룩업)"
             elif "Segment Rule" in m_name:
                 r["complexity"] = "낮음 (1차 분기 룰)"

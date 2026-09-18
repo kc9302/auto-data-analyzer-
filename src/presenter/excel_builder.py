@@ -994,5 +994,5 @@ class ExcelReportBuilder:
                     length = sum(2 if ord(char) > 128 else 1 for char in val_str[:60])
                     if length > max_len:
                         max_len = length
-            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 52)
+            ws.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 75)
 

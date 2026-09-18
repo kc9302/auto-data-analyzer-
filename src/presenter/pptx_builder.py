@@ -174,10 +174,15 @@ class PptxDeckBuilder:
         atf = act_box.text_frame
         atf.word_wrap = True
         ap = atf.paragraphs[0]
-        ap.text = "💡 데이터 품질 액션 플랜:"
+        ap.text = "💡 데이터 아키텍처 및 계보 (3-Tier Data Lineage Guide):"
         ap.font.size = Pt(10)
         ap.font.bold = True
         ap.font.color.rgb = RGBColor(0x92, 0x40, 0x0E)
+
+        ap_sub = atf.add_paragraph()
+        ap_sub.text = "• [원천 DB]: 학사운영계(DEVDB.UDMSED) / 비교과운영계(DEVDB.STD_CDP)\n• [마트 물리테이블]: RISSA_MART (DIM_STUDENT, FACT_COURSE_RECORD, DIM_LECTURE_OFFERING, BRIDGE_CURRICULUM)\n• [분석용 VIEW]: 모델 학습용 사전 조인 뷰 (V_DGU_COURSE_INTERACTIONS_0813, V_DGU_COURSE_USERS_0813, V_DGU_COURSE_ITEMS_0813)"
+        ap_sub.font.size = Pt(8.5)
+        ap_sub.font.color.rgb = self.c_text_dark
         ap2 = atf.add_paragraph()
         ap2.text = f"• 결측치 {len(audit_data.get('missing_summary', []))}개 컬럼은 3단계 거버넌스 적용 | PII는 학습셋에서 원천 차단하여 개인정보 규제 리스크 0% 달성"
         ap2.font.size = Pt(9.5)
