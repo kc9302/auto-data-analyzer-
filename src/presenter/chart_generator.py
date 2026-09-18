@@ -25,8 +25,9 @@ class PresentationChartGenerator:
         }
         # Configure clean matplotlib rcParams with robust cross-platform CJK font fallbacks
         plt.rcParams["font.sans-serif"] = [
-            "NanumGothic", "Noto Sans CJK KR", "AppleGothic", "Malgun Gothic", "DejaVu Sans", "Arial", "sans-serif"
+            "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR", "AppleGothic", "DejaVu Sans", "Arial", "sans-serif"
         ]
+        plt.rcParams["font.family"] = "sans-serif"
         plt.rcParams["axes.unicode_minus"] = False
 
 
