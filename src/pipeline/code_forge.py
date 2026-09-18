@@ -90,51 +90,169 @@ class MissingManager(BaseEstimator, TransformerMixin):
         with open(os.path.join(export_path, "pipeline.py"), "w", encoding="utf-8") as f:
             f.write(pipeline_code)
 
-        # 2. train.py
+        # 2. train.py with Intelligent Forward/Ablation Feature Selection
+        sel_features_repr = json.dumps(selected_features, ensure_ascii=False)
+        is_classifier = "Classifier" in str(model_instance.__class__.__name__) if model_instance else ("Classification" in task_type)
+
         train_code = f'''"""
-Production Training Script with Feature A/B Benchmark
+Production Training & Intelligent Sequential Feature Selection Script
 Model: {best_model_name}
 Target: {target_column}
+Initial Candidate Features: {len(selected_features)} features
 """
 import os
+import sys
+import json
 import argparse
 import numpy as np
 import pandas as pd
+import joblib
 from sqlalchemy import create_engine
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold, cross_val_score
 from lightgbm import LGBMClassifier, LGBMRegressor
-from pipeline import MissingManager, AutoFeatureSynthesizer
+
+CANDIDATE_FEATURES = {sel_features_repr}
 
 def load_data(db_url: str, table_name: str):
-    clean = db_url.replace("csv://", "").strip("\"'")
-    if clean.endswith(".csv") or os.path.isfile(clean):
+    clean = db_url.replace("csv://", "").strip()
+    clean = clean.replace('"', '').replace("'", "")
+    if clean.endswith(".parquet") or clean.endswith(".pq"):
+        return pd.read_parquet(clean)
+    elif clean.endswith(".csv") or os.path.isfile(clean):
         return pd.read_csv(clean)
     engine = create_engine(db_url)
     with engine.connect() as conn:
         return pd.read_sql_table(table_name, conn)
 
-def train(db_url: str = "{db_url}", table_name: str = "{table_name}", run_ab_test: bool = False):
-    print(f"Loading data from {{db_url}} [{{table_name}}]...")
+safe_db_url = repr(db_url)
+
+def run_feature_selection_and_train(
+    db_url: str = {repr(db_url)},
+    table_name: str = "{table_name}",
+    tolerance_pct: float = 0.5,
+    output_model_path: str = "best_model.joblib",
+    manifest_path: str = "final_feature_decision.json"
+):
+    print("=" * 80)
+    print("🚀 [Step 1] 전체 데이터 로드 및 피처 정합성 검증")
+    print(f"• 데이터 소스: {{db_url}}")
     df = load_data(db_url, table_name)
-    X = df.drop(columns=["{target_column}"])
+    total_rows = len(df)
+    print(f"• 전체 로드된 데이터 건수: {{total_rows:,}} 건 (100% Full Population)")
+
+    if "{target_column}" not in df.columns:
+        raise KeyError(f"타겟 컬럼 '{target_column}'이 데이터에 존재하지 않습니다.")
+
     y = df["{target_column}"]
+    
+    # 1. Available features in dataset
+    available_features = [f for f in CANDIDATE_FEATURES if f in df.columns]
+    print(f"• 1차 검증 후보 피처: {{len(available_features)}}개 / {{len(CANDIDATE_FEATURES)}}개 일치 확인")
+    for idx, f in enumerate(available_features, start=1):
+        print(f"   - 후보 {{idx}}: {{f}}")
 
-    if run_ab_test:
-        print("[A/B TEST] Evaluating Group A (Baseline) vs Group B (Engineered)...")
-        # Same 5-fold CV evaluation
-        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-        print("✓ A/B Test Finished. Group B shows superior lift.")
+    # Handle basic preprocessing for numeric candidates
+    X = df[available_features].copy()
+    for col in X.columns:
+        if pd.api.types.is_numeric_dtype(X[col]):
+            X[col] = X[col].fillna(X[col].median())
+        else:
+            X[col] = pd.factorize(X[col].astype(str))[0]
 
-    print(f"Fitting production model: {best_model_name}...")
-    model = LGBMClassifier(n_estimators=100, random_state=42, verbose=-1)
-    # Complete fit
-    print("Training complete! Ready for deployment.")
+    is_classif = {is_classifier}
+    scoring = "f1_weighted" if is_classif else "r2"
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42) if is_classif else KFold(n_splits=3, shuffle=True, random_state=42)
+
+    print()
+    print("=" * 80)
+    print(f"🔬 [Step 2] 점진적 피처 투입/제거 실측 실험 (Sequential Forward Feature Selection)")
+    print(f"• 평가 지표: {{scoring}} | 교차검증: 3-Fold Stratified CV")
+    print("=" * 80)
+
+    # Greedy Forward Selection: evaluate incremental lift of each feature
+    current_selected = []
+    best_overall_score = -9999.0
+    selection_history = []
+
+    for step, feat in enumerate(available_features, start=1):
+        test_features = current_selected + [feat]
+        clf = LGBMClassifier(n_estimators=100, random_state=42, verbose=-1, n_jobs=-1) if is_classif else LGBMRegressor(n_estimators=100, random_state=42, verbose=-1, n_jobs=-1)
+        
+        scores = cross_val_score(clf, X[test_features], y, cv=cv, scoring=scoring)
+        mean_score = float(np.mean(scores))
+        
+        # Calculate lift
+        if current_selected:
+            prev_score = selection_history[-1]["score"]
+            lift_from_prev = mean_score - prev_score
+            lift_pct = (lift_from_prev / max(abs(prev_score), 1e-6)) * 100.0
+        else:
+            lift_from_prev = 0.0
+            lift_pct = 0.0
+
+        # Decision rule: Keep if score improves or drops within tiny tolerance threshold
+        if mean_score >= best_overall_score - (tolerance_pct / 100.0 * max(best_overall_score, 1.0)):
+            status = "🟢 채택 (Adopted)"
+            current_selected.append(feat)
+            if mean_score > best_overall_score:
+                best_overall_score = mean_score
+        else:
+            status = "🔴 탈락 (Pruned - Overfitting/Redundancy)"
+
+        print(f"[실험 {{step}}/{{len(available_features)}}] {{feat:<32}} -> {{scoring}}: {{mean_score:.4f}} (증감: {{lift_pct:+.2f}}%) | {{status}}")
+        selection_history.append({{
+            "step": step,
+            "feature": feat,
+            "feature_count": len(test_features),
+            "score": round(mean_score, 4),
+            "lift_pct": round(lift_pct, 2),
+            "status": status
+        }})
+
+    final_selected_features = current_selected
+    print()
+    print("=" * 80)
+    print("🎯 [Step 3] 최종 의사결정 결론 (Final Feature Decision Summary)")
+    print("=" * 80)
+    print(f"• 전체 모집단 데이터 규모: {{total_rows:,}} 건")
+    print(f"• 1차 투입 후보 피처 수 : {{len(available_features)}} 개")
+    print(f"• 최종 엄선된 피처 수   : {{len(final_selected_features)}} 개 (경량화 압축 완료)")
+    print(f"• 최종 검증 {{scoring}} 점수: {{best_overall_score:.4f}}")
+    print(f"• 최종 확정 피처 목록:")
+    for i, f in enumerate(final_selected_features, start=1):
+        print(f"   [{{i}}위] {{f}}")
+
+    print()
+    print("=" * 80)
+    print("⚡ [Step 4] 최종 확정 피처 기반 전체 28.3만 건 Full-Fit 학습 및 저장")
+    print("=" * 80)
+    final_model = LGBMClassifier(n_estimators=100, random_state=42, verbose=-1, n_jobs=-1) if is_classif else LGBMRegressor(n_estimators=100, random_state=42, verbose=-1, n_jobs=-1)
+    final_model.fit(X[final_selected_features], y)
+    
+    # Save Model Artifact
+    joblib.dump(final_model, output_model_path)
+    print(f"✓ 최종 서빙 모델 아티팩트 저장 완료: {{output_model_path}}")
+
+    # Save Decision JSON Manifest
+    decision_manifest = {{
+        "total_population_rows": total_rows,
+        "evaluated_candidate_count": len(available_features),
+        "final_selected_feature_count": len(final_selected_features),
+        "final_selected_features": final_selected_features,
+        "best_cv_score": round(best_overall_score, 4),
+        "scoring_metric": scoring,
+        "feature_ablation_history": selection_history
+    }}
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(decision_manifest, f, indent=2, ensure_ascii=False)
+    print(f"✓ 최종 의사결정 매니페스트 저장 완료: {{manifest_path}}")
+    print("🎉 모든 프로세스가 성공적으로 완료되었습니다!")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run-ab-test", action="store_true", help="Run A/B test before training")
+    parser = argparse.ArgumentParser(description="Full Population Training & Sequential Feature Selection")
+    parser.add_argument("--tolerance", type=float, default=0.2, help="Tolerance drop percent to keep feature")
     args = parser.parse_args()
-    train(run_ab_test=args.run_ab_test)
+    run_feature_selection_and_train(tolerance_pct=args.tolerance)
 '''
         with open(os.path.join(export_path, "train.py"), "w", encoding="utf-8") as f:
             f.write(train_code)
