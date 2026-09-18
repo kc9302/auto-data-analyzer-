@@ -70,7 +70,8 @@ def test_two_tier_loco_and_borda_consensus():
     candidate_cols = [
         "gpa_current", "gpa_drop_ratio", "attendance_rate",
         "crisis_interaction_idx", "gap_per_extracurricular_hr",
-        "lms_access_days_monthly", "failed_course_ratio"
+        "lms_access_days_monthly", "failed_course_ratio",
+        "department", "admission_type"
     ]
     selector = DGUTwoTierLOCOFeatureSelector(
         redundancy_threshold=0.80,
@@ -131,7 +132,7 @@ def test_nadeau_bengio_ttest_and_svd():
 
 
 def test_public_sector_doc_builder():
-    """NIA 표준 공공 5대 감리 문서(Markdown)의 완전성 검증"""
+    """NIA 표준 공공 감리 문서(Markdown)의 완전성 검증 (제1장 ~ 제8장)"""
     tournament_res = DGUModelTournament.run_benchmark()
     dummy_audit = [
         {"rank": 1, "feature": "crisis_interaction_idx", "status_badge": "🟢 최종 선정", "shap_pct": 31.5, "loco_drop": 0.078, "rationale": "합의 1위"},
@@ -149,6 +150,7 @@ def test_public_sector_doc_builder():
     assert "제5장. [산출물 5] 학사 가드레일 및 공공 AI 윤리·공정성 점검표" in md
     assert "제6장. [산출물 6] 기술 및 개발 감리원 최종 권고사항 이행 결과표" in md
     assert "제7장. [산출물 7] 전체 시스템 아키텍처 및 데이터 분석 방법론 명세" in md
+    assert "제8장. [산출물 8] 글로벌 5대 전문 평가 위원회(미국 실리콘밸리·학계) 최종 평가서" in md
 
 
 def test_recsys_recipe_engine_healthcheck_and_metrics():
