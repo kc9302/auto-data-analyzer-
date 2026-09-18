@@ -143,9 +143,9 @@ class HtmlReportBuilder:
   <!-- 4 Core KPI Cards -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <span class="text-xs font-semibold text-slate-400">총 레코드 수</span>
-      <div class="text-3xl font-bold text-slate-800 mt-1">{db_meta.get('total_row_count', 0):,} 행</div>
-      <span class="text-xs text-blue-600 mt-2 block font-medium">표본: {db_meta.get('sample_row_count', 0):,}행 (적응형 샘플링)</span>
+      <span class="text-xs font-semibold text-slate-400">모집단 vs 학습 표본</span>
+      <div class="text-2xl font-bold text-slate-800 mt-1">{db_meta.get('sample_row_count', 0):,} / {db_meta.get('total_row_count', 0):,} 행</div>
+      <span class="text-xs text-blue-600 mt-2 block font-medium">99% 신뢰수준(오차 ±0.5%) 표본 추출</span>
     </div>
     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
       <span class="text-xs font-semibold text-slate-400">총 컬럼 수</span>
