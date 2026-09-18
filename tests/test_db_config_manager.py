@@ -43,7 +43,7 @@ def test_env_var_interpolation(tmp_path):
 
     url = DBConfigManager.resolve_connection_url(config)
     assert "P%40ssw0rd%21123" in url  # @ and ! properly URL encoded
-    assert "currentSchema=public" in url
+    assert "options=-csearch_path%3Dpublic" in url
 
 
 def test_multi_engine_url_synthesis():
