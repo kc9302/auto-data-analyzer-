@@ -122,10 +122,6 @@ def load_data(db_url: str, table_name: str):
         return pd.read_csv(clean)
     engine = create_engine(db_url)
     with engine.connect() as conn:
-        return pd.read_sql_table(table_name, conn)
-
-safe_db_url = repr(db_url)
-
 def run_feature_selection_and_train(
     db_url: str = {repr(db_url)},
     table_name: str = "{table_name}",
