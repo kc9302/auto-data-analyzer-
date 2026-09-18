@@ -297,9 +297,9 @@ def main():
     target_table = args.table or cfg_data.get("table")
     target_col = args.target or cfg_data.get("target")
     query_str = args.query or cfg_data.get("query")
-    sql_path = args.sql_file or cfg_data.get("sql_file")
-    out_dir = args.out_dir or cfg_data.get("out_dir", "dist")
-    sample_size = args.sample_size or cfg_data.get("sample_size", 50000)
+    sample_size = args.sample_size if args.sample_size is not None else cfg_data.get("sample_size", 50000)
+    if sample_size == 0:
+        sample_size = 999999999  # Disable sampling (Full Population)
 
     run_analyzer(
         db_url=source,
