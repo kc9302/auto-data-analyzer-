@@ -55,7 +55,7 @@ class FeaturePipeline:
         cumulative_shap_threshold: float = 0.95,
         noise_threshold_pct: float = 1.0,
         redundancy_threshold: float = 0.80,
-        max_selected_features: int = 20,
+        max_selected_features: int = 40,
         selection_profile: str = "lean_pareto"
     ):
         self.target_column = target_column

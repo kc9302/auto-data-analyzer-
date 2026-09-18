@@ -1,0 +1,94 @@
+# ==============================================================================
+# Domain Recipe: Dongguk University Course Recommendation & Curriculum Optimization
+# Target: 동국대학교 교무처 / 교육혁신처 / AI융합대학 / 학사지도센터
+# Reference: 동국대_추천기능_엔티티플로우_v0.4 (슬라이드 8: 교과 추천)
+# ==============================================================================
+domain_id: "dgu_course_recommendation"
+domain_name: "동국대학교 교과목 맞춤 추천 & 학사 이수체계 최적화"
+description: "학생 프로파일 및 수강 이력 기반 차기 학기 전공·교양 맞춤 교과 추천 (Cold/Warming/Adapted 앙상블)"
+industry: "Higher Education"
+version: "1.0.0"
+
+# Target & ML Task Definition
+task_type: "Binary_Classification"
+target_column: "LABEL"
+positive_class_label: "수강 신청/이수 (Enrolled)"
+id_columns:
+  - "USER_ID"
+  - "ITEM_ID"
+group_column: "U_PERSONA"
+
+# Recommendation Model Lineup (Serving & Ensemble)
+models:
+  cold_start:
+    - "popularity"           # 단과대/학과/학년별 코호트 수강 인기도
+    - "content_similarity"    # 프로필 및 교육과정 메타데이터 유사도
+  warming:
+    - "item_cf"              # 과목 간 동시수강 코사인 유사도 (동일 패턴 이수자)
+  adapted:
+    - "gru4rec"              # 학기순 시퀀스 딥러닝 (선후수 및 연속 이수)
+  feature_selection:
+    - "xgboost_treeshap"     # 후보 변수 전수 검증 및 페르소나별 LOCO 평가
+
+# Objective Weights (Multi-Criteria Optimization)
+weights:
+  cohort_pattern: 0.35       # 같은 학과·학년 이수 관행(코호트 수강률)
+  collaborative_signal: 0.30 # 학생 이력 기반 협업 필터링 유사도(Item-CF)
+  academic_relevance: 0.20   # 주전공/입학학과 및 트랙/MD 적합도
+  timeliness_grade: 0.15     # 학년 적합성 및 직전 학점 부담 조절
+
+# Academic Guardrails & Regulations
+guardrails:
+  max_credits_normal: 18     # 일반 학생 정규 수강 상한 학점
+  max_credits_honor: 21      # 직전 학기 평점 4.0 이상 우수 학생 수강 상한
+  max_credits_warning: 15    # 학사경고자 수강 상한 학점 제한
+  prerequisite_filter: true  # 선수과목(BRIDGE_COURSE_PREREQ) 미이수 교과목 강제 배제
+  retake_filter: true        # 이미 이수한 과목(X_TAKEN_BEFORE) 제외 (재수강 정책 별도)
+  offered_only: true         # 당해학기 개설 강좌(DIM_LECTURE_OFFERING)만 후보 허용
+
+# Key Essential Features & Hypotheses
+key_features:
+  - name: "X_COHORT_RATE"
+    description: "같은 학과·목표학년 학생 중 작년 동학기 해당 과목 수강률"
+    importance_rank: 1
+    hypothesis: "해당 학년/학과가 통상 이수하는 교육과정 관행(1위 신호)"
+  - name: "X_ITEMCF_MEAN"
+    description: "학생 기수강 과목들과 후보 과목 간 Item-CF 코사인 유사도 평균"
+    importance_rank: 2
+    hypothesis: "유사한 이수 경로를 밟은 학생들의 후속 수강 패턴 반영"
+  - name: "X_DEPT_RATE"
+    description: "입학학과 기준 최근 1년 해당 과목 수강률"
+    importance_rank: 3
+    hypothesis: "원소속 학과 전공 핵심 과목 선호 신호"
+  - name: "X_USER_DEPT_HIST_SHARE"
+    description: "학생의 기수강 과목 중 해당 과목 개설학과가 차지하는 비중"
+    importance_rank: 4
+    hypothesis: "다전공/부전공 등 학생의 실질 관심 학과 집중도"
+  - name: "X_IN_CURI_LIST"
+    description: "교육과정 편성표 대상학과에 학생 소속 학과 포함 여부"
+    importance_rank: 5
+    hypothesis: "정규 편성 커리큘럼 부합 여부"
+
+# Prescriptive Action Templates by Persona
+personas:
+  P0_신입:
+    focus: "코호트 기본 수강률 및 전공기초/교양필수 안내"
+    primary_signal: "X_COHORT_RATE, X_DEPT_RATE"
+  P1P2_1학년:
+    focus: "전공 진입 기초 과목 및 균형 교양 탐색"
+    primary_signal: "X_COHORT_RATE, X_IN_CURI_LIST"
+  P1_열린전공:
+    focus: "희망 전공 탐색 및 선수 기초과목 추천"
+    primary_signal: "X_DEPT_RATE, X_ITEMCF_MEAN"
+  P3_2_3학년:
+    focus: "전공심화 및 트랙/MD 연계 이수 로드맵"
+    primary_signal: "X_ITEMCF_MAX, X_USER_DEPT_HIST_SHARE"
+  P4_편입:
+    focus: "잔여 필수 과목 및 선수과목 충족 집중"
+    primary_signal: "X_PREREQ_SATISFIED, X_COHORT_RATE"
+  P5_4학년:
+    focus: "졸업 잔여 요건 및 캡스톤/취업 연계 과목"
+    primary_signal: "X_ITEMCF_MEAN, X_OBJ_GRADE_DIFF"
+  P6_저관여:
+    focus: "기본 수강 표준 경로 및 수강신청 알림 연계"
+    primary_signal: "X_COHORT_RATE, I_ENR_2025"

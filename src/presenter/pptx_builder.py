@@ -247,10 +247,18 @@ class PptxDeckBuilder:
         sp2.font.color.rgb = self.c_primary
 
         top_f = shap_res.get("top_drivers_summary", [])
+        from src.domains.feature_catalog import FeatureMetadataCatalog
+        catalog = FeatureMetadataCatalog.get_default()
+
         if top_f:
             for item in top_f[:2 if has_xgb_chart else 3]:
+                feat_raw = item["feature"]
+                meta = catalog.get_info(feat_raw)
+                kor_name = meta.get("korean_name", feat_raw)
+                source_mart = meta.get("source_mart", "")
+                mart_str = f" [{source_mart}]" if source_mart and source_mart != "-" else ""
                 sp_item = stf.add_paragraph()
-                sp_item.text = f"• [{item.get('direction', 'Positive')}] {item['feature']} (기여율 {item['impact_pct']}%): {item.get('interpretation', '')}"
+                sp_item.text = f"• [{item.get('direction', 'Positive')}] {feat_raw} ({kor_name}){mart_str} ({item['impact_pct']}%): {item.get('interpretation', '')}"
                 sp_item.font.size = Pt(8.0)
                 sp_item.font.color.rgb = self.c_text_dark
         else:

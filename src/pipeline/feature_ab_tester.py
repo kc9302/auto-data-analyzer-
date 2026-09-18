@@ -44,6 +44,16 @@ class FeatureABTester:
             def score_fn(y_true, y_pred):
                 return r2_score(y_true, y_pred)
 
+        # Clean column names for LightGBM JSON compatibility
+        import re
+        def clean_col(c):
+            return re.sub(r'[\[\]\{\}:,"\s]', '_', str(c))
+
+        X_base = X_base.copy()
+        X_base.columns = [clean_col(c) for c in X_base.columns]
+        X_eng = X_eng.copy()
+        X_eng.columns = [clean_col(c) for c in X_eng.columns]
+
         scores_a = []
         scores_b = []
 

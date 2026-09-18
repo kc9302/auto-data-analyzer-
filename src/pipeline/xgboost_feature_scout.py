@@ -334,12 +334,15 @@ class XGBoostFeatureScout:
         os.makedirs(output_dir, exist_ok=True)
         plot_paths = {}
 
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        plt.rcParams["font.family"] = ["Malgun Gothic", "NanumGothic", "DejaVu Sans", "sans-serif"]
+        plt.rcParams["axes.unicode_minus"] = False
+
         # 1. Official SHAP Beeswarm Summary Plot
         if self.last_shap_values_ is not None and self.last_bg_data_ is not None:
             try:
-                import matplotlib
-                matplotlib.use("Agg")
-                import matplotlib.pyplot as plt
                 import shap
 
                 plt.figure(figsize=(7.5, 4.5), dpi=150)
