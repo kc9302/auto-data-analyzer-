@@ -122,10 +122,17 @@ class SmartFeatureSynthesizer:
         num_cols = list(X.select_dtypes(include=[np.number]).columns)
         cat_cols = list(X.select_dtypes(include=["object", "category"]).columns)
 
-        # 1. Skewness Log Transform (skew > 1.5)
+        # Zero-variance / constant column guard: drop non-informative constants from synthesis
+        valid_num_cols = []
         for col in num_cols:
             if col.endswith("_is_missing"):
                 continue
+            s = X[col].dropna()
+            if len(s) > 0 and s.nunique() > 1 and float(s.std()) > 1e-9:
+                valid_num_cols.append(col)
+
+        # 1. Skewness Log Transform (skew > 1.5)
+        for col in valid_num_cols:
             if (X[col] >= 0).all():
                 try:
                     skew_val = float(stats.skew(X[col].dropna()))
@@ -143,8 +150,8 @@ class SmartFeatureSynthesizer:
                     pass
 
         # 2. Ratio & Difference Candidates (Pairwise for top correlated numeric features)
-        if len(num_cols) >= 2:
-            clean_nums = [c for c in num_cols if not c.endswith("_is_missing")][:5]
+        if len(valid_num_cols) >= 2:
+            clean_nums = valid_num_cols[:5]
             for i in range(len(clean_nums)):
                 for j in range(i + 1, len(clean_nums)):
                     c1, c2 = clean_nums[i], clean_nums[j]
@@ -163,7 +170,7 @@ class SmartFeatureSynthesizer:
         for cat_col in cat_cols:
             n_unique = X[cat_col].nunique()
             if 2 <= n_unique <= 15:
-                for num_col in num_cols[:3]:
+                for num_col in valid_num_cols[:3]:
                     if num_col.endswith("_is_missing"):
                         continue
                     try:

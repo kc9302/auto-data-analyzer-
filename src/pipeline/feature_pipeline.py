@@ -13,6 +13,7 @@ from src.pipeline.feature_synthesizer import MissingGovernance, SmartFeatureSynt
 from src.pipeline.feature_ab_tester import FeatureABTester
 from src.pipeline.xgboost_feature_scout import XGBoostFeatureScout
 from src.pipeline.feature_selector import FeatureSelector
+from src.pipeline.text_feature_extractor import TextFeatureExtractor
 
 
 class LineageTracker:
@@ -68,6 +69,7 @@ class FeaturePipeline:
 
         # Advanced sub-modules
         self.missing_gov = MissingGovernance()
+        self.text_extractor = TextFeatureExtractor()
         self.synthesizer = SmartFeatureSynthesizer(max_synthetic_features=6)
         self.ab_tester = FeatureABTester(random_seed=random_seed)
         self.selector = FeatureSelector(
@@ -101,19 +103,57 @@ class FeaturePipeline:
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         df_clean = df.copy()
 
-        # Step 0: Isolate PII & ID columns
+        # Step 0: Isolate PII, ID, Datetime & Target-Leakage columns
         actual_group_col = group_column or self.group_column
         cols_to_drop = list(self.pii_columns)
+        
+        # Target leakage detector: identify columns that deterministically predict the target (e.g., raw class index or label encoding of target)
+        y_raw = df_clean[self.target_column] if (self.target_column and self.target_column in df_clean.columns) else None
+        target_is_discrete = (y_raw is not None and (pd.api.types.is_object_dtype(y_raw) or pd.api.types.is_categorical_dtype(y_raw) or y_raw.nunique() <= 50))
+        target_cardinality = y_raw.nunique() if (y_raw is not None and target_is_discrete) else 0
+
         for col in df_clean.columns:
             if col != self.target_column and col != actual_group_col:
                 is_id_or_name = any(k in col.lower() for k in ["id", "code", "name", "sn", "num", "token"])
                 is_float = pd.api.types.is_float_dtype(df_clean[col])
-                if (is_id_or_name and df_clean[col].nunique() >= 0.5 * len(df_clean)) or (not is_float and df_clean[col].nunique() == len(df_clean)):
+                is_datetime = pd.api.types.is_datetime64_any_dtype(df_clean[col])
+                
+                # Check for Target Leakage: e.g. recommended_top1_idx uniquely mapping to job_label
+                is_target_leak = False
+                if target_is_discrete and target_cardinality > 1 and df_clean[col].nunique() >= target_cardinality:
+                    # If grouping by candidate feature yields max 1 unique target per feature value
+                    try:
+                        max_targets_per_val = df_clean.groupby(col)[self.target_column].nunique().max()
+                        if max_targets_per_val == 1 and df_clean[col].nunique() <= target_cardinality * 3:
+                            is_target_leak = True
+                    except Exception:
+                        pass
+
+                if is_target_leak:
+                    cols_to_drop.append(col)
+                    self.dropped_features_log.append({
+                        "column": col,
+                        "reason": f"Target Leakage Guard (1:1 deterministic mapping to target '{self.target_column}')"
+                    })
+                elif is_datetime:
+                    cols_to_drop.append(col)
+                    self.dropped_features_log.append({
+                        "column": col,
+                        "reason": "Datetime timestamp feature (excluded from tabular ML vectorizer)"
+                    })
+                elif (is_id_or_name and df_clean[col].nunique() >= 0.5 * len(df_clean)) or (not is_float and df_clean[col].nunique() == len(df_clean)):
                     cols_to_drop.append(col)
                     self.dropped_features_log.append({
                         "column": col,
                         "reason": "Unique identifier / High-cardinality text (no generalization power)"
                     })
+
+        # Extract NLP Linguistic Features from free-text columns before dropping
+        text_cols = self.text_extractor.identify_text_columns(df_clean, exclude_cols=cols_to_drop + [self.target_column])
+        if text_cols:
+            text_feats = self.text_extractor.extract_features(df_clean)
+            for tf_col in text_feats.columns:
+                df_clean[tf_col] = text_feats[tf_col]
 
         cols_to_drop = list(set(cols_to_drop))
         for col in cols_to_drop:
@@ -318,6 +358,12 @@ class FeaturePipeline:
         """Production inference transform on newly arrived raw data."""
         X = df_raw.copy()
         
+        # 0. Text Feature Extraction if configured
+        if self.text_extractor.text_cols_:
+            text_feats = self.text_extractor.extract_features(X)
+            for tf_col in text_feats.columns:
+                X[tf_col] = text_feats[tf_col]
+
         # 1. Drop PII if present
         for p in self.pii_columns:
             if p in X.columns:
