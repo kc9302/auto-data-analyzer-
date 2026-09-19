@@ -7,11 +7,11 @@
 # [선택 1: PostgreSQL]
 database:
   engine: postgresql              # postgresql, mysql, oracle, mssql, sqlite, parquet
-  host: 192.168.1.100             # DB 서버 IP 또는 도메인
+  host: db.example.com            # DB 서버 IP 또는 도메인
   port: 5432                      # 포트 번호 (기본: 5432)
   database: enterprise_dw         # 데이터베이스 이름
   username: readonly_user         # 읽기 전용 접속 계정
-  password: ${DB_PASSWORD:-secret123} # 비밀번호 (환경변수 치환 지원: ${VAR:-default})
+  password: ${DB_PASSWORD}        # 비밀번호 (사용자 입력 또는 환경변수 설정 필수)
   schema: public                  # 스키마 (선택 사항)
   table: customer_churn           # 기본 분석 대상 테이블명
   target: churn                   # 머신러닝 예측 타깃 컬럼명
@@ -20,7 +20,7 @@ database:
 # [선택 2: MySQL / MariaDB 예시]
 # database:
 #   engine: mysql
-#   host: 10.0.0.25
+#   host: db.example.com
 #   port: 3306
 #   database: ecommerce
 #   username: data_analyst
