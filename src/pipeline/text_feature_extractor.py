@@ -13,10 +13,13 @@ import pandas as pd
 
 
 class TextFeatureExtractor:
-    def __init__(self, max_features_per_text: int = 5):
+    def __init__(self, max_features_per_text: int = 5, max_vocab_size: int = 500, min_df: int = 2):
         self.max_features_per_text = max_features_per_text
+        self.max_vocab_size = max_vocab_size
+        self.min_df = min_df
         self.text_cols_: List[str] = []
         self.extracted_cols_: List[str] = []
+        self.fitted_vocab_: Dict[str, List[str]] = {}
 
     def identify_text_columns(self, df: pd.DataFrame, exclude_cols: Optional[List[str]] = None) -> List[str]:
         """Identifies text columns suitable for NLP feature extraction (average len > 10, non-trivial cardinality)."""
@@ -31,6 +34,28 @@ class TextFeatureExtractor:
                     text_cols.append(col)
         self.text_cols_ = text_cols
         return text_cols
+
+    def fit(self, df: pd.DataFrame) -> "TextFeatureExtractor":
+        """Fits vocabulary with strict upper bound (max_vocab_size) and min_df to prevent memory explosion."""
+        self.fitted_vocab_ = {}
+        for col in self.text_cols_:
+            if col not in df.columns:
+                continue
+            s = df[col].fillna("").astype(str)
+            token_counts = {}
+            for text_val in s:
+                tokens = re.findall(r"[a-zA-Z가-힣0-9]{2,}", text_val.lower())
+                seen = set(tokens)
+                for t in seen:
+                    token_counts[t] = token_counts.get(t, 0) + 1
+
+            # Filter by min_df and sort by document frequency descending, up to max_vocab_size
+            frequent_tokens = [
+                token for token, count in sorted(token_counts.items(), key=lambda x: x[1], reverse=True)
+                if count >= self.min_df
+            ][:min(self.max_vocab_size, 20)] # top 20 salient keywords per text column for tabular compactness
+            self.fitted_vocab_[col] = frequent_tokens
+        return self
 
     def extract_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Extracts numerical features from identified text columns."""
@@ -62,6 +87,12 @@ class TextFeatureExtractor:
 
             # 5. Question mark & punctuation indicator
             feats[f"{col}_has_qmark"] = s.apply(lambda x: 1.0 if '?' in x else 0.0)
+
+            # 5-1. Salient Keywords Frequency (Bounded Vocabulary)
+            vocab = self.fitted_vocab_.get(col, [])
+            for token in vocab:
+                clean_t = re.sub(r"[^a-zA-Z가-힣0-9]", "_", token)
+                feats[f"{col}_kw_{clean_t}"] = s.str.lower().apply(lambda x, t=token.lower(): 1.0 if t in x else 0.0)
 
         # 6. Pairwise text overlaps (if multiple text columns exist, e.g. question vs answer/title)
         if len(self.text_cols_) >= 2:

@@ -151,6 +151,7 @@ class FeaturePipeline:
         # Extract NLP Linguistic Features from free-text columns before dropping
         text_cols = self.text_extractor.identify_text_columns(df_clean, exclude_cols=cols_to_drop + [self.target_column])
         if text_cols:
+            self.text_extractor.fit(df_clean)
             text_feats = self.text_extractor.extract_features(df_clean)
             for tf_col in text_feats.columns:
                 df_clean[tf_col] = text_feats[tf_col]
