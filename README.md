@@ -157,6 +157,24 @@ dist/export_pipeline/
 
 ---
 
+## 📊 Visualizations & Explainability (XAI) Out of the Box
+
+Auto Data Analyzer automatically evaluates feature contributions, hyperparameters, and model errors without any manual matplotlib scripting:
+
+<div align="center">
+
+| **TreeSHAP Feature Impact (Beeswarm)** | **Confusion Matrix & Error Analysis** |
+| :---: | :---: |
+| <img src="docs/images/shap_beeswarm.png" alt="SHAP Beeswarm" width="100%" /> | <img src="docs/images/confusion_matrix_LightGBM.png" alt="Confusion Matrix" width="100%" /> |
+
+| **Feature Importance Ranking** | **Hyperparameter Coordinate Space** |
+| :---: | :---: |
+| <img src="docs/images/xgb_importance.png" alt="XGBoost Feature Importance" width="100%" /> | <img src="docs/images/param_importance_parallel_coords.png" alt="Hyperparameter Tuning Coordinates" width="100%" /> |
+
+</div>
+
+---
+
 ## 🗺️ Roadmap & Community vs Enterprise
 
 We follow an **Open-Core** model. The core pipeline is free and open-source forever.
