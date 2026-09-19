@@ -78,34 +78,6 @@ flowchart LR
 | **6. 프로덕션 서빙 패키징 (`ServingPackager`)** | 실시간 FastAPI REST API 서버, Dockerfile, Ring Buffer 기반 Live DriftMonitor | 0.1 초 미만 추론, Laplace 스무딩 대칭 PSI 실시간 드리프트 감시 |
 | **7. CI/CD AI 코드 리뷰 봇 (`ai_reviewer.py`)** | PR diff 자동 분석, Karpathy 원칙/보안/테스트 검증, 종합 Grade 산출 | **Grade A(90점 이상 & Critical 0건)일 때만 `develop` 머지 허용** |
 
----
-
-## 🌿 깃허브 브랜치 전략 및 PR 머지 정책 (Git Flow Policy)
-
-우리 팀은 안정적인 릴리즈와 엄격한 품질 보증을 위해 아래 브랜치 전략을 준수합니다:
-
-```
-[main] ───────────────────────────● 릴리즈 v2.3 (Stable Production)
-                                 ▲
-                          (정기 릴리즈 PR)
-                                 │
-[develop] ──────────●────────────● 통합 브랜치 (Integration)
-                    ▲
-            (Grade A 필수 PR)
-                    │
-[feature/xxx] ──────┘ 작업 브랜치 (Feature / Bugfix / Refactor)
-```
-
-1. **브랜치 규칙**:
-   - `main`: 상용 배포 전용 브랜치 (최종 검증 완료된 태그만 릴리즈).
-   - `develop`: 일상 개발 통합 브랜치. 모든 작업은 `develop`을 향해 PR(MR)을 요청합니다.
-   - `feature/*`, `fix/*`, `refactor/*`: `develop`에서 분기하여 기능 개발 수행.
-2. **AI Quality Gatekeeper (Grade A 필수 정책)**:
-   - `develop` 브랜치로 PR이 생성되면 GitHub Actions AI 코드 리뷰 봇이 자동 가동됩니다.
-   - 4대 평가 축(Karpathy 원칙 30점, 보안/PII 25점, 테스트 통과 25점, 아키텍처/재현성 20점)을 채점합니다.
-   - **오직 `Grade A` (90점 이상 & Critical 결함 0건) 획득 시에만 머지가 허용됩니다.**
-
----
 
 ## 🚀 실행 가이드
 
