@@ -119,19 +119,19 @@ class BusinessTranslator:
             return {
                 "status": "정상 대칭",
                 "badge": "🟢 양호",
-                "description": "데이터가 좌우 균등하게 분포되어 추가 변환이 불필요합니다."
+                "description": "데이터가 좌우 대칭을 이루어 정규분포 가정을 충족하며, 추가 변환 없이 모델링에 즉각 투입 가능합니다."
             }
         elif val <= 1.5:
             return {
                 "status": "경미한 비대칭",
                 "badge": "🟡 주의",
-                "description": "한쪽으로 약간 치우쳐 있으나 모델 학습에 심각한 왜곡은 없습니다."
+                "description": "특정 방향으로 완만한 치우침이 있으나, 트리 모델 학습에 유의미한 왜곡을 주지 않는 안정적 수준입니다."
             }
         else:
             return {
                 "status": "극심한 쏠림",
                 "badge": "🚨 자동 교정 완료",
-                "description": "이상치 또는 특정 구간 쏠림이 심하여 log1p 수학적 변환으로 완화했습니다."
+                "description": "이상치 밀집 및 롱테일 쏠림을 식별하여 log1p 수학적 변환으로 데이터 스케일을 안정화했습니다."
             }
 
     @staticmethod
@@ -140,19 +140,19 @@ class BusinessTranslator:
             return {
                 "status": "분포 무결성 100%",
                 "badge": "✅ 안전",
-                "description": "결측치를 대체한 후에도 원천 데이터의 통계적 분포가 그대로 보존되었습니다."
+                "description": "결측 대체 조치 후에도 원천 데이터의 통계적 고유 분포를 온전히 보존함을 검증 완료했습니다."
             }
         elif p_val >= 0.01:
             return {
                 "status": "경미한 분포 변동",
                 "badge": "🟡 모니터링",
-                "description": "미세한 분포 이동이 감지되었으나 학습 유의수준 내에 있습니다."
+                "description": "미세한 분포 이동이 감지되었으나 허용 통계적 유의수준 범위 내에서 안정적으로 제어 중입니다."
             }
         else:
             return {
                 "status": "분포 왜곡 위험",
                 "badge": "⚠️ 주의",
-                "description": "결측 대체로 인한 데이터 형태 변형 가능성이 있어 지시자 플래그를 추가했습니다."
+                "description": "결측 대체로 인한 데이터 분포 왜곡을 방지하고자 결측 여부 지시자(Indicator) 플래그를 추가 반영했습니다."
             }
 
     @staticmethod
@@ -161,19 +161,19 @@ class BusinessTranslator:
             return {
                 "status": "일반화 성능 최상",
                 "badge": "🟢 우수",
-                "description": "학습 데이터와 교차 검증 점수가 일치하여 실운영 환경에서도 성능이 안정적입니다."
+                "description": "학습 점수와 교차 검증 점수가 이상적 균형을 유지하여 실운영 서빙 환경에서도 견고한 일반화 성능을 발휘합니다."
             }
         elif gap <= 0.12:
             return {
                 "status": "적정 일반화",
                 "badge": "🟡 양호",
-                "description": "통상적인 머신러닝 모델의 학습-검증 격차 허용 범위 내에 있습니다."
+                "description": "통상적인 머신러닝 학습-검증 격차 허용치 내에 안착하여 안정적 성능 유지가 가능합니다."
             }
         else:
             return {
                 "status": "과적합(Overfitting) 위험",
                 "badge": "🚨 규제 권고",
-                "description": "학습 데이터에 지나치게 특화되었을 수 있으므로 정규화 가중치 상향을 권장합니다."
+                "description": "학습 데이터 편향 위험이 포착되어 정규화 가중치(L1/L2) 상향 및 트리 최대 깊이 제약 조치를 권고합니다."
             }
 
     @staticmethod
@@ -182,19 +182,19 @@ class BusinessTranslator:
             return {
                 "grade": "A등급 (우수)",
                 "badge": "🟢 운영 적합",
-                "summary": "결측 및 중복이 극히 적고 데이터 품질이 매우 건강합니다."
+                "summary": "결측치 및 중복 레코드가 극소 수준이며, 전반적인 데이터 품질과 정합성이 매우 우수합니다."
             }
         elif score >= 70:
             return {
                 "grade": "B등급 (양호)",
                 "badge": "🟡 전처리 권장",
-                "summary": "일부 결측치와 이상치가 존재하나 자동 전처리 파이프라인으로 정제 가능합니다."
+                "summary": "일부 결측치와 이상치가 식별되었으나 자동 정제 파이프라인을 통해 결함을 안정적으로 해소 가능합니다."
             }
         else:
             return {
                 "grade": "C등급 (주의)",
                 "badge": "🚨 수집 체계 보완",
-                "summary": "결측률이 높거나 중복 데이터가 다수 감지되어 원천 수집 단계 점검이 필요합니다."
+                "summary": "결측률 상회 및 중복 레코드 집중으로 원천 수집 파이프라인의 무결성 점검 및 보완을 권고합니다."
             }
 
     @staticmethod

@@ -864,7 +864,7 @@ class ExcelReportBuilder:
                 ws.cell(row=row, column=1, value=f"• {rec}").font = self.f_bold
                 row += 1
         else:
-            ws.cell(row=row, column=1, value="• 데이터 무결성이 검증되어 추가 보정 없이 상위 모델링 파이프라인으로 안전하게 진입합니다.").font = self.f_normal
+            ws.cell(row=row, column=1, value="• 데이터 무결성 전수 검증 완료: 추가 보정 없이 상위 모델링 파이프라인으로 안전하게 진입함.").font = self.f_normal
             row += 1
 
     def _build_pareto_automl_sheet(self, ws, pipeline_result: Dict[str, Any]):

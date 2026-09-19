@@ -689,7 +689,7 @@ class PptxDeckBuilder:
         bp4_sub.font.color.rgb = self.c_text_dark
         
         bp4_sub2 = btf4.add_paragraph()
-        bp4_sub2.text = "• [자동 추출 배포 패키지]: `export_pipeline/pipeline_serve.py`, `train.py`, `reproduce.py`가 완전 생성되어 운영 서버 CI/CD 및 FastAPI 실시간 서빙으로 즉시 직결 가능"
+        bp4_sub2.text = "• [자동 추출 배포 패키지]: `export_pipeline/pipeline_serve.py`, `train.py`, `reproduce.py` 자동 생성 완료: 운영 서버 CI/CD 및 FastAPI 실시간 서빙 즉각 연계 가능"
         bp4_sub2.font.size = Pt(8.5)
         bp4_sub2.font.color.rgb = self.c_text_muted
 

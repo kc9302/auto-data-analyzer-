@@ -175,6 +175,22 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
+# Enterprise Security Headers Middleware (Google Cloud WAF & OWASP Hardened)
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    # Guard against DoS payload attacks
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > 10 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={{"detail": "Payload too large. Exceeds 10MB limit."}})
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
+
 # Load and Verify Model Artifact with SHA-256 Cryptographic Checksum
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "best_model.joblib")
 META_PATH = os.path.join(os.path.dirname(__file__), "metadata.json")

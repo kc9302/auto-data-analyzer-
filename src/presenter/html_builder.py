@@ -165,7 +165,7 @@ class HtmlReportBuilder:
   </section>
 
   <!-- PII Warning Banner if detected -->
-  {"<div class='bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl mb-10 flex items-center justify-between text-sm'><div><span class='font-bold text-rose-900'>🛡️ 개인정보(PII) 감지 및 안전 격리:</span> 총 " + str(len(health.get('pii_detected', []))) + "개 컬럼에서 개인정보 패턴이 감지되어 리포트 마스킹 및 ML 피처에서 자동 제외 조치되었습니다.</div><span class='text-xs bg-rose-200 text-rose-900 px-2 py-1 rounded font-semibold'>Zero-Leakage</span></div>" if health.get('pii_detected') else ""}
+  {"<div class='bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl mb-10 flex items-center justify-between text-sm'><div><span class='font-bold text-rose-900'>🛡️ 개인정보(PII) 감지 및 안전 격리:</span> 총 " + str(len(health.get('pii_detected', []))) + "개 컬럼에서 개인정보 패턴을 식별하여 리포트 마스킹 및 ML 피처셋에서 안전 격리 조치를 완료했습니다.</div><span class='text-xs bg-rose-200 text-rose-900 px-2 py-1 rounded font-semibold'>Zero-Leakage</span></div>" if health.get('pii_detected') else ""}
 
   <!-- DECK 1: 데이터 현황 진단 -->
   <div class="mb-14">
