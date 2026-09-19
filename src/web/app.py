@@ -146,8 +146,9 @@ with st.sidebar:
     else:
         db_url = st.text_input(
             "데이터베이스 접속 URL",
-            value="sqlite:///tests/data/sample_warehouse.db",
-            help="SQLite, PostgreSQL, MySQL 등 SQLAlchemy 지원 접속 포맷"
+            value="",
+            placeholder="예: postgresql://user:password@localhost:5432/mydb 또는 sqlite:///path/to/db.sqlite",
+            help="PostgreSQL, MySQL, Oracle, MS-SQL, SQLite 등 SQLAlchemy 지원 접속 포맷을 직접 입력하세요."
         )
 
 
