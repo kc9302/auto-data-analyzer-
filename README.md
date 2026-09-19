@@ -64,19 +64,6 @@ flowchart LR
 ```
 </details>
 
----
-
-## 🌟 핵심 특징 및 모듈 구성
-
-| 레이어 / 모듈 | 핵심 기술 및 동작 원리 | 산출물 및 특징 |
-| :--- | :--- | :--- |
-| **1. 제로-락인 커넥터 (`SafeDBConnector`)** | SQL Injection 및 DDL 차단, 적응형 무작위 샘플링, CSV 파일 직접 수용 | DB 연결 없이도 `data/sample_customers.csv`로 즉시 시연 가능 |
-| **2. 실데이터 프로파일러 (`FactDataProfiler`)** | 100% 팩트 기반 결측률/왜도/상관관계 진단, 한국인 주민등록번호/이메일 PII 자동 탐지 | PII 감지 즉시 학습셋에서 자동 격리 |
-| **3. 누수 방지 피처 파이프라인 (`FeaturePipeline`)** | 3단계 결측치 거버넌스, 스마트 피처 합성(Safe Ratio, Skew 교정), Feature A/B 테스터 | 대조군(A) 대비 실험군(B) Lift % 및 $p$-value 실측 검증 |
-| **4. AutoML & XAI 엔진 (`MLScoutEngine`)** | GBDT 및 TabularDeepNet(MLP) 토너먼트, 라이브러리 무의존성 FastMarginalExplainer | 대표 3대 고객군(고위험/중간/안전) 워터폴 및 의사결정 Cutoff 시뮬레이터 |
-| **5. 모델 완벽 재현성 (`DataFreezer`)** | Train/Val 데이터셋 Parquet/CSV 동결, SHA-256 체크섬 매니페스트, 환경 핑거프린트 봉인 | `python reproduce.py`로 비트 단위 100% 동일 모델 재현 검증 |
-| **6. 프로덕션 서빙 패키징 (`ServingPackager`)** | 실시간 FastAPI REST API 서버, Dockerfile, Ring Buffer 기반 Live DriftMonitor | 0.1 초 미만 추론, Laplace 스무딩 대칭 PSI 실시간 드리프트 감시 |
-| **7. CI/CD AI 코드 리뷰 봇 (`ai_reviewer.py`)** | PR diff 자동 분석, Karpathy 원칙/보안/테스트 검증, 종합 Grade 산출 | **Grade A(90점 이상 & Critical 0건)일 때만 `develop` 머지 허용** |
 
 
 ## 🚀 실행 가이드
