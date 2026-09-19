@@ -17,7 +17,7 @@ class DQInsightGatewayClient:
     Supports At-Risk Student Detection (Classification) and Course/Track Recommendation (Ranking).
     """
 
-    DEFAULT_BASE_URL = os.getenv("DQI_GATEWAY_URL", "http://192.168.110.125:8090")
+    DEFAULT_BASE_URL = os.getenv("DQI_GATEWAY_URL", "http://localhost:8090")
     DEFAULT_TIMEOUT_SEC = 5.0
 
     def __init__(self, base_url: Optional[str] = None, timeout: float = DEFAULT_TIMEOUT_SEC):

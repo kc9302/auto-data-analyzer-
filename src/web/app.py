@@ -158,8 +158,9 @@ with st.sidebar:
     else:
         db_url = st.text_input(
             "데이터베이스 접속 URL",
-            value="sqlite:///tests/data/sample_warehouse.db",
-            help="SQLite, PostgreSQL, MySQL 등 SQLAlchemy 지원 접속 포맷"
+            value="",
+            placeholder="예: postgresql://user:password@localhost:5432/mydb 또는 sqlite:///path/to/db.sqlite",
+            help="PostgreSQL, MySQL, Oracle, MS-SQL, SQLite 등 SQLAlchemy 지원 접속 포맷을 직접 입력하세요."
         )
 
 
@@ -613,7 +614,7 @@ if "audit_data" in st.session_state:
         # Real-time DQ Insight2 Gateway Live Test Section
         st.divider()
         st.markdown("#### ⚡ [Live Gateway 연동] dq-insight2-gateway 실시간 추론 & 설명력 테스트")
-        st.caption("개발 서버 게이트웨이(192.168.110.125:8090/18080)와 실시간 통신하여 위기학생 탐지(#304) 및 추천(#253)을 즉시 호출합니다.")
+        st.caption("게이트웨이 서버(DQI_GATEWAY_URL 또는 localhost)와 실시간 통신하여 위기학생 탐지(#304) 및 추천(#253)을 즉시 호출합니다.")
 
         from src.connectors.gateway_client import DQInsightGatewayClient
         gw_client = DQInsightGatewayClient()
