@@ -100,7 +100,7 @@ class DBConfigManager:
         # Engine-specific dialect and default port mapping
         if engine in ["postgres", "postgresql"]:
             port_part = f":{port}" if port else ":5432"
-            schema_opt = f"?currentSchema={config['schema']}" if config.get("schema") else ""
+            schema_opt = f"?options=-csearch_path%3D{config['schema']}" if config.get("schema") else ""
             return f"postgresql://{auth_part}{host}{port_part}/{database}{schema_opt}"
 
         elif engine in ["mysql", "mariadb"]:
