@@ -11,8 +11,14 @@
 
 ## 🏗️ 엔터프라이즈 시스템 아키텍처 (Enterprise Architecture by Archify)
 
-> 본 시스템은 **Zero-Lockin Ingestion, Two-Tier LOCO Feature Engine, Multi-Model Benchmark Suite, 5대 프로덕션 산출물 자동 생성**의 4대 핵심 축으로 설계되었습니다.  
-> 🔗 **[인터랙티브 전체 아키텍처 뷰어 열기 (docs/system_architecture.html)](docs/system_architecture.html)** | 📄 **[아키텍처 스키마 명세 (docs/system_architecture.json)](docs/system_architecture.json)**
+> 본 시스템은 **Zero-Lockin Ingestion, Two-Tier LOCO Feature Engine, Multi-Model Benchmark Suite, 5대 프로덕션 산출물 자동 생성**의 4대 핵심 축으로 설계되었습니다.
+
+<div align="center">
+  <img src="docs/system_architecture.svg" alt="Auto Data Analyzer Enterprise Architecture" width="100%" />
+</div>
+
+<details>
+<summary><b>📐 텍스트 기반 Mermaid 다이어그램 펼쳐보기 (Fallback View)</b></summary>
 
 ```mermaid
 flowchart TB
@@ -71,6 +77,7 @@ flowchart TB
     class Freezer,ReproScript,CodeForge,ServingRouter,Drift serve;
     class SSOT,PPTX,HTML,XLSX,WebUI pres;
 ```
+</details>
 
 ---
 
