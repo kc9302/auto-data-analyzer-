@@ -106,7 +106,9 @@ with st.sidebar:
             if up_cfg is not None:
                 up_dir = os.path.join("data", "uploads")
                 os.makedirs(up_dir, exist_ok=True)
-                cfg_temp = os.path.join(up_dir, up_cfg.name)
+                import re
+                safe_cfg_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", os.path.basename(up_cfg.name))
+                cfg_temp = os.path.join(up_dir, safe_cfg_name)
                 with open(cfg_temp, "wb") as f:
                     f.write(up_cfg.getbuffer())
                 try:
@@ -114,7 +116,7 @@ with st.sidebar:
                     db_url = DBConfigManager.resolve_connection_url(cfg_dict)
                     config_default_table = cfg_dict.get("table")
                     config_default_target = cfg_dict.get("target")
-                    st.success(f"✓ `{up_cfg.name}` 로드 성공 (엔진: {cfg_dict.get('engine', 'Unknown')})")
+                    st.success(f"✓ `{safe_cfg_name}` 로드 성공 (엔진: {cfg_dict.get('engine', 'Unknown')})")
                 except Exception as ce:
                     st.error(f"설정 파일 처리 실패: {ce}")
 
@@ -148,11 +150,13 @@ with st.sidebar:
             if uploaded_file is not None:
                 upload_dir = os.path.join("data", "uploads")
                 os.makedirs(upload_dir, exist_ok=True)
-                temp_path = os.path.join(upload_dir, uploaded_file.name)
+                import re
+                safe_data_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", os.path.basename(uploaded_file.name))
+                temp_path = os.path.join(upload_dir, safe_data_name)
                 with open(temp_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 db_url = temp_path
-                st.success(f"✓ 업로드 완료: `{uploaded_file.name}`")
+                st.success(f"✓ 업로드 완료: `{safe_data_name}`")
             else:
                 st.warning("분석할 데이터 파일을 업로드해주세요.")
     else:
