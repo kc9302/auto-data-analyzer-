@@ -135,9 +135,61 @@ uv run python dist/export_pipeline/reproduce.py
 
 ---
 
+## 🔄 ML 학습 파이프라인 설계 — 샘플 탐색 → 전체 재학습
+
+> 대용량 데이터에서 빠른 실험과 최고 품질의 프로덕션 모델을 동시에 달성하기 위해  
+> **2단계 학습 전략 (Scout → Refit)** 을 채택합니다.
+
+```mermaid
+flowchart TD
+    A[("🗄️ 원본 DB\n(전체 N행)")]
+    A --> B{"N > 50,000?"}
+
+    B -- "YES\n대용량" --> C["📥 TABLESAMPLE BERNOULLI\n최대 50,000행 적응형 샘플링\nPostgreSQL / Oracle / MS-SQL"]
+    B -- "NO\n소용량" --> D["📥 Full Population 직접 로드\n전체 행 그대로 사용"]
+
+    C --> E["🔬 Step 4  MLScout 토너먼트\nBaseline / RF / GBDT / MLP\ncross_validate k-fold 공정 평가"]
+    D --> E
+
+    E --> F["🏆 챔피언 모델 선정\nF1 / R² 기준 1위"]
+
+    F --> G{"샘플링 했나?"}
+
+    G -- "YES 재학습 필요" --> H["🔁 Step 4-C  Full Population Refitting\n전체 N행으로 챔피언 재학습\n동일 FeaturePipeline 적용"]
+    G -- "NO 이미 전체 학습" --> I
+
+    H --> I["📊 Step 9  Eval Charts 자동 생성\nROC Curve / Confusion Matrix\nClassification Report / Residuals"]
+
+    I --> J["📦 Step 5  프로덕션 패키징\nbest_model.joblib 전체 데이터 학습\nserve.py / reproduce.py / Dockerfile"]
+
+    style A fill:#EBF8FF,stroke:#3182CE,color:#2B6CB0
+    style C fill:#FFF5F5,stroke:#FC8181,color:#742A2A
+    style D fill:#F0FFF4,stroke:#68D391,color:#22543D
+    style E fill:#FAF5FF,stroke:#B794F4,color:#44337A
+    style F fill:#FAF5FF,stroke:#805AD5,color:#44337A
+    style H fill:#FFF3CD,stroke:#F6AD55,color:#7B341E
+    style I fill:#E6FFFA,stroke:#38B2AC,color:#1D4044
+    style J fill:#FEEBC8,stroke:#DD6B20,color:#7B341E
+```
+
+### 📌 핵심 설계 원칙
+
+| 단계 | 목적 | 대상 데이터 |
+|------|------|------------|
+| **Step 4 Scout** | 빠른 모델 탐색 (수 초~수십 초) | 샘플 ≤ 50,000행 |
+| **Step 4-C Refit** | 프로덕션용 전체 데이터 재학습 | 전체 N행 (샘플링 시에만) |
+| **Step 9 Eval** | ROC·Confusion Matrix·리포트 차트 생성 | 최종 학습 데이터 기준 |
+| **Step 5 Export** | `best_model.joblib` 저장 | 전체 데이터 학습 모델 |
+
+> **소용량 (N ≤ 50K)**: 처음부터 전체로 학습 → Step 4-C 자동 생략  
+> **대용량 (N > 50K)**: 샘플로 탐색 완료 후 전체 데이터로 자동 재학습 → 최고 품질 프로덕션 아티팩트
+
+---
+
 ## 🏛️ 실제 공공 AI-Hub 125만 건 RDBMS(PostgreSQL) 실증 검증 (Empirical Benchmarks)
 
 > `Auto Data Analyzer & ML Scout`는 단순 토이 데이터셋이 아닌, **국가 AI-Hub 대용량 원천 데이터(총 1,257,542건)를 PostgreSQL DW에 적재하고 실측 벤치마크를 전수 완료**하여 프로덕션 도입 신뢰성을 입증했습니다.
+
 
 <div align="center">
 
