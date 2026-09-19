@@ -169,6 +169,34 @@ def run_analyzer(
         print(f"[OK] 이전 선정 모델 대비: [{comp.get('legacy_model_name')}] 대비 [{comp.get('champion_model_name')}] 검증 성능 +{comp.get('lift_pct', 0.0)}% 향상 확인")
         print(f"[OK] 공식 제안 상태: {decision_proposal.get('executive_narrative', {}).get('final_verdict', '프로덕션 도입 승인')}")
 
+    # 4-C. Full Population Refitting
+    # When data was sampled for fast scouting, retrain the champion model on the
+    # complete dataset using the identical FeaturePipeline (no data leakage).
+    # This ensures the production artifact is trained on maximum available signal.
+    full_X_train, full_y_train = X_train, y_train  # default: same as scout set
+    if target_col and y_train is not None and load_res.get("is_sampled", False):
+        total_rows = load_res.get("total_rows", 0)
+        print(f"\n[Step 4-C] 전체 모집단 재학습 (Full Population Refitting) 중...")
+        print(f"   탐색 표본: {load_res['sample_rows']:,}행 → 전체 데이터: {total_rows:,}행으로 챔피언 모델 재학습")
+        try:
+            full_load = connector.load_table_data(table_name, sample_threshold=999_999_999)
+            df_full = full_load["data"]
+            full_X_train, full_X_test, full_y_train, full_y_test = pipeline.fit_transform(df_full)
+            champion_instance = ml_scout.best_model_instance
+            import time as _time
+            _t0 = _time.time()
+            champion_instance.fit(full_X_train, full_y_train)
+            _elapsed = round(_time.time() - _t0, 2)
+            ml_scout.best_model_instance = champion_instance  # update in-place
+            print(f"[OK] 전체 모집단 재학습 완료: {total_rows:,}행 / {full_X_train.shape[1]}개 피처 / {_elapsed}초")
+            # Replace split references for export
+            X_train, y_train = full_X_train, full_y_train
+            X_test, y_test = full_X_test, full_y_test
+        except Exception as refit_err:
+            print(f"[WARN] 전체 모집단 재학습 실패 (표본 모델 유지): {refit_err}")
+    elif target_col and y_train is not None:
+        print(f"\n[Step 4-C] 전체 모집단 재학습: 표본 추출 없이 전체 {load_res.get('total_rows', len(X_train)):,}행이 이미 사용됨 — 재학습 생략")
+
     # 5. Export Production Clean Python Code, FastAPI Serving Package & Data Freezing
     print("\n[Step 5] 프로덕션 레디 클린 파이썬, 서빙 패키지 및 데이터 동결(Freezing) 추출 중...")
     code_forge = CodeForge()
