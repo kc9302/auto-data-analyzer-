@@ -1,0 +1,76 @@
+# ==============================================================================
+# 데이터베이스 접속 설정 예제 (Auto Data Analyzer & ML Scout)
+# 사용 방법: 이 파일을 복사하여 configs/db_config.yaml을 만들고 실제 접속 정보를 입력하세요.
+# 실행: python -m src.main --config configs/db_config.yaml
+# ==============================================================================
+
+# [선택 1: PostgreSQL]
+database:
+  engine: postgresql              # postgresql, mysql, oracle, mssql, sqlite, parquet
+  host: db.example.com            # DB 서버 IP 또는 도메인
+  port: 5432                      # 포트 번호 (기본: 5432)
+  database: enterprise_dw         # 데이터베이스 이름
+  username: readonly_user         # 읽기 전용 접속 계정
+  password: ${DB_PASSWORD}        # 비밀번호 (사용자 입력 또는 환경변수 설정 필수)
+  schema: public                  # 스키마 (선택 사항)
+  table: customer_churn           # 기본 분석 대상 테이블명
+  target: churn                   # 머신러닝 예측 타깃 컬럼명
+
+# ------------------------------------------------------------------------------
+# [선택 2: MySQL / MariaDB 예시]
+# database:
+#   engine: mysql
+#   host: db.example.com
+#   port: 3306
+#   database: ecommerce
+#   username: data_analyst
+#   password: ${MYSQL_PASSWORD}
+#   table: orders
+#   target: is_cancelled
+
+# ------------------------------------------------------------------------------
+# [선택 3: Oracle 예시]
+# database:
+#   engine: oracle
+#   host: 172.16.0.10
+#   port: 1521
+#   service_name: ORCLPDB1        # 또는 sid: ORCL
+#   username: DW_READONLY
+#   password: ${ORACLE_PWD}
+#   table: TB_CUSTOMER
+#   target: CHURN_YN
+
+# ------------------------------------------------------------------------------
+# [선택 4: MS-SQL 예시]
+# database:
+#   engine: mssql
+#   host: sqlserver.corp.local
+#   port: 1433
+#   database: CRM_DB
+#   username: ml_engineer
+#   password: ${MSSQL_PWD}
+#   driver: "ODBC Driver 17 for SQL Server"
+#   table: Users
+#   target: Churned
+
+# ------------------------------------------------------------------------------
+# [선택 5: SQLite / 로컬 파일 예시]
+# database:
+#   engine: sqlite
+#   path: tests/data/sample_warehouse.db
+#   table: customers
+#   target: churn
+
+# ------------------------------------------------------------------------------
+# [선택 6: Parquet / Excel / CSV 직접 파일 경로]
+# database:
+#   engine: parquet
+#   path: /data/lakehouse/customer_events.parquet
+#   target: churn
+
+# ------------------------------------------------------------------------------
+# [선택 7: 이미 완성된 SQLAlchemy URL 문자열을 직접 사용하는 경우]
+# database:
+#   url: "postgresql://user:pass@localhost:5432/mydb"
+#   table: customers
+#   target: churn

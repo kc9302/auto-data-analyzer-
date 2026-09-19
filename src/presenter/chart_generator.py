@@ -23,9 +23,13 @@ class PresentationChartGenerator:
             "card_bg": "#FFFFFF",
             "muted": "#64748B"
         }
-        # Configure clean matplotlib rcParams
-        plt.rcParams["font.sans-serif"] = ["Malgun Gothic", "DejaVu Sans", "Arial"]
+        # Configure clean matplotlib rcParams with robust cross-platform CJK font fallbacks
+        plt.rcParams["font.sans-serif"] = [
+            "Malgun Gothic", "NanumGothic", "Noto Sans CJK KR", "AppleGothic", "DejaVu Sans", "Arial", "sans-serif"
+        ]
+        plt.rcParams["font.family"] = "sans-serif"
         plt.rcParams["axes.unicode_minus"] = False
+
 
     def generate_missing_chart(self, missing_summary: List[Dict[str, Any]], out_path: str):
         if not missing_summary:
@@ -117,10 +121,18 @@ class PresentationChartGenerator:
             plt.close()
             return
 
-        top_models = leaderboard[:5][::-1]
-        names = [m["model"] for m in top_models]
-        scores = [float(m.get(primary_metric, 0.0)) for m in top_models]
-        colors = [self.colors["success"] if m.get("rank") == 1 else self.colors["accent"] for m in top_models]
+        # Select top ML candidates and ensure baselines are included for visual contrast
+        top_ml = [m for m in leaderboard if not m.get("is_baseline")][:4]
+        baselines = [m for m in leaderboard if m.get("is_baseline")]
+        selected = sorted(top_ml + baselines, key=lambda x: float(x.get(primary_metric, -9999)))
+
+        names = [m["model"] for m in selected]
+        scores = [float(m.get(primary_metric, 0.0)) for m in selected]
+        colors = [
+            self.colors["success"] if m.get("rank") == 1
+            else ("#94A3B8" if m.get("is_baseline") else self.colors["accent"])
+            for m in selected
+        ]
 
         bars = ax.barh(names, scores, color=colors, height=0.55, zorder=3)
         ax.grid(axis="x", linestyle="--", alpha=0.5, zorder=0)
@@ -174,3 +186,51 @@ class PresentationChartGenerator:
         plt.tight_layout()
         plt.savefig(out_path, transparent=False, facecolor="#FFFFFF")
         plt.close()
+
+    def generate_shap_summary_chart(self, shap_analysis: Dict[str, Any], out_path: str):
+        fig, ax = plt.subplots(figsize=(6.2, 3.8), dpi=150)
+        top_feats = shap_analysis.get("top_features", []) if shap_analysis else []
+        if not top_feats:
+            ax.text(0.5, 0.5, "1차 SHAP 피처 분석 데이터 대기 중", ha="center", va="center", color=self.colors["muted"])
+            ax.axis("off")
+            plt.savefig(out_path)
+            plt.close()
+            return
+
+        items = top_feats[:8][::-1]
+        features = [it["feature"] for it in items]
+        pcts = [float(it["impact_pct"]) for it in items]
+        directions = [it.get("direction", "Positive") for it in items]
+
+        # Colors: Positive(+) -> Rose Red, Negative(-) -> Sky Blue, Other -> Slate
+        bar_colors = []
+        for d in directions:
+            if "Positive" in d or "(+)" in d:
+                bar_colors.append(self.colors["danger"])
+            elif "Negative" in d or "(-)" in d:
+                bar_colors.append(self.colors["accent"])
+            else:
+                bar_colors.append(self.colors["muted"])
+
+        bars = ax.barh(features, pcts, color=bar_colors, height=0.55, zorder=3)
+        ax.grid(axis="x", linestyle="--", alpha=0.5, zorder=0)
+        ax.set_xlabel("SHAP 글로벌 기여율 (%)", fontsize=10, color=self.colors["muted"], fontweight="bold")
+        base_score = shap_analysis.get("baseline_score", 0.0)
+        base_metric = shap_analysis.get("baseline_metric", "Score")
+        ax.set_title(f"1차 피처 분석 (XGBoost {base_metric}: {base_score:.3f} & SHAP)", fontsize=11, fontweight="bold", color=self.colors["primary"], pad=10)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color("#E2E8F0")
+        ax.spines["bottom"].set_color("#E2E8F0")
+
+        max_pct = max(pcts) if pcts else 10.0
+        for bar, p, d in zip(bars, pcts, directions):
+            d_symbol = "(+)" if ("Positive" in d or "(+)" in d) else ("(-)" if ("Negative" in d or "(-)" in d) else "(~)")
+            ax.text(p + (max_pct * 0.02), bar.get_y() + bar.get_height() / 2,
+                    f"{p:.1f}% {d_symbol}", va="center", fontsize=9, fontweight="bold", color=self.colors["primary"])
+
+        ax.set_xlim(0, max_pct * 1.35)
+        plt.tight_layout()
+        plt.savefig(out_path, transparent=False, facecolor="#FFFFFF")
+        plt.close()
+

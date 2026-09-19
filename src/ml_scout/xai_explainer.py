@@ -190,8 +190,16 @@ class TreeSHAPExplainer(BaseModelExplainer):
         bg_size = min(n_samples, max_background_samples)
         bg_data = X_train.sample(n=bg_size, random_state=42) if n_samples > bg_size else X_train.copy()
 
-        explainer = shap.TreeExplainer(model, data=bg_data)
-        shap_vals = explainer.shap_values(bg_data)
+        try:
+            explainer = shap.TreeExplainer(model, data=bg_data)
+            shap_vals = explainer.shap_values(bg_data)
+        except Exception:
+            # Fallback for non-tree models (LogisticRegression, Ridge, MLP, etc.)
+            return FastMarginalExplainer().explain(
+                model, X_train, task_type=task_type,
+                max_background_samples=max_background_samples,
+                num_local_cases=num_local_cases
+            )
         
         # Handle binary classification returning list of arrays
         if isinstance(shap_vals, list) and len(shap_vals) >= 2:

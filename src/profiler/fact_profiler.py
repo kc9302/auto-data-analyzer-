@@ -17,7 +17,7 @@ class FactDataProfiler:
         "CREDIT_CARD": r"\b(?:\d{4}[-\s]?){3}\d{4}\b"
     }
 
-    PII_KEYWORDS = ["resident", "ssn", "password", "passwd", "pwd", "card", "secret", "token", "rrn"]
+    PII_KEYWORDS = ["resident", "ssn", "password", "passwd", "pwd", "card", "secret", "token", "rrn", "name"]
 
     def __init__(self, df: pd.DataFrame, table_name: str = "main_table"):
         self.raw_df = df.copy()
@@ -53,13 +53,14 @@ class FactDataProfiler:
                     reasons.append(f"Column keyword match: '{kw}'")
                     break
 
-            # 2. Regex matching on string values
-            sample_vals = self.raw_df[col].dropna().astype(str).head(200)
-            for pattern_name, pattern_regex in self.PII_PATTERNS.items():
-                match_count = sample_vals.str.contains(pattern_regex, regex=True).sum()
-                if match_count > 0:
-                    reasons.append(f"Sample values matched pattern: {pattern_name} ({match_count} hits)")
-                    break
+            # 2. Regex matching on string values (only for object/string columns to prevent float precision false-positives)
+            if not pd.api.types.is_numeric_dtype(self.raw_df[col]):
+                sample_vals = self.raw_df[col].dropna().astype(str).head(200)
+                for pattern_name, pattern_regex in self.PII_PATTERNS.items():
+                    match_count = sample_vals.str.contains(pattern_regex, regex=True).sum()
+                    if match_count > 0:
+                        reasons.append(f"Sample values matched pattern: {pattern_name} ({match_count} hits)")
+                        break
 
             if reasons:
                 detected.append({

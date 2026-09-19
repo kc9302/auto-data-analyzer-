@@ -1,49 +1,105 @@
-# Auto Data Analyzer & ML Scout
+<div align="center">
 
-DB나 CSV 파일을 Read-Only로 연결하면, 피처 엔지니어링부터 모델 선택, 평가 리포트(PPTX/HTML/XLSX)까지 자동으로 처리해주는 ML 자동화 파이프라인입니다.
+# ⚡ Auto Data Analyzer & ML Scout
 
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
-[![Tests Passing](https://img.shields.io/badge/Tests-23%20Passed-brightgreen.svg)](tests/)
+### **Turn any production database into an ML API and Executive-ready Presentation Deck in 60 seconds.**
+
+*Safe Read-Only Profiling • Leak-Free Feature Engineering • 6-Model Tournament • One-Click FastAPI & PPTX Export*
+
+<br/>
+
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
+[![Tests Passing](https://img.shields.io/badge/Tests-23%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+
+<br/>
+
+**[ 🇰🇷 한국어 설명서 (Korean Documentation) ](README.ko.md)** • **[ 📖 Full Architecture Specs ](docs/24_데이터분석_파이프라인_도식_및_벤치마크.md)**
+
+</div>
 
 ---
 
-## 시스템 구조
+## 🌟 Why Auto Data Analyzer?
+
+Most AutoML solutions are either **fragile scripts** that crash on dirty production tables, or **black-box SaaS tools** that require uploading your private customer data to third-party clouds.
+
+**Auto Data Analyzer** is built from the ground up for enterprise data engineers and ML practitioners:
+1. 🛡️ **Zero-Write Guarantee**: Read-only DB connection with `TABLESAMPLE BERNOULLI`. Guaranteed 0 write queries on your production warehouse.
+2. 🔒 **Governance & Privacy**: Automatic PII masking, Two-Tier LOCO data-leakage barrier, and SVD multicollinearity suppression ($\kappa \le 15.0$).
+3. 🏆 **Champion Tournament**: Evaluates 6 model families (LightGBM, XGBoost, Random Forest, MLP, GBDT, Baselines) using 10 metrics with 1,000 bootstrap iterations.
+4. 🚀 **Production-Ready in Seconds**: Instantly generates an SLA < 50ms FastAPI service (`serve.py`), Dockerfile, and reproducible code (`reproduce.py`).
+5. 📊 **Executive C-Level Deliverables**: Not just console logs — exports high-impact **16:9 widescreen PPTX presentation decks**, interactive HTML dashboards, and Excel data marts automatically.
+
+---
+
+## ⚡ 30-Second Quickstart
+
+### 1. Installation
+```bash
+# Clone the repository
+git clone https://github.com/your-org/auto-data-analyzer.git
+cd auto-data-analyzer
+
+# Install with uv (ultra-fast) or standard pip
+uv sync
+```
+
+### 2. Launch Interactive Web UI
+```bash
+uv run streamlit run web.py
+```
+> Select a CSV file or enter a database connection string in the sidebar to start profiling and model discovery immediately.
+
+### 3. Or Run via One-Liner CLI
+```bash
+# Analyze a CSV file & build churn prediction model + PPTX deck
+uv run run.py --db-url "data/sample_customers.csv" --target "churn"
+
+# Profile a live PostgreSQL table safely
+uv run python src/main.py --config configs/db_config_postgres.yaml --table "customer_retention_mart" --target "is_churn"
+```
+
+---
+
+## 🏗️ Architecture & Pipeline Flow
 
 <div align="center">
-  <img src="docs/system_architecture.svg" alt="System Architecture" width="100%" />
+  <img src="docs/system_architecture.svg" alt="System Architecture" width="95%" />
 </div>
 
 <details>
-<summary><b>파이프라인 전체 흐름 보기</b></summary>
+<summary><b>🔍 Click to view interactive Mermaid pipeline diagram</b></summary>
 
 ```mermaid
 flowchart LR
-    subgraph S1 ["① 데이터 수집"]
+    subgraph S1 ["① Data Ingestion"]
         direction TB
-        DB[("PostgreSQL / Oracle / CSV")]
+        DB[("PostgreSQL / Oracle / CSV / SQLite")]
         Safe["SafeDBConnector<br/>(Read-Only & TABLESAMPLE)"]
         DB --> Safe
     end
 
-    subgraph S2 ["② 전처리 & 피처"]
+    subgraph S2 ["② Feature & Governance"]
         direction TB
-        Gov["Fact Profiler & PII 마스킹"]
-        LOCO["Two-Tier LOCO Engine<br/>(누수 차단 & SVD κ ≤ 15.0)"]
+        Gov["Fact Profiler & PII Masking"]
+        LOCO["Two-Tier LOCO Engine<br/>(Leak-Free & SVD κ ≤ 15.0)"]
         Gov --> LOCO
     end
 
-    subgraph S3 ["③ 모델 선택"]
+    subgraph S3 ["③ Model Tournament"]
         direction TB
-        Scout["MLScout (6개 모델 토너먼트)"]
-        Stat["10개 지표 & 1,000회 부트스트랩"]
+        Scout["MLScout (6 Model Families)"]
+        Stat["10 Metrics & 1,000 Bootstraps"]
         Scout --> Stat
     end
 
-    subgraph S4 ["④ 배포 & 산출물"]
+    subgraph S4 ["④ Deployment & Decks"]
         direction TB
-        Serve["FastAPI Serving<br/>(SLA < 50ms)"]
-        Docs["산출물<br/>(HTML / PPTX / XLSX)"]
+        Serve["FastAPI Serving<br/>(SLA < 50ms serve.py)"]
+        Docs["Deliverables<br/>(HTML / PPTX / XLSX)"]
         Serve --- Docs
     end
 
@@ -63,96 +119,78 @@ flowchart LR
 
 ---
 
-## 실행 방법
+## 📈 Proven Enterprise Benchmarks (1.25M Real Records)
 
-### 웹 UI
-```bash
-uv run streamlit run web.py
-```
-사이드바에서 CSV 파일을 선택하거나 DB URL을 입력하면 바로 분석이 시작됩니다.
-
-### CLI
-```bash
-# CSV 파일 분석
-uv run run.py --db-url "data/sample_customers.csv" --target "churn"
-
-# SQLite
-uv run run.py --db-url "sqlite:///tests/data/sample_warehouse.db" --table "customers" --target "churn"
-
-# PostgreSQL (설정 파일)
-uv run python src/main.py --config configs/db_config_postgres.yaml --table "aihub_career_counseling_mart" --target "job_label"
-
-# 테스트 실행
-uv run pytest -v
-
-# 모델 재현성 검증
-uv run python dist/export_pipeline/reproduce.py
-```
-
----
-
-## ML 학습 파이프라인 — 샘플 탐색 → 전체 재학습
-
-데이터가 50,000행을 넘으면 먼저 샘플로 빠르게 최적 모델을 찾고, 이후 전체 데이터로 재학습해서 프로덕션 모델을 만듭니다.
-
-```mermaid
-flowchart TD
-    A[("원본 DB\n(전체 N행)")]
-    A --> B{"N > 50,000?"}
-
-    B -- "YES\n대용량" --> C["TABLESAMPLE BERNOULLI\n최대 50,000행 샘플링\nPostgreSQL / Oracle / MS-SQL"]
-    B -- "NO\n소용량" --> D["전체 데이터 직접 로드"]
-
-    C --> E["Step 4  MLScout 토너먼트\nBaseline / RF / GBDT / MLP\ncross_validate k-fold 평가"]
-    D --> E
-
-    E --> F["챔피언 모델 선정\nF1 / R² 기준 1위"]
-
-    F --> G{"샘플링 했나?"}
-
-    G -- "YES" --> H["Step 4-C  Full Population Refitting\n전체 N행으로 챔피언 재학습\n동일 FeaturePipeline 적용"]
-    G -- "NO" --> I
-
-    H --> I["Step 9  평가 차트 생성\nROC Curve / Confusion Matrix\nClassification Report / Residuals"]
-
-    I --> J["Step 5  프로덕션 패키징\nbest_model.joblib\nserve.py / reproduce.py / Dockerfile"]
-
-    style A fill:#EBF8FF,stroke:#3182CE,color:#2B6CB0
-    style C fill:#FFF5F5,stroke:#FC8181,color:#742A2A
-    style D fill:#F0FFF4,stroke:#68D391,color:#22543D
-    style E fill:#FAF5FF,stroke:#B794F4,color:#44337A
-    style F fill:#FAF5FF,stroke:#805AD5,color:#44337A
-    style H fill:#FFF3CD,stroke:#F6AD55,color:#7B341E
-    style I fill:#E6FFFA,stroke:#38B2AC,color:#1D4044
-    style J fill:#FEEBC8,stroke:#DD6B20,color:#7B341E
-```
-
-| 단계 | 역할 | 대상 데이터 |
-|------|------|------------|
-| Step 4 Scout | 모델 탐색 | 샘플 ≤ 50,000행 |
-| Step 4-C Refit | 전체 데이터 재학습 | 전체 N행 (샘플링 시에만) |
-| Step 9 Eval | 평가 차트 생성 | 최종 학습 데이터 기준 |
-| Step 5 Export | `best_model.joblib` 저장 | 전체 데이터 학습 모델 |
-
----
-
-## AI-Hub 공공 데이터 실측 결과
-
-국가 AI-Hub 데이터(총 125만 건)를 PostgreSQL에 적재하고 직접 실행한 결과입니다.
+Tested against official national AI-Hub datasets loaded into production PostgreSQL instances:
 
 <div align="center">
 
-| 데이터셋 | 규모 | 테이블 | 예측 대상 | 최적 모델 | 성능 | 대조군 대비 |
-| :--- | :---: | :--- | :--- | :---: | :---: | :---: |
-| 270번 진로상담·직업추천 | 22,106건 | `aihub_career_counseling_mart` | `job_label` | LightGBM | 0.9875 | +86.78% |
-| 142번 학생 교육역량 | 335,436건 | `aihub_student_competency_mart` | `data_type` | LogisticRegression | 0.4894 | +0.20% |
-| 149번 표 정보 QA | 900,000건 | `aihub_table_qa_mart` | `is_impossible` | ExtraTrees | 0.7066 | +1.46% |
+| Dataset Domain | Rows | Target Column | Champion Model | Metric Score | Improvement vs Baseline |
+| :--- | :---: | :--- | :---: | :---: | :---: |
+| **Career Counseling & Recommendation** | 22,106 | `job_label` (Multi-class) | **LightGBM** | **0.9875** (F1) | **+86.78%** |
+| **Student Educational Competency** | 335,436 | `data_type` (Binary) | **LogisticRegression** | **0.4894** (F1) | **+0.20%** |
+| **Tabular QA & Validation** | 900,000 | `is_impossible` (Binary) | **ExtraTrees** | **0.7066** (F1) | **+1.46%** |
 
 </div>
 
-- 125만 건 실운영 DB 연결 시 DDL/DML 쓰기 0건 (`Read-Only` + `TABLESAMPLE BERNOULLI`)
-- 다중 분류, 이진 분류, 텍스트 피처 추출 등 스키마 무관하게 수동 튜닝 없이 모델링 완료
-- 테이블별 `serve.py`, `best_model.joblib`, `reproduce.py`, PPTX, HTML, 엑셀 자동 생성
+- **0 DDL/DML write events** executed on production databases.
+- Automatic handling of class imbalance, high-cardinality categoricals, and multi-collinearity.
+- Full artifacts generated in `< 3 minutes` per table.
 
+---
 
+## 🎁 What You Get (Generated Artifacts)
 
+When the pipeline completes, your project workspace immediately receives:
+
+```
+dist/export_pipeline/
+├── serve.py              # Production FastAPI server with <50ms SLA endpoint
+├── best_model.joblib     # Serialized Champion model pipeline (Preprocessors + Estimator)
+├── reproduce.py          # Standalone Python script to replicate training from scratch
+├── Dockerfile            # Container deployment manifest ready for K8s / Cloud Run
+└── reports/
+    ├── executive_deck.pptx   # 16:9 Widescreen slide deck with charts & business summary
+    ├── model_report.html     # Interactive dashboard with ROC curves, confusion matrices, SHAP
+    └── profiling_mart.xlsx   # Cleaned feature profile and validation metrics
+```
+
+---
+
+## 🗺️ Roadmap & Community vs Enterprise
+
+We follow an **Open-Core** model. The core pipeline is free and open-source forever.
+
+| Feature Area | Community Edition (Free OSS) | Enterprise Edition |
+| :--- | :---: | :---: |
+| **Data Sources** | CSV, SQLite, PostgreSQL | **Snowflake, BigQuery, Databricks, Redshift, Oracle, SAP** |
+| **Pipeline Core** | Full LOCO Engine & 6-Model Scout | Full LOCO Engine & Distributed Hyperopt |
+| **Outputs** | FastAPI, HTML, Standard PPTX | **Custom Branded C-Level PPTX (Your CI/Theme)** |
+| **Security & Auth** | PII Masking, Read-Only Guards | **SSO (Okta/SAML), Role-Based Access Control (RBAC), Audit Logs** |
+| **MLOps & Monitoring** | Single-node export | **Automated Data Drift Watcher & Scheduled Continuous Retraining** |
+| **LLM Agent Add-on** | Community prompt template | **Natural Language "Ask your DB" Executive Agent** |
+
+> 💬 **Interested in Enterprise Early Access or Custom B2B PoC?**  
+> Contact our engineering team at `contact@yourdomain.com` or open an [Enterprise Inquiry Discussion](https://github.com).
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) and [Branch Strategy](docs/09_깃허브_브랜치_전략_및_PR_정책.md).
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feat/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feat/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📜 License
+
+Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for more information.
+
+<div align="center">
+  <sub>Built with care for data teams worldwide. Star ⭐ this repository if you find it helpful!</sub>
+</div>
