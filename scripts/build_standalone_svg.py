@@ -1,38 +1,45 @@
 import re
+import xml.etree.ElementTree as ET
 
 with open('docs/system_architecture.html', 'r', encoding='utf-8') as f:
     html = f.read()
 
+m = re.search(r'<svg[\s\S]*?</svg>', html, re.IGNORECASE)
+if not m:
+    print("Could not find SVG in HTML")
+    exit(1)
+
+raw_svg = m.group(0)
+
+# Add SVG namespace and standard attributes
+if 'xmlns="http://www.w3.org/2000/svg"' not in raw_svg:
+    raw_svg = raw_svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ')
+
+# Extract CSS from html
 css_matches = re.findall(r'<style[^>]*>([\s\S]*?)</style>', html)
-diagram_css = ''
-for s in css_matches:
-    if 'c-region' in s or 'c-external' in s or 'a-default' in s or 'theme-dark' in s:
-        diagram_css += s + '\n'
+full_css = '\n'.join(css_matches)
 
-# Default to dark theme colors for github dark/light compatibility or crisp layout
-# Let's inspect root variables in html
-root_vars = ''
-m_root = re.search(r':root\s*\{[\s\S]*?\}', html)
-if m_root:
-    root_vars += m_root.group(0) + '\n'
-m_dark = re.search(r'\[data-theme="dark"\]\s*\{[\s\S]*?\}', html)
-if m_dark:
-    root_vars += m_dark.group(0) + '\n'
+# Inject <style> inside <defs> with CDATA to prevent XML parser collision
+defs_replacement = f'''<defs>
+    <style type="text/css"><![CDATA[
+{full_css}
+    ]]></style>'''
 
-with open('docs/system_architecture.svg', 'r', encoding='utf-8') as f:
-    svg_content = f.read()
+clean_svg = raw_svg.replace('<defs>', defs_replacement)
 
-if 'xmlns="http://www.w3.org/2000/svg"' not in svg_content:
-    svg_content = svg_content.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+# Add solid background rect so GitHub light/dark mode doesn't produce transparent background
+if '<rect width="100%" height="100%" fill="#020617"/>' not in clean_svg:
+    clean_svg = clean_svg.replace('<rect width="100%" height="100%" fill="url(#grid)" />', '<rect width="100%" height="100%" fill="#020617"/><rect width="100%" height="100%" fill="url(#grid)" />')
 
-style_block = f'<style>\n{root_vars}\n{diagram_css}\n</style>'
-svg_content = svg_content.replace('<!-- Definitions -->', f'<!-- Definitions -->\n{style_block}')
-
-# Ensure background rect is solid dark
-if '<rect width="100%" height="100%" fill="#020617"/>' not in svg_content:
-    svg_content = svg_content.replace('<rect width="100%" height="100%" fill="url(#grid)" />', '<rect width="100%" height="100%" fill="#020617"/><rect width="100%" height="100%" fill="url(#grid)" />')
+# Validate XML before writing
+try:
+    ET.fromstring(clean_svg)
+    print("Verification: SVG is 100% VALID XML!")
+except Exception as e:
+    print(f"Verification FAILED: {e}")
+    exit(1)
 
 with open('docs/system_architecture.svg', 'w', encoding='utf-8') as f:
-    f.write(svg_content)
+    f.write(clean_svg)
 
-print("Saved self-contained SVG successfully!")
+print(f"Successfully saved docs/system_architecture.svg (Length: {len(clean_svg)} bytes)")
