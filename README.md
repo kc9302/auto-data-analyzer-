@@ -9,46 +9,52 @@
 
 ---
 
-## 🏗️ 시스템 아키텍처 다이어그램 (System Architecture)
+## 🏗️ 엔터프라이즈 시스템 아키텍처 (Enterprise Architecture by Archify)
+
+> 본 시스템은 **Zero-Lockin Ingestion, Two-Tier LOCO Feature Engine, Multi-Model Benchmark Suite, 5대 프로덕션 산출물 자동 생성**의 4대 핵심 축으로 설계되었습니다.  
+> 🔗 **[인터랙티브 전체 아키텍처 뷰어 열기 (docs/system_architecture.html)](docs/system_architecture.html)** | 📄 **[아키텍처 스키마 명세 (docs/system_architecture.json)](docs/system_architecture.json)**
 
 ```mermaid
 flowchart TB
-    subgraph L1 ["1. Zero-Lockin Ingestion Layer"]
-        DB[("Any SQL DB<br/>PostgreSQL / MySQL / SQLite")] --> SafeConn["SafeDBConnector<br/>(Read-Only Guard & Adaptive Sampler)"]
-        CSV["CSV File / Dataset<br/>(data/sample_customers.csv)"] --> SafeConn
+    subgraph Boundary1 ["1. Zero-Lockin Ingestion Layer & Security Boundary"]
+        DB[("Enterprise DBs<br/>PostgreSQL / Oracle / MySQL")] --> SafeConn["SafeDBConnector<br/>(Read-Only Guard & Adaptive Sampler)"]
+        CSV["Data Marts & Files<br/>(Parquet / CSV / JSON)"] --> SafeConn
+        Config["DBConfigManager<br/>(Masking & Env Resolve)"] -.-> SafeConn
     end
 
-    subgraph L2 ["2. Fact Profiling & Isolation Layer"]
+    subgraph Boundary2 ["2. Fact Profiling & Data Governance"]
         SafeConn --> Profiler["FactDataProfiler<br/>(Health Score / Skewness / KS-Test)"]
-        Profiler --> PII["PII Privacy Shield<br/>(RRN / Email Auto-Isolation)"]
+        Profiler --> PII["PII Privacy Shield<br/>(SHA-256 Hash & Safe Isolation)"]
+        SafeConn --> Mart["AutoMartBuilder<br/>(Star-Schema Auto Join)"]
     end
 
-    subgraph L3 ["3. Leakage-Free Preprocessing & A/B Testing"]
-        PII --> Split["Stratified Train/Val Split<br/>(Strict Anti-Leakage)"]
-        Split --> MissGov["Missing Governance<br/>(3-Tier: Minor / Moderate / Severe)"]
-        MissGov --> Synthesizer["Smart Feature Synthesizer<br/>(Safe Division / Relative Dev / log1p)"]
-        Synthesizer --> ABTest{"Feature A/B Tester<br/>(Baseline A vs Engineered B)"}
+    subgraph Boundary3 ["3. Two-Tier LOCO & Leakage-Free Preprocessing"]
+        PII --> Split["Stratified Train/Val Split<br/>(Zero-Leakage Guarantee)"]
+        Split --> MissGov["Missing Governance<br/>(3-Tier Imputation Policy)"]
+        MissGov --> Synthesizer["Smart Feature Synthesizer<br/>(Safe Ratio / Relative Dev / log1p)"]
+        Synthesizer --> LOCO["Two-Tier LOCO Guard<br/>(Group-LOCO & TreeSHAP, SVD κ ≤ 15.0)"]
     end
 
-    subgraph L4 ["4. AutoML Scout & XAI Explainability"]
-        ABTest --> MLScout["MLScoutEngine<br/>(LightGBM / HistGBDT / RF / DeepNet)"]
-        MLScout --> XAI["FastMarginalExplainer (TreeSHAP)<br/>(Global Impact & Local Waterfall)"]
-        MLScout --> Imbalance["ImbalanceHandler<br/>(Cost-Sensitive Threshold Tuner)"]
+    subgraph Boundary4 ["4. AutoML Scout & Multi-Candidate Tournament"]
+        LOCO --> MLScout["MLScoutEngine<br/>(LightGBM / HistGBDT / RF / ExtraTrees / DeepNet)"]
+        MLScout --> XAI["TreeSHAP Explainability<br/>(Global Impact & Local Waterfall)"]
+        MLScout --> Decision["DecisionProposalEngine<br/>(Multi-Candidate Matrix & Statistical Lift)"]
     end
 
-    subgraph L5 ["5. Model Reproducibility & Serving Forge"]
-        MLScout & Split --> Freezer["DataFreezer (Zero-Deviation)<br/>(frozen_data/ Parquet + SHA-256 Hashes)"]
+    subgraph Boundary5 ["5. Production Reproducibility & Serving Router"]
+        MLScout --> Freezer["DataFreezer (Zero-Deviation)<br/>(frozen_data/ Parquet + SHA-256 Hashes)"]
         Freezer --> ReproScript["reproduce.py<br/>(100% Bit-for-bit Parity Verifier)"]
-        MLScout --> Serving["ServingPackager<br/>(FastAPI serve.py + Dockerfile)"]
-        Serving --> Drift["DriftMonitor<br/>(O(1) Ring Buffer + Laplace PSI)"]
+        MLScout --> CodeForge["CodeForge Packager<br/>(FastAPI serve.py + Dockerfile)"]
+        CodeForge --> ServingRouter["FastAPI Serving Router<br/>(Real-Time SLA < 50ms, DoS Guard)"]
+        ServingRouter --> Drift["DriftMonitor<br/>(O(1) Ring Buffer + Laplace PSI)"]
     end
 
-    subgraph L6 ["6. Dual Presenter & Governance Gate"]
-        XAI & Imbalance & ReproScript --> SSOT["SSOT Audit Log (run_audit.json)"]
-        SSOT --> PPTX["PptxDeckBuilder<br/>(4 Essential Visual Slides)"]
-        SSOT --> HTML["HtmlReportBuilder<br/>(Interactive Tech Report)"]
-        SSOT --> WebUI["Streamlit Dashboard<br/>(What-If & Live Drift & Reproducibility)"]
-        L5 --> AIRecall["GitHub Actions AI Reviewer<br/>(Grade A Merge Gatekeeper)"]
+    subgraph Boundary6 ["6. Dual Presenter & Enterprise Deliverables"]
+        Decision & XAI --> SSOT["SSOT Audit Log (run_audit.json)"]
+        SSOT --> PPTX["PptxDeckBuilder<br/>(Executive Presentation Slides)"]
+        SSOT --> HTML["HtmlReportBuilder<br/>(Interactive Audit Dashboard)"]
+        SSOT --> XLSX["ExcelReportBuilder<br/>(6-Sheet Feature Journey & Audit)"]
+        SSOT --> WebUI["Streamlit Web UI (:8501)<br/>(What-If & Live Drift)"]
     end
 
     classDef ingest fill:#EBF8FF,stroke:#3182CE,stroke-width:2px,color:#2B6CB0;
@@ -58,12 +64,12 @@ flowchart TB
     classDef serve fill:#FEEBC8,stroke:#DD6B20,stroke-width:2px,color:#7B341E;
     classDef pres fill:#EDF2F7,stroke:#4A5568,stroke-width:2px,color:#1A202C;
 
-    class DB,CSV,SafeConn ingest;
-    class Profiler,PII prof;
-    class Split,MissGov,Synthesizer,ABTest prep;
-    class MLScout,XAI,Imbalance ml;
-    class Freezer,ReproScript,Serving,Drift serve;
-    class SSOT,PPTX,HTML,WebUI,AIRecall pres;
+    class DB,CSV,Config,SafeConn ingest;
+    class Profiler,PII,Mart prof;
+    class Split,MissGov,Synthesizer,LOCO prep;
+    class MLScout,XAI,Decision ml;
+    class Freezer,ReproScript,CodeForge,ServingRouter,Drift serve;
+    class SSOT,PPTX,HTML,XLSX,WebUI pres;
 ```
 
 ---
