@@ -30,8 +30,26 @@ data/uploads/
 .env.*
 *.pem
 *.key
+configs/db_config.yaml
+configs/db_config_*.yaml
+configs/db_config.json
+configs/db_config_*.json
 
 # OS specific files
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Mock databases
+tests/data/*.db
+
+# MLflow tracking
+mlruns/
+*.sqlite
+
+# Big data cache directory
+.cache/
+
+# Local scripts / DDLs
+scripts/oracle_ddl/
+scripts/aihub_oracle_loader.py
