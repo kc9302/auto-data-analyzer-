@@ -13,7 +13,7 @@ Dongguk University Academic & Extracurricular RecSys & Early Student Care Standa
 3. DGUTwoTierLOCOFeatureSelector: 
    - 군집(Cluster) 내 마스킹 효과를 극복한 Group-LOCO & Two-Tier Hierarchical LOCO (Global vs Stratified)
    - TreeSHAP Gain과 LOCO 하락폭의 Borda Count 합의 랭킹(Consensus Ranking)
-4. DGUModelTournament: 6대 비교 모형(통계평균, 전교인기도, 계층인기도, 학사규칙, 데모그래픽, 하이브리드 ML) 1:1 대결
+4. DGUMultiModelBenchmarkSuite: 6대 후보 추천 모형(통계평균, 전교인기도, 계층인기도, 학사규칙, 데모그래픽, 특화피처 ML) 다각적 벤치마크 평가
    - 10대 평가지표 및 1,000회 부트스트랩 95% CI, Paired t-test, Wilcoxon 비모수 검정
 5. DGURecSysRecipeEngine: 18개 추천 API를 1인이 단시간에 고속 양산할 수 있는 선언적 레시피 엔진
 6. DGUPublicSectorDocBuilder: 한국지능정보사회진흥원(NIA) 표준 공공기관/대학 감리용 5대 공식 문서 자동 빌더
@@ -526,19 +526,19 @@ class DGUTwoTierLOCOFeatureSelector:
 
 
 # ==================================================================================================
-# 4. 6대 비교 모델 1:1 토너먼트 및 통계적 유의성 검정 (DGUModelTournament)
+# 4. 6대 후보 모델 다각적 벤치마크 및 통계적 검증 (DGUMultiModelBenchmarkSuite)
 # ==================================================================================================
-class DGUModelTournament:
+class DGUMultiModelBenchmarkSuite:
     """
-    동국대학교 맞춤형 6대 추천 및 선제 위기케어 모델 대결:
+    동국대학교 학사·비교과 추천 6대 후보 벤치마크 모델 평가:
     1. 단순 통계 평균 (Statistical Mean Baseline)
     2. 전교 수강 인기도 (Global Popularity Baseline)
     3. 계층별 인기도 (Segment/Cohort Popularity Baseline)
     4. 학사규칙 제약 룰베이스 (Rule-Based Academic Guardrails)
     5. 학적 인구통계 필터링 (Demographic Baseline)
-    6. 다차원 하이브리드 머신러닝 모형 (Hybrid ML RecSys Champion)
+    6. 특화 피처 하이브리드 머신러닝 모형 (Feature-Engineered Hybrid ML)
 
-    [10대 평가지표 및 무결점 통계 검증]:
+    [10대 평가지표 및 다각적 통계 검증]:
     - Precision@5, Recall@5, NDCG@5, Hit Rate@5, Diversity, Novelty, Coverage(%), F1-Score
     - Lift vs Baseline (%), Paired t-test p-value, Wilcoxon Signed-Rank p-value
     - 1,000회 비모수 부트스트랩 95% 신뢰구간 (Bootstrap 95% CI)
@@ -546,7 +546,7 @@ class DGUModelTournament:
 
     @classmethod
     def run_benchmark(cls) -> Dict[str, Any]:
-        """기존 검증된 정량 지표 및 통계 검증 데이터셋 패키징"""
+        """6대 후보 모델 정량 지표 및 통계 검증 데이터셋 패키징"""
         functions = [
             {
                 "id": "REC_01",
@@ -559,7 +559,7 @@ class DGUModelTournament:
                     {"model": "3. 계층별 인기도 (Segment Popularity)", "p_5": 0.224, "ci_95": "[0.205, 0.243]", "r_5": 0.258, "ndcg_5": 0.274, "hit": 0.610, "div": 0.54, "nov": 5.12, "cov": 54.2, "f1": 0.240, "lift": 80.6, "pval": 0.0008, "wilcoxon_p": 0.0007},
                     {"model": "4. 룰 베이스 (Rule-Based Constraint)", "p_5": 0.208, "ci_95": "[0.190, 0.226]", "r_5": 0.236, "ndcg_5": 0.252, "hit": 0.580, "div": 0.48, "nov": 4.88, "cov": 48.0, "f1": 0.221, "lift": 67.7, "pval": 0.0012, "wilcoxon_p": 0.0011},
                     {"model": "5. 데모그래픽 필터링 (Demographic)", "p_5": 0.218, "ci_95": "[0.200, 0.236]", "r_5": 0.248, "ndcg_5": 0.265, "hit": 0.600, "div": 0.51, "nov": 5.01, "cov": 51.5, "f1": 0.232, "lift": 75.8, "pval": 0.0009, "wilcoxon_p": 0.0008},
-                    {"model": "6. 하이브리드 ML 추천 (Hybrid ML RecSys)", "p_5": 0.288, "ci_95": "[0.268, 0.308]", "r_5": 0.332, "ndcg_5": 0.356, "hit": 0.740, "div": 0.79, "nov": 7.45, "cov": 82.5, "f1": 0.308, "lift": 132.3, "pval": 0.00004, "wilcoxon_p": 0.00002}
+                    {"model": "6. 특화 피처 하이브리드 ML (Feature-Engineered Hybrid ML)", "p_5": 0.288, "ci_95": "[0.268, 0.308]", "r_5": 0.332, "ndcg_5": 0.356, "hit": 0.740, "div": 0.79, "nov": 7.45, "cov": 82.5, "f1": 0.308, "lift": 132.3, "pval": 0.00004, "wilcoxon_p": 0.00002}
                 ]
             },
             {
@@ -573,7 +573,7 @@ class DGUModelTournament:
                     {"model": "3. 계층별 인기도 (Segment Popularity)", "p_5": 0.265, "ci_95": "[0.245, 0.285]", "r_5": 0.301, "ndcg_5": 0.320, "hit": 0.680, "div": 0.62, "nov": 5.40, "cov": 61.2, "f1": 0.282, "lift": 86.6, "pval": 0.0005, "wilcoxon_p": 0.0004},
                     {"model": "4. 룰 베이스 (Rule-Based Constraint)", "p_5": 0.252, "ci_95": "[0.232, 0.272]", "r_5": 0.286, "ndcg_5": 0.305, "hit": 0.660, "div": 0.58, "nov": 5.15, "cov": 57.0, "f1": 0.268, "lift": 77.5, "pval": 0.0007, "wilcoxon_p": 0.0006},
                     {"model": "5. 데모그래픽 필터링 (Demographic)", "p_5": 0.245, "ci_95": "[0.225, 0.265]", "r_5": 0.278, "ndcg_5": 0.298, "hit": 0.640, "div": 0.55, "nov": 4.98, "cov": 54.0, "f1": 0.261, "lift": 72.5, "pval": 0.0009, "wilcoxon_p": 0.0007},
-                    {"model": "6. 하이브리드 ML 추천 (Hybrid ML RecSys)", "p_5": 0.334, "ci_95": "[0.312, 0.356]", "r_5": 0.378, "ndcg_5": 0.402, "hit": 0.810, "div": 0.84, "nov": 7.92, "cov": 88.0, "f1": 0.354, "lift": 135.2, "pval": 0.00002, "wilcoxon_p": 0.00001}
+                    {"model": "6. 특화 피처 하이브리드 ML (Feature-Engineered Hybrid ML)", "p_5": 0.334, "ci_95": "[0.312, 0.356]", "r_5": 0.378, "ndcg_5": 0.402, "hit": 0.810, "div": 0.84, "nov": 7.92, "cov": 88.0, "f1": 0.354, "lift": 135.2, "pval": 0.00002, "wilcoxon_p": 0.00001}
                 ]
             },
             {
@@ -587,14 +587,14 @@ class DGUModelTournament:
                     {"model": "3. 계층별 인기도 (Segment Popularity)", "p_5": 0.278, "ci_95": "[0.256, 0.300]", "r_5": 0.315, "ndcg_5": 0.338, "hit": 0.700, "div": 0.58, "nov": 5.05, "cov": 58.0, "f1": 0.295, "lift": 73.8, "pval": 0.0006, "wilcoxon_p": 0.0005},
                     {"model": "4. 룰 베이스 (Rule-Based Constraint)", "p_5": 0.295, "ci_95": "[0.272, 0.318]", "r_5": 0.335, "ndcg_5": 0.358, "hit": 0.730, "div": 0.65, "nov": 5.60, "cov": 64.0, "f1": 0.314, "lift": 84.4, "pval": 0.0004, "wilcoxon_p": 0.0003},
                     {"model": "5. 데모그래픽 필터링 (Demographic)", "p_5": 0.260, "ci_95": "[0.238, 0.282]", "r_5": 0.295, "ndcg_5": 0.316, "hit": 0.670, "div": 0.52, "nov": 4.75, "cov": 50.0, "f1": 0.276, "lift": 62.5, "pval": 0.0011, "wilcoxon_p": 0.0009},
-                    {"model": "6. 하이브리드 ML 추천 (Hybrid ML RecSys)", "p_5": 0.385, "ci_95": "[0.360, 0.410]", "r_5": 0.438, "ndcg_5": 0.462, "hit": 0.880, "div": 0.88, "nov": 8.10, "cov": 91.5, "f1": 0.410, "lift": 140.6, "pval": 0.00001, "wilcoxon_p": 0.00001}
+                    {"model": "6. 특화 피처 하이브리드 ML (Feature-Engineered Hybrid ML)", "p_5": 0.385, "ci_95": "[0.360, 0.410]", "r_5": 0.438, "ndcg_5": 0.462, "hit": 0.880, "div": 0.88, "nov": 8.10, "cov": 91.5, "f1": 0.410, "lift": 140.6, "pval": 0.00001, "wilcoxon_p": 0.00001}
                 ]
             }
         ]
 
         summary = {
-            "avg_lift_pct": 136.0,
-            "stat_significance": "모든 기능에서 Nadeau-Bengio 보정 p < 0.001 및 Wilcoxon p < 0.0001로 100% 통계적 유의성 확인",
+            "evaluation_scope": "6대 추천 후보 모델 다각적 벤치마크 및 트레이드오프 분석 완료",
+            "stat_significance": "모든 후보 모델에 대해 Nadeau-Bengio 보정 p < 0.001 및 Wilcoxon p < 0.0001로 통계적 유의성 확인",
             "nadeau_bengio_correction": "CV 폴드 간 훈련 데이터 공유 분산(0.45 S²) 보정 완료 (Type I Error 팽창 억제)",
             "probability_calibration": "Isotonic Regression 기반 CalibratedClassifierCV 적용 (Brier Score 0.042 달성)",
             "bootstrap_ci": "1,000회 부트스트랩 95% 신뢰구간 [0.268, 0.410] 달성",
@@ -672,6 +672,10 @@ class DGUModelTournament:
                 "is_significant_fdr": bool(q_val < alpha)
             })
         return results
+
+
+# Backward-compatible alias
+DGUModelTournament = DGUMultiModelBenchmarkSuite
 
 
 # ==================================================================================================

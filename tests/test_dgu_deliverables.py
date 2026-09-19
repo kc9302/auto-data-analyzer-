@@ -31,7 +31,7 @@ def test_feature_journey_excel(dgu_deliverables):
     wb = openpyxl.load_workbook(xlsx_path)
     sheet_names = wb.sheetnames
     assert "00_총괄_추천아키텍처_및_요약" in sheet_names
-    assert "01_비교모델_벤치마크_대결표" in sheet_names
+    assert "01_6대_후보모델_종합_벤치마크_평가표" in sheet_names
     assert "02_기능별_피처엔지니어링_여정" in sheet_names
     assert "03_학사규칙_및_추천의도_요건정의" in sheet_names
 
@@ -43,7 +43,7 @@ def test_feature_journey_excel(dgu_deliverables):
     assert "REC_03" in f_ids
 
     # Verify Sheet 1 (Benchmarking rows and lift)
-    ws1 = wb["01_비교모델_벤치마크_대결표"]
+    ws1 = wb["01_6대_후보모델_종합_벤치마크_평가표"]
     models_found = []
     has_champ_lift = False
     for row in ws1.iter_rows(values_only=True):
@@ -121,7 +121,7 @@ def test_executive_pptx(dgu_deliverables):
 
     assert "동국대학교 맞춤형 추천 시스템" in slide_texts[0]
     assert "핵심 패턴" in slide_texts[1]
-    assert "비교 모델" in slide_texts[2]
+    assert "후보 모델" in slide_texts[2] or "벤치마크" in slide_texts[2]
     assert "3단계 진화 로드맵" in slide_texts[3]
     assert "우리는 이런 것도 할 수 있습니다" in slide_texts[4]
     assert "18.5 M/M" in slide_texts[5] or "실행 계획" in slide_texts[5]

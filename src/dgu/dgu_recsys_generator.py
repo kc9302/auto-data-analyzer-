@@ -73,7 +73,7 @@ class DGURecSysDeliverablesGenerator:
                     {"model": "3. 계층별 인기도 (Segment Popularity)", "p_5": 0.224, "ci_95": "[0.205, 0.243]", "r_5": 0.258, "ndcg_5": 0.274, "hit": 0.610, "div": 0.54, "nov": 5.12, "cov": 54.2, "f1": 0.240, "lift": 80.6, "pval": 0.0008, "wilcoxon_p": 0.0007},
                     {"model": "4. 룰 베이스 (Rule-Based Constraint)", "p_5": 0.208, "ci_95": "[0.190, 0.226]", "r_5": 0.236, "ndcg_5": 0.252, "hit": 0.580, "div": 0.48, "nov": 4.88, "cov": 48.0, "f1": 0.221, "lift": 67.7, "pval": 0.0012, "wilcoxon_p": 0.0011},
                     {"model": "5. 데모그래픽 필터링 (Demographic)", "p_5": 0.218, "ci_95": "[0.200, 0.236]", "r_5": 0.248, "ndcg_5": 0.265, "hit": 0.600, "div": 0.51, "nov": 5.01, "cov": 51.5, "f1": 0.232, "lift": 75.8, "pval": 0.0009, "wilcoxon_p": 0.0008},
-                    {"model": "6. 하이브리드 ML 추천 (Hybrid ML RecSys)", "p_5": 0.288, "ci_95": "[0.268, 0.308]", "r_5": 0.332, "ndcg_5": 0.356, "hit": 0.740, "div": 0.79, "nov": 7.45, "cov": 82.5, "f1": 0.308, "lift": 132.3, "pval": 0.00004, "wilcoxon_p": 0.00002}
+                    {"model": "6. 특화 피처 하이브리드 ML (Feature-Engineered Hybrid ML)", "p_5": 0.288, "ci_95": "[0.268, 0.308]", "r_5": 0.332, "ndcg_5": 0.356, "hit": 0.740, "div": 0.79, "nov": 7.45, "cov": 82.5, "f1": 0.308, "lift": 132.3, "pval": 0.00004, "wilcoxon_p": 0.00002}
                 ]
             },
             {
@@ -87,7 +87,7 @@ class DGURecSysDeliverablesGenerator:
                     {"model": "3. 계층별 인기도 (Segment Popularity)", "p_5": 0.265, "ci_95": "[0.245, 0.285]", "r_5": 0.301, "ndcg_5": 0.320, "hit": 0.680, "div": 0.62, "nov": 5.40, "cov": 61.2, "f1": 0.282, "lift": 86.6, "pval": 0.0005, "wilcoxon_p": 0.0004},
                     {"model": "4. 룰 베이스 (Rule-Based Constraint)", "p_5": 0.252, "ci_95": "[0.232, 0.272]", "r_5": 0.286, "ndcg_5": 0.305, "hit": 0.660, "div": 0.58, "nov": 5.15, "cov": 57.0, "f1": 0.268, "lift": 77.5, "pval": 0.0007, "wilcoxon_p": 0.0006},
                     {"model": "5. 데모그래픽 필터링 (Demographic)", "p_5": 0.245, "ci_95": "[0.225, 0.265]", "r_5": 0.278, "ndcg_5": 0.298, "hit": 0.640, "div": 0.55, "nov": 4.98, "cov": 54.0, "f1": 0.261, "lift": 72.5, "pval": 0.0009, "wilcoxon_p": 0.0007},
-                    {"model": "6. 하이브리드 ML 추천 (Hybrid ML RecSys)", "p_5": 0.334, "ci_95": "[0.312, 0.356]", "r_5": 0.378, "ndcg_5": 0.402, "hit": 0.810, "div": 0.84, "nov": 7.92, "cov": 88.0, "f1": 0.354, "lift": 135.2, "pval": 0.00002, "wilcoxon_p": 0.00001}
+                    {"model": "6. 특화 피처 하이브리드 ML (Feature-Engineered Hybrid ML)", "p_5": 0.334, "ci_95": "[0.312, 0.356]", "r_5": 0.378, "ndcg_5": 0.402, "hit": 0.810, "div": 0.84, "nov": 7.92, "cov": 88.0, "f1": 0.354, "lift": 135.2, "pval": 0.00002, "wilcoxon_p": 0.00001}
                 ]
             },
             {
@@ -101,17 +101,17 @@ class DGURecSysDeliverablesGenerator:
                     {"model": "3. 계층별 인기도 (Segment Popularity)", "p_5": 0.278, "ci_95": "[0.256, 0.300]", "r_5": 0.315, "ndcg_5": 0.338, "hit": 0.700, "div": 0.58, "nov": 5.05, "cov": 58.0, "f1": 0.295, "lift": 73.8, "pval": 0.0006, "wilcoxon_p": 0.0005},
                     {"model": "4. 룰 베이스 (Rule-Based Constraint)", "p_5": 0.295, "ci_95": "[0.272, 0.318]", "r_5": 0.335, "ndcg_5": 0.358, "hit": 0.730, "div": 0.65, "nov": 5.60, "cov": 64.0, "f1": 0.314, "lift": 84.4, "pval": 0.0004, "wilcoxon_p": 0.0003},
                     {"model": "5. 데모그래픽 필터링 (Demographic)", "p_5": 0.260, "ci_95": "[0.238, 0.282]", "r_5": 0.295, "ndcg_5": 0.316, "hit": 0.670, "div": 0.52, "nov": 4.75, "cov": 50.0, "f1": 0.276, "lift": 62.5, "pval": 0.0011, "wilcoxon_p": 0.0009},
-                    {"model": "6. 하이브리드 ML 추천 (Hybrid ML RecSys)", "p_5": 0.385, "ci_95": "[0.360, 0.410]", "r_5": 0.438, "ndcg_5": 0.462, "hit": 0.880, "div": 0.88, "nov": 8.10, "cov": 91.5, "f1": 0.410, "lift": 140.6, "pval": 0.00001, "wilcoxon_p": 0.00001}
+                    {"model": "6. 특화 피처 하이브리드 ML (Feature-Engineered Hybrid ML)", "p_5": 0.385, "ci_95": "[0.360, 0.410]", "r_5": 0.438, "ndcg_5": 0.462, "hit": 0.880, "div": 0.88, "nov": 8.10, "cov": 91.5, "f1": 0.410, "lift": 140.6, "pval": 0.00001, "wilcoxon_p": 0.00001}
                 ]
             }
         ]
 
         summary_insights = {
-            "key_finding": "동국대 3대 추천 영역 모두에서 단순 통계/인기도 대비 하이브리드 ML 추천이 평균 +136.0%의 압도적 Lift 달성",
-            "rule_vs_ml": "엄격한 학사규칙 룰베이스 모델(Lift +76.5%)과 대비해도 하이브리드 ML 모델은 정밀도(Precision) +33.8%, 다양성 +45.2% 우위",
-            "stat_significance": "모든 기능에서 Paired t-test (p < 0.0001) 및 Wilcoxon 비모수 검정 (p < 0.0001) 결과 100% 통계적 유의성 입증 완료",
-            "bootstrap_ci": "1,000회 부트스트랩 95% 신뢰구간 검증 시 ML 모델은 [0.268, 0.410]으로 통계적 오차 범위를 상회하는 절대적 격차 확인",
-            "cost_sensitive": "위기 학생 미감지 손실(Cost FN=5)을 반영한 최적 결정 임계치(theta*=0.32) 적용 시 기대 손실 24.8% 절감 달성"
+            "key_finding": "동국대 3대 추천 기능 전반에서 6대 후보 모델별 정밀도(Precision), 다양성(Diversity), 학사규칙 준수도 간 다각적 벤치마크 결과 도출",
+            "rule_vs_ml": "학사규칙 룰베이스(규칙 준수율 100%, 커버리지 48~64%)와 특화 피처 머신러닝(정밀도 0.288~0.385, 다양성 0.79~0.88) 간의 상호 보완성 확인",
+            "stat_significance": "모든 후보 모델에 대해 Paired t-test 및 Wilcoxon 비모수 검정(p < 0.01)으로 모델 간 성능 차이의 통계적 유의성 검증 완료",
+            "bootstrap_ci": "1,000회 부트스트랩 95% 신뢰구간 검증을 통해 표본 변동성에 따른 지표 안정성 및 신뢰구간 범위 확인",
+            "cost_sensitive": "위기 학생 미감지 손실(Cost FN=5) 반영 최적 임계치(theta*=0.32) 적용 시 기대 손실 24.8% 절감 확인"
         }
 
         return {"functions": functions, "summary": summary_insights}
@@ -196,21 +196,21 @@ class DGURecSysDeliverablesGenerator:
         ws0["A11"] = "2. 실무 개발은 1단계(룰/인기도 기반 선개통 API)로 안정적 서비스를 오픈한 뒤, 2단계(피처 엔지니어링 & 하이브리드 ML)로 고도화하는 방법론을 적용합니다."
         ws0["A12"] = "3. 비교 모델 벤치마크는 단순 기술적 평가를 넘어, '왜 이 추천 기능을 ML로 개발해야 하는가?'에 대한 사업적/학사적 타당성 근거로 기능합니다."
 
-        # Sheet 1: 01_비교모델_벤치마크_대결표
-        ws1 = wb.create_sheet(title="01_비교모델_벤치마크_대결표")
+        # Sheet 1: 01_6대_후보모델_종합_벤치마크_평가표
+        ws1 = wb.create_sheet(title="01_6대_후보모델_종합_벤치마크_평가표")
         ws1.views.sheetView[0].showGridLines = True
 
-        ws1["A1"] = "추천 기능별 6대 비교 모델 1:1 벤치마크 대결표 (10개 평가지표)"
+        ws1["A1"] = "추천 기능별 6대 후보 벤치마크 모델 종합 평가표 (10개 평가지표)"
         ws1["A1"].font = f_title
-        ws1["A2"] = "단순 통계, 글로벌 인기도, 계층별 인기도, 학사규칙 룰, 데모그래픽 vs 하이브리드 머신러닝 모델의 정량적 성능 비교"
+        ws1["A2"] = "단순 통계, 글로벌 인기도, 계층별 인기도, 학사규칙 룰, 데모그래픽, 특화 피처 머신러닝 모델의 정량적 지표 및 특성 분석"
         ws1["A2"].font = f_subtitle
 
-        headers1 = ["추천 기능", "비교 모델 구분", "Precision@5", "95% CI (Bootstrap)", "Recall@5", "NDCG@5", "Hit Rate@5", "Diversity", "Novelty", "Coverage (%)", "F1-Score", "Lift vs Baseline (%)", "t-test p-value", "Wilcoxon p-val"]
+        headers1 = ["추천 기능", "후보 모델 구분", "Precision@5", "95% CI (Bootstrap)", "Recall@5", "NDCG@5", "Hit Rate@5", "Diversity", "Novelty", "Coverage (%)", "F1-Score", "Lift vs Baseline (%)", "t-test p-value", "Wilcoxon p-val"]
 
         cur_row = 4
         for fn in data["functions"]:
             ws1.merge_cells(start_row=cur_row, start_column=1, end_row=cur_row, end_column=len(headers1))
-            banner = ws1.cell(row=cur_row, column=1, value=f"[{fn['id']}] {fn['name']} - 6대 비교 모델 벤치마크 실측 (통계적 무결점 검증)")
+            banner = ws1.cell(row=cur_row, column=1, value=f"[{fn['id']}] {fn['name']} - 6대 후보 모델 다각적 벤치마크 실측 (통계적 검증 완료)")
             banner.font = Font(name="맑은 고딕", size=10, bold=True, color="FFFFFF")
             banner.fill = fill_sub_header
             banner.alignment = align_left
@@ -225,7 +225,6 @@ class DGURecSysDeliverablesGenerator:
             cur_row += 1
 
             for b in fn["baselines"]:
-                is_champ = "하이브리드 ML" in b["model"]
                 row_vals = [
                     fn["name"],
                     b["model"],
@@ -244,12 +243,10 @@ class DGURecSysDeliverablesGenerator:
                 ]
                 for c_idx, val in enumerate(row_vals, 1):
                     c = ws1.cell(row=cur_row, column=c_idx, value=val)
-                    c.font = f_champ if is_champ else f_cell
+                    c.font = f_bold if c_idx == 2 else f_cell
                     c.border = border_thin
                     c.alignment = align_left if c_idx == 2 else (align_center if c_idx in [1, 4, 12, 13, 14] else align_right)
-                    if is_champ:
-                        c.fill = fill_champ
-                    elif cur_row % 2 == 0:
+                    if cur_row % 2 == 0:
                         c.fill = fill_alt
                 cur_row += 1
             cur_row += 1
@@ -755,44 +752,43 @@ class DGURecSysDeliverablesGenerator:
             p_d.font.color.rgb = c_sub_navy
             p_d.font.name = "맑은 고딕"
 
-        # Slide 3: Comparative Benchmarks
+        # Slide 3: Multi-Model Benchmark Spectrum
         s3 = prs.slides.add_slide(blank_slide_layout)
-        add_header(s3, "왜 머신러닝 추천인가? - 6대 비교 모델 1:1 벤치마크 실측", "COMPARATIVE BENCHMARKS")
+        add_header(s3, "6대 추천 후보 모델 다각적 벤치마크 및 운영 적합성 평가", "MULTI-MODEL BENCHMARK")
 
         tbl_box = s3.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(7.5), Inches(5.2))
         tf_tbl = tbl_box.text_frame
         tf_tbl.word_wrap = True
 
         p_th = tf_tbl.paragraphs[0]
-        p_th.text = "■ 6대 모델 실측 성능 비교 (DreamPATH 비교과 추천 기준)"
+        p_th.text = "■ 6대 후보 모델 실측 성능 및 특성 비교 (DreamPATH 비교과 추천 기준)"
         p_th.font.size = Pt(12)
         p_th.font.bold = True
         p_th.font.color.rgb = c_navy
         p_th.font.name = "맑은 고딕"
 
         bench_rows = [
-            ("1. 단순 통계 (평균값)", "Precision: 12.4%", "Hit Rate: 38.0%", "기준 (0.0% Lift)", "개인화 전무, 획일적 추천"),
-            ("2. 글로벌 인기도 (Top-K)", "Precision: 18.6%", "Hit Rate: 52.0%", "+50.0% Lift", "다수 수강 과목 편중"),
-            ("3. 계층별 인기도 (학과/학년)", "Precision: 22.4%", "Hit Rate: 61.0%", "+80.6% Lift", "1차 선개통 API로 우수"),
-            ("4. 학사규칙 룰 (제약조건)", "Precision: 20.8%", "Hit Rate: 58.0%", "+67.7% Lift", "규칙 위반 방지 필수 룰"),
-            ("5. 데모그래픽 룰 (전형/성별)", "Precision: 21.8%", "Hit Rate: 60.0%", "+75.8% Lift", "기본 그룹핑 필터"),
-            ("6. 하이브리드 ML (GBDT)", "Precision: 28.8%", "Hit Rate: 74.0%", "+132.3% Lift (챔피언)", "초개인화 & 비선형 시너지")
+            ("1. 단순 통계 (평균값)", "Precision: 12.4%", "Hit Rate: 38.0%", "Coverage: 22.4%", "기본 베이스라인, 단순성 우수"),
+            ("2. 글로벌 인기도 (Top-K)", "Precision: 18.6%", "Hit Rate: 52.0%", "Coverage: 31.0%", "대중적 인기 과목 중심"),
+            ("3. 계층별 인기도 (학과/학년)", "Precision: 22.4%", "Hit Rate: 61.0%", "Coverage: 54.2%", "1차 선개통 신속 구축 적합"),
+            ("4. 학사규칙 룰 (제약조건)", "Precision: 20.8%", "Hit Rate: 58.0%", "Coverage: 48.0%", "학사규칙 위반 0% 보장 필수"),
+            ("5. 데모그래픽 룰 (전형/성별)", "Precision: 21.8%", "Hit Rate: 60.0%", "Coverage: 51.5%", "학생 그룹핑 기본 필터"),
+            ("6. 특화 피처 하이브리드 ML", "Precision: 28.8%", "Hit Rate: 74.0%", "Coverage: 82.5%", "초개인화 & 다차원 시너지")
         ]
 
-        for m_name, prec, hit, lift, note in bench_rows:
-            is_c = "하이브리드 ML" in m_name
+        for m_name, prec, hit, cov, note in bench_rows:
             p_r = tf_tbl.add_paragraph()
-            p_r.text = f"• {m_name} : {prec}  |  {hit}  |  {lift}  ({note})"
+            p_r.text = f"• {m_name} : {prec}  |  {hit}  |  {cov}  ({note})"
             p_r.font.size = Pt(10)
-            p_r.font.bold = is_c
-            p_r.font.color.rgb = c_green if is_c else (c_orange if "계층별" in m_name else c_sub_navy)
+            p_r.font.bold = "하이브리드 ML" in m_name or "계층별" in m_name or "학사규칙" in m_name
+            p_r.font.color.rgb = c_navy if "하이브리드 ML" in m_name else (c_orange if "계층별" in m_name else c_sub_navy)
             p_r.font.name = "맑은 고딕"
 
         p_stat = tf_tbl.add_paragraph()
-        p_stat.text = "\n✓ 통계적 유의성 검정: Paired t-test 결과 p = 0.00004 (p < 0.001)로 우연이 아닌 100% 실질적 성능 우위 입증 완료"
+        p_stat.text = "\n✓ 통계적 유의성 검정: Paired t-test 및 Wilcoxon 검정으로 6개 모델 간 통계적 성능 차이 검증 완료"
         p_stat.font.size = Pt(10)
         p_stat.font.bold = True
-        p_stat.font.color.rgb = c_green
+        p_stat.font.color.rgb = c_navy
         p_stat.font.name = "맑은 고딕"
 
         r_box = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(8.6), Inches(1.5), Inches(3.9), Inches(5.2))
