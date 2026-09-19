@@ -153,3 +153,22 @@ flowchart TD
 - 125만 건 실운영 DB 연결 시 DDL/DML 쓰기 0건 (`Read-Only` + `TABLESAMPLE BERNOULLI`)
 - 다중 분류, 이진 분류, 텍스트 피처 추출 등 스키마 무관하게 수동 튜닝 없이 모델링 완료
 - 테이블별 `serve.py`, `best_model.joblib`, `reproduce.py`, PPTX, HTML, 엑셀 자동 생성
+
+---
+
+## 📊 시각화 및 모델 해석(XAI) 자동 산출물 갤러리
+
+수동 matplotlib 코딩 없이, 피처 기여도 분석과 하이퍼파라미터 튜닝 결과, 오차 분석 차트가 자동으로 생성됩니다:
+
+<div align="center">
+
+| **TreeSHAP 피처 기여도 분석 (Beeswarm)** | **혼동 행렬(Confusion Matrix) 및 오차 분석** |
+| :---: | :---: |
+| <img src="docs/images/shap_beeswarm.png" alt="SHAP Beeswarm" width="100%" /> | <img src="docs/images/confusion_matrix_LightGBM.png" alt="Confusion Matrix" width="100%" /> |
+
+| **XGBoost 피처 중요도 랭킹** | **하이퍼파라미터 튜닝 탐색 좌표 공간** |
+| :---: | :---: |
+| <img src="docs/images/xgb_importance.png" alt="XGBoost Feature Importance" width="100%" /> | <img src="docs/images/param_importance_parallel_coords.png" alt="Hyperparameter Tuning Coordinates" width="100%" /> |
+
+</div>
+
