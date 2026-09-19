@@ -18,64 +18,49 @@
 </div>
 
 <details>
-<summary><b>📐 텍스트 기반 Mermaid 다이어그램 펼쳐보기 (Fallback View)</b></summary>
+<summary><b>📐 4단계 요약 파이프라인 펼쳐보기 (Overview Flow)</b></summary>
 
 ```mermaid
-flowchart TB
-    subgraph Boundary1 ["1. Zero-Lockin Ingestion Layer & Security Boundary"]
-        DB[("Enterprise DBs<br/>PostgreSQL / Oracle / MySQL")] --> SafeConn["SafeDBConnector<br/>(Read-Only Guard & Adaptive Sampler)"]
-        CSV["Data Marts & Files<br/>(Parquet / CSV / JSON)"] --> SafeConn
-        Config["DBConfigManager<br/>(Masking & Env Resolve)"] -.-> SafeConn
+flowchart LR
+    subgraph S1 ["① 무해 수집 & 안전 접속"]
+        direction TB
+        DB[("PostgreSQL / Oracle / CSV")]
+        Safe["SafeDBConnector<br/>(Read-Only & TABLESAMPLE)"]
+        DB --> Safe
     end
 
-    subgraph Boundary2 ["2. Fact Profiling & Data Governance"]
-        SafeConn --> Profiler["FactDataProfiler<br/>(Health Score / Skewness / KS-Test)"]
-        Profiler --> PII["PII Privacy Shield<br/>(SHA-256 Hash & Safe Isolation)"]
-        SafeConn --> Mart["AutoMartBuilder<br/>(Star-Schema Auto Join)"]
+    subgraph S2 ["② 데이터 거버넌스 & 피처"]
+        direction TB
+        Gov["Fact Profiler & PII 마스킹"]
+        LOCO["Two-Tier LOCO Engine<br/>(누수 원천 차단 & SVD κ ≤ 15.0)"]
+        Gov --> LOCO
     end
 
-    subgraph Boundary3 ["3. Two-Tier LOCO & Leakage-Free Preprocessing"]
-        PII --> Split["Stratified Train/Val Split<br/>(Zero-Leakage Guarantee)"]
-        Split --> MissGov["Missing Governance<br/>(3-Tier Imputation Policy)"]
-        MissGov --> Synthesizer["Smart Feature Synthesizer<br/>(Safe Ratio / Relative Dev / log1p)"]
-        Synthesizer --> LOCO["Two-Tier LOCO Guard<br/>(Group-LOCO & TreeSHAP, SVD κ ≤ 15.0)"]
+    subgraph S3 ["③ AutoML & 공정 평가"]
+        direction TB
+        Scout["MLScout (6대 모델 토너먼트)"]
+        Stat["10대 지표 & 1,000회 부트스트랩"]
+        Scout --> Stat
     end
 
-    subgraph Boundary4 ["4. AutoML Scout & Multi-Candidate Tournament"]
-        LOCO --> MLScout["MLScoutEngine<br/>(LightGBM / HistGBDT / RF / ExtraTrees / DeepNet)"]
-        MLScout --> XAI["TreeSHAP Explainability<br/>(Global Impact & Local Waterfall)"]
-        MLScout --> Decision["DecisionProposalEngine<br/>(Multi-Candidate Matrix & Statistical Lift)"]
+    subgraph S4 ["④ 프로덕션 배포 & 5대 산출물"]
+        direction TB
+        Serve["FastAPI Serving Router<br/>(SLA < 50ms, DoS 방어)"]
+        Docs["5대 감리 산출물<br/>(HTML / PPTX / XLSX)"]
+        Serve --- Docs
     end
 
-    subgraph Boundary5 ["5. Production Reproducibility & Serving Router"]
-        MLScout --> Freezer["DataFreezer (Zero-Deviation)<br/>(frozen_data/ Parquet + SHA-256 Hashes)"]
-        Freezer --> ReproScript["reproduce.py<br/>(100% Bit-for-bit Parity Verifier)"]
-        MLScout --> CodeForge["CodeForge Packager<br/>(FastAPI serve.py + Dockerfile)"]
-        CodeForge --> ServingRouter["FastAPI Serving Router<br/>(Real-Time SLA < 50ms, DoS Guard)"]
-        ServingRouter --> Drift["DriftMonitor<br/>(O(1) Ring Buffer + Laplace PSI)"]
-    end
+    S1 ==> S2 ==> S3 ==> S4
 
-    subgraph Boundary6 ["6. Dual Presenter & Enterprise Deliverables"]
-        Decision & XAI --> SSOT["SSOT Audit Log (run_audit.json)"]
-        SSOT --> PPTX["PptxDeckBuilder<br/>(Executive Presentation Slides)"]
-        SSOT --> HTML["HtmlReportBuilder<br/>(Interactive Audit Dashboard)"]
-        SSOT --> XLSX["ExcelReportBuilder<br/>(6-Sheet Feature Journey & Audit)"]
-        SSOT --> WebUI["Streamlit Web UI (:8501)<br/>(What-If & Live Drift)"]
-    end
+    classDef s1 fill:#EBF8FF,stroke:#3182CE,stroke-width:1.5px,color:#2B6CB0;
+    classDef s2 fill:#E6FFFA,stroke:#319795,stroke-width:1.5px,color:#234E52;
+    classDef s3 fill:#FAF5FF,stroke:#805AD5,stroke-width:1.5px,color:#44337A;
+    classDef s4 fill:#FEEBC8,stroke:#DD6B20,stroke-width:1.5px,color:#7B341E;
 
-    classDef ingest fill:#EBF8FF,stroke:#3182CE,stroke-width:2px,color:#2B6CB0;
-    classDef prof fill:#FEFCBF,stroke:#D69E2E,stroke-width:2px,color:#744210;
-    classDef prep fill:#E6FFFA,stroke:#319795,stroke-width:2px,color:#234E52;
-    classDef ml fill:#FAF5FF,stroke:#805AD5,stroke-width:2px,color:#44337A;
-    classDef serve fill:#FEEBC8,stroke:#DD6B20,stroke-width:2px,color:#7B341E;
-    classDef pres fill:#EDF2F7,stroke:#4A5568,stroke-width:2px,color:#1A202C;
-
-    class DB,CSV,Config,SafeConn ingest;
-    class Profiler,PII,Mart prof;
-    class Split,MissGov,Synthesizer,LOCO prep;
-    class MLScout,XAI,Decision ml;
-    class Freezer,ReproScript,CodeForge,ServingRouter,Drift serve;
-    class SSOT,PPTX,HTML,XLSX,WebUI pres;
+    class DB,Safe s1;
+    class Gov,LOCO s2;
+    class Scout,Stat s3;
+    class Serve,Docs s4;
 ```
 </details>
 
