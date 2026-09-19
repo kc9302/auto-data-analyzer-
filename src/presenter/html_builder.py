@@ -49,22 +49,21 @@ class HtmlReportBuilder:
                 kor_name = meta.get("korean_name", feat_raw)
                 source_mart = meta.get("source_mart", "-")
                 shap_rows += f"""<tr>
-                  <td class='p-2.5 font-bold text-slate-800 text-xs'>{item.get('rank')}</td>
-                  <td class='p-2.5 font-semibold text-slate-900'>
-                    <div>{feat_raw}</div>
-                    <div class='text-xs text-indigo-600 font-normal mt-0.5'>{kor_name}</div>
-                    <div class='text-[10px] text-slate-400 font-mono'>{source_mart}</div>
+                  <td class='font-bold text-slate-700 text-xs font-mono'>{item.get('rank')}</td>
+                  <td>
+                    <div class='font-medium text-slate-900 font-mono text-xs'>{feat_raw}</div>
+                    <div class='text-[11px] text-indigo-600 font-normal'>{kor_name}</div>
                   </td>
-                  <td class='p-2.5'>
+                  <td>
                     <div class='flex items-center gap-2'>
-                      <div class='w-28 bg-slate-100 rounded-full h-2 overflow-hidden'>
-                        <div class='{bar_bg} h-2 rounded-full' style='width: {min(pct * 2, 100)}%'></div>
+                      <div class='w-20 bg-slate-100 rounded-full h-1.5 overflow-hidden'>
+                        <div class='{bar_bg} h-1.5 rounded-full' style='width: {min(pct * 2, 100)}%'></div>
                       </div>
-                      <span class='text-xs font-bold text-slate-700'>{pct}%</span>
+                      <span class='text-xs font-bold text-slate-700 font-mono'>{pct}%</span>
                     </div>
                   </td>
-                  <td class='p-2.5'><span class='text-xs font-bold px-2 py-0.5 rounded-full {dir_color}'>{item.get('direction')}</span></td>
-                  <td class='p-2.5 text-xs text-slate-600'>{item.get('interpretation')}</td>
+                  <td><span class='text-[10px] font-bold px-1.5 py-0.5 rounded {dir_color}'>{item.get('direction')}</span></td>
+                  <td class='text-xs text-slate-600 leading-snug'>{item.get('interpretation')}</td>
                 </tr>"""
         else:
             shap_rows = "<tr><td colspan='5' class='p-3 text-center text-slate-400'>1차 피처 분석 데이터 없음</td></tr>"
@@ -119,11 +118,19 @@ class HtmlReportBuilder:
   <title>Auto Data Analyzer - 종합 진단 및 피처 여정 보고서</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
-    body {{ font-family: 'Pretendard', sans-serif; background-color: #F8FAFC; color: #0F172A; }}
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+    body {{ font-family: 'Pretendard', sans-serif; background-color: #F8FAFC; color: #0F172A; letter-spacing: -0.015em; }}
+    code, pre, .font-mono {{ font-family: 'JetBrains Mono', monospace; }}
+    
+    /* Modern Compact Data Table Styles (GitHub & Linear Inspired) */
+    .data-table {{ width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; line-height: 1.25rem; }}
+    .data-table th {{ background-color: #F8FAFC; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; padding: 0.5rem 0.75rem; border-bottom: 1px solid #E2E8F0; }}
+    .data-table td {{ padding: 0.45rem 0.75rem; border-bottom: 1px solid #F1F5F9; transition: background-color 0.15s ease; }}
+    .data-table tbody tr:hover td {{ background-color: #F8FAFC; }}
+    .data-table tbody tr:last-child td {{ border-bottom: none; }}
   </style>
 </head>
-<body class="p-6 md:p-12 max-w-7xl mx-auto">
+<body class="p-4 sm:p-8 md:p-10 max-w-7xl mx-auto antialiased">
 
   <!-- Header -->
   <header class="border-b border-slate-200 pb-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -177,45 +184,49 @@ class HtmlReportBuilder:
     <!-- Missing & Distribution Tables -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
       <!-- Missing Values -->
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
+      <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>결측치 현황 및 조치 권고</span>
-          <span class="text-xs text-slate-400 font-normal">Missing Value Matrix</span>
+          <span class="text-[11px] text-slate-400 font-normal font-mono">Missing Matrix</span>
         </h3>
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="bg-slate-50 text-slate-400 text-xs font-semibold">
-            <tr>
-              <th class="p-2.5">컬럼</th>
-              <th class="p-2.5">결측 건수</th>
-              <th class="p-2.5">결측률</th>
-              <th class="p-2.5">비즈니스 조치</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            {"".join(f"<tr><td class='p-2.5 font-medium text-slate-800'>{m.get('column')}</td><td class='p-2.5'>{m.get('missing_count'):,}건</td><td class='p-2.5 text-amber-600 font-bold'>{m.get('missing_ratio')}%</td><td class='p-2.5 text-xs text-slate-500'>{m.get('recommendation', '중앙값 대체 권고')}</td></tr>" for m in missing_summary) if missing_summary else "<tr><td colspan='4' class='p-3 text-center text-slate-400'>결측치 없음 (데이터 완전성 100%)</td></tr>"}
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>컬럼</th>
+                <th>결측 건수</th>
+                <th>결측률</th>
+                <th>비즈니스 조치</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(f"<tr><td class='font-medium text-slate-800 font-mono text-xs'>{m.get('column')}</td><td>{m.get('missing_count'):,}건</td><td class='text-amber-600 font-bold'>{m.get('missing_ratio')}%</td><td class='text-xs text-slate-500'>{m.get('recommendation', '중앙값 대체 권고')}</td></tr>" for m in missing_summary) if missing_summary else "<tr><td colspan='4' class='p-3 text-center text-slate-400 text-xs'>결측치 없음 (데이터 완전성 100%)</td></tr>"}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Outlier & Skewness -->
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
+      <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>수치형 변수 분포 및 왜도 (Skewness)</span>
-          <span class="text-xs text-slate-400 font-normal">Plain-Text Labeled</span>
+          <span class="text-[11px] text-slate-400 font-normal font-mono">Distribution Stats</span>
         </h3>
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="bg-slate-50 text-slate-400 text-xs font-semibold">
-            <tr>
-              <th class="p-2.5">변수명</th>
-              <th class="p-2.5">중앙값</th>
-              <th class="p-2.5">왜도</th>
-              <th class="p-2.5">비즈니스 일상어 상태</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            {"".join(f"<tr><td class='p-2.5 font-medium text-slate-800'>{p.get('name')}</td><td class='p-2.5'>{p.get('median')}</td><td class='p-2.5'>{p.get('skewness')}</td><td class='p-2.5 text-xs font-semibold text-blue-700 bg-blue-50 rounded'>{p.get('plain_skew_label')}</td></tr>" for p in num_profiles[:5])}
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>변수명</th>
+                <th>중앙값</th>
+                <th>왜도</th>
+                <th>상태 진단</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(f"<tr><td class='font-medium text-slate-800 font-mono text-xs'>{p.get('name')}</td><td>{p.get('median')}</td><td>{p.get('skewness')}</td><td><span class='text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100'>{p.get('plain_skew_label')}</span></td></tr>" for p in num_profiles[:5])}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -247,25 +258,27 @@ class HtmlReportBuilder:
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <!-- Left 2 Cols: SHAP Importance & Direction Table -->
-      <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
+      <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>글로벌 영향력(SHAP) & 영향 방향성 매트릭스</span>
-          <span class="text-xs text-slate-400 font-normal">Native TreeSHAP Ranked</span>
+          <span class="text-[11px] text-slate-400 font-normal font-mono">Native TreeSHAP Ranked</span>
         </h3>
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="bg-slate-50 text-slate-400 text-xs font-semibold">
-            <tr>
-              <th class="p-2.5">순위</th>
-              <th class="p-2.5">변수명</th>
-              <th class="p-2.5">기여율</th>
-              <th class="p-2.5">영향 방향</th>
-              <th class="p-2.5">비즈니스 해석</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            {shap_rows}
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="w-12">순위</th>
+                <th>변수명</th>
+                <th class="w-36">기여율</th>
+                <th class="w-24">영향 방향</th>
+                <th>비즈니스 해석</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shap_rows}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Right 1 Col: Noise Pruning & Recommendations -->
@@ -386,42 +399,46 @@ class HtmlReportBuilder:
 
     <!-- AutoML Leaderboard & Feature Importance -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center justify-between">
+      <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
           <span>AutoML 모델 벤치마크 결과</span>
-          <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">최적 승자: {ml_scout.get('best_model', 'N/A')}</span>
+          <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200">최적 승자: {ml_scout.get('best_model', 'N/A')}</span>
         </h3>
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="bg-slate-50 text-slate-400 text-xs font-semibold">
-            <tr>
-              <th class="p-2.5">순위</th>
-              <th class="p-2.5">알고리즘</th>
-              <th class="p-2.5">역할</th>
-              <th class="p-2.5">평가 성능</th>
-              <th class="p-2.5">룰 대비 Lift</th>
-              <th class="p-2.5">소요 시간</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            {"".join(f"<tr><td class='p-2.5 font-bold text-slate-800'>{m.get('rank')}위</td><td class='p-2.5 font-medium'>{m.get('model')}</td><td class='p-2.5 text-xs text-slate-500'>{m.get('model_role', '후보')}</td><td class='p-2.5 text-blue-600 font-bold'>{m.get('f1_weighted', m.get('accuracy', m.get('r2', m.get('neg_root_mean_squared_error', 0.0)))):.4f}</td><td class='p-2.5 text-xs font-bold text-emerald-600'>{'+' if m.get('lift_vs_segment_pct',0)>0 else ''}{m.get('lift_vs_segment_pct', 0):.1f}%</td><td class='p-2.5 text-xs text-slate-400'>{m.get('train_time_sec', 0)}초</td></tr>" for m in ml_scout.get('leaderboard', []))}
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="w-12">순위</th>
+                <th>알고리즘</th>
+                <th>역할</th>
+                <th>평가 성능</th>
+                <th>룰 대비 Lift</th>
+                <th>소요 시간</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(f"<tr><td class='font-bold text-slate-700 font-mono text-xs'>{m.get('rank')}위</td><td class='font-medium text-slate-900'>{m.get('model')}</td><td class='text-xs text-slate-500'>{m.get('model_role', '후보')}</td><td class='text-blue-600 font-bold font-mono text-xs'>{m.get('f1_weighted', m.get('accuracy', m.get('r2', m.get('neg_root_mean_squared_error', 0.0)))):.4f}</td><td class='text-xs font-bold text-emerald-600 font-mono'>{'+' if m.get('lift_vs_segment_pct',0)>0 else ''}{m.get('lift_vs_segment_pct', 0):.1f}%</td><td class='text-xs text-slate-400 font-mono'>{m.get('train_time_sec', 0)}s</td></tr>" for m in ml_scout.get('leaderboard', []))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h3 class="text-base font-bold text-slate-800 mb-3">Top 5 핵심 기여 피처 (Feature Importance)</h3>
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead class="bg-slate-50 text-slate-400 text-xs font-semibold">
-            <tr>
-              <th class="p-2.5">중요도</th>
-              <th class="p-2.5">피처명</th>
-              <th class="p-2.5">상대 기여도</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            {"".join(f"<tr><td class='p-2.5 font-bold text-slate-800'>Top {idx+1}</td><td class='p-2.5 font-medium'>{item[0]}</td><td class='p-2.5 text-emerald-600 font-bold'>{item[1]*100:.1f}%</td></tr>" for idx, item in enumerate(ml_scout.get('top_features', [])[:5]))}
-          </tbody>
-        </table>
+      <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-3">Top 5 핵심 기여 피처 (Feature Importance)</h3>
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="w-16">중요도</th>
+                <th>피처명</th>
+                <th class="w-28 text-right">상대 기여도</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(f"<tr><td class='font-bold text-slate-700 font-mono text-xs'>Top {idx+1}</td><td class='font-medium text-slate-900 font-mono text-xs'>{item[0]}</td><td class='text-emerald-600 font-bold font-mono text-xs text-right'>{item[1]*100:.1f}%</td></tr>" for idx, item in enumerate(ml_scout.get('top_features', [])[:5]))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
