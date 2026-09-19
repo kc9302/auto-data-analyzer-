@@ -9,14 +9,14 @@
 
 ## 1. 회의 목적 및 배경
 
-본 회의는 On-prem 추천/분류 플랫폼인 **`dq-insight2`**(Python Data Plane) 및 **`dq-insight2-gateway`**(Spring Boot Control Plane)와 **`auto-data-analyzer-`**(AutoML & ML Scout 엔진)을 상호 접목하여, 현재 개발 서버(`192.168.110.125:8090/18080`)에서 운영 중인 동국대학교 위기학생 탐지(`#304`) 및 교과 추천(`#253`) 모델의 서빙 상태를 점검하고 피처 고도화 방안을 확정하기 위해 개최되었습니다.
+본 회의는 On-prem 추천/분류 플랫폼인 **`dq-insight2`**(Python Data Plane) 및 **`dq-insight2-gateway`**(Spring Boot Control Plane)와 **`auto-data-analyzer-`**(AutoML & ML Scout 엔진)을 상호 접목하여, 현재 개발 서버(`내부 게이트웨이:8090/18080`)에서 운영 중인 동국대학교 위기학생 탐지(`#304`) 및 교과 추천(`#253`) 모델의 서빙 상태를 점검하고 피처 고도화 방안을 확정하기 위해 개최되었습니다.
 
 ---
 
 ## 2. 현행 플랫폼 운영 및 연동 검증 팩트
 
 ### 1) 게이트웨이 및 엔진 실시간 서빙 검증
-- **게이트웨이 헬스**: `http://192.168.110.125:18080/actuator/health` ➔ `{"status":"UP"}` 확인 완료
+- **게이트웨이 헬스**: `http://<GATEWAY_HOST>:18080/actuator/health` ➔ `{"status":"UP"}` 확인 완료
 - **위기학생 탐지 (`config_id: 304`, 학번: `1995211382`)**:
   - 판정 결과: `is_risk: False`, `probability: 0.0031` (서빙 임계치: `0.0283`)
   - 실시간 TreeSHAP 상위 요인: `GRADE`(-1.6619), `LEAVE_CNT`(-0.4763), `GPA_LATEST`(+0.2613), `GPA_DELTA`(-0.1915), `ACWARN_CNT`(-0.1400)
