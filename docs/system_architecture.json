@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Auto Data Analyzer & ML Scout - Enterprise Architecture",
+    "subtitle": "Universal Data Lakehouse Ingestion, Two-Tier LOCO Feature Engine & Multi-Model Benchmark Suite",
+    "output": "system_architecture.html"
+  },
+  "components": [
+    { "id": "user_analyst", "type": "external", "label": "Data Analyst / MLE", "sublabel": "CLI / Web UI", "pos": [40, 260], "size": [150, 65] },
+    { "id": "db_sources", "type": "database", "label": "Enterprise DBs", "sublabel": "PostgreSQL / Oracle", "pos": [40, 430], "size": [150, 65] },
+    { "id": "file_sources", "type": "database", "label": "Data Mart & Files", "sublabel": "Parquet / CSV / JSON", "pos": [40, 600], "size": [150, 65] },
+    
+    { "id": "web_app", "type": "frontend", "label": "Streamlit Web UI", "sublabel": "Interactive UI :8501", "pos": [255, 260], "size": [150, 65] },
+    { "id": "safe_connector", "type": "security", "label": "SafeDBConnector", "sublabel": "Read-Only / Sampling", "pos": [255, 430], "size": [150, 65], "tag": "Zero-Mutation" },
+    { "id": "config_manager", "type": "security", "label": "DBConfigManager", "sublabel": "Masking & Env Resolve", "pos": [255, 600], "size": [150, 65] },
+
+    { "id": "cli_engine", "type": "backend", "label": "CLI Orchestrator", "sublabel": "src/main.py / run.py", "pos": [470, 260], "size": [150, 65] },
+    { "id": "profiler", "type": "backend", "label": "FactDataProfiler", "sublabel": "Missing / PII / Balance", "pos": [470, 430], "size": [150, 65] },
+    { "id": "mart_builder", "type": "backend", "label": "AutoMartBuilder", "sublabel": "Star-Schema / Merge", "pos": [470, 600], "size": [150, 65] },
+
+    { "id": "synthesizer", "type": "backend", "label": "FeatureSynthesizer", "sublabel": "Non-linear / Domain", "pos": [685, 430], "size": [150, 65] },
+    { "id": "loco_selector", "type": "backend", "label": "Two-Tier LOCO Guard", "sublabel": "Group-LOCO & TreeSHAP", "pos": [685, 600], "size": [150, 65], "tag": "κ ≤ 15.0 SVD" },
+
+    { "id": "decision_proposal", "type": "backend", "label": "DecisionProposal", "sublabel": "Multi-Candidate Matrix", "pos": [900, 260], "size": [150, 65] },
+    { "id": "ml_scout", "type": "backend", "label": "MLScoutEngine", "sublabel": "6-Model Benchmark Suite", "pos": [900, 430], "size": [150, 65], "tag": "Bootstrap 95% CI" },
+    { "id": "code_forge", "type": "backend", "label": "CodeForge", "sublabel": "Pipeline & Docker Build", "pos": [900, 600], "size": [150, 65] },
+
+    { "id": "presenter", "type": "cloud", "label": "DualPresenter", "sublabel": "HTML / PPTX / XLSX", "pos": [1115, 260], "size": [150, 65] },
+    { "id": "mlflow_tracking", "type": "cloud", "label": "MLflow & Artifacts", "sublabel": "Runs & Audit JSON", "pos": [1115, 430], "size": [150, 65] },
+    { "id": "fastapi_serving", "type": "backend", "label": "Serving Router", "sublabel": "FastAPI SLA < 50ms", "pos": [1115, 600], "size": [150, 65] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Data Lakehouse & Security Boundary", "wraps": ["db_sources", "file_sources", "safe_connector", "config_manager"] },
+    { "kind": "region", "label": "Auto Data Analyzer & ML Scout Core Engine", "wraps": ["profiler", "mart_builder", "synthesizer", "loco_selector", "ml_scout", "code_forge"] },
+    { "kind": "security-group", "label": "Multi-Channel Delivery & Serving", "wraps": ["presenter", "fastapi_serving", "mlflow_tracking"] }
+  ],
+  "connections": [
+    { "from": "user_analyst", "to": "web_app", "label": "HTTP :8501" },
+    { "from": "user_analyst", "to": "cli_engine", "label": "CLI Run", "variant": "emphasis", "fromSide": "top", "toSide": "top", "via": [[115, 190], [545, 190]] },
+    { "from": "config_manager", "to": "safe_connector", "label": "auth" },
+    { "from": "db_sources", "to": "safe_connector", "label": "SQL Read", "variant": "security" },
+    { "from": "file_sources", "to": "safe_connector", "label": "Ingest" },
+    { "from": "safe_connector", "to": "profiler", "label": "Sample" },
+    { "from": "safe_connector", "to": "mart_builder", "label": "Tables" },
+    { "from": "web_app", "to": "cli_engine", "label": "Exec" },
+    { "from": "cli_engine", "to": "profiler" },
+    { "from": "mart_builder", "to": "synthesizer", "label": "Schema" },
+    { "from": "profiler", "to": "synthesizer", "label": "Profiles" },
+    { "from": "synthesizer", "to": "loco_selector", "label": "Candidates", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "from": "loco_selector", "to": "ml_scout", "label": "Features", "variant": "emphasis" },
+    { "from": "ml_scout", "to": "decision_proposal", "label": "Leaderboard" },
+    { "from": "ml_scout", "to": "code_forge", "label": "Trained", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "from": "decision_proposal", "to": "presenter", "label": "Report", "variant": "emphasis" },
+    { "from": "ml_scout", "to": "mlflow_tracking", "label": "Tracking" },
+    { "from": "code_forge", "to": "fastapi_serving", "label": "FastAPI", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Data Ingestion & Safety", "items": ["Zero-Mutation Read-Only 안전 접속", "PostgreSQL TABLESAMPLE BERNOULLI 및 PII 마스킹", "AutoMartBuilder를 통한 멀티테이블 자동 결합"] },
+    { "dot": "emerald", "title": "Feature & LOCO Engine", "items": ["도메인 스마트 피처 및 비선형 인터랙션 지수 합성", "Two-Tier LOCO & SVD 특이값 조건수(κ ≤ 15.0) 안정성 통제", "TreeSHAP Borda 합의 랭킹 기반 정예 피처 선별"] },
+    { "dot": "violet", "title": "Multi-Candidate Benchmark", "items": ["6대 후보 모델(통계, 인기도, 계층, 룰, 데모그래픽, ML) 공정 평가", "10대 평가지표 및 1,000회 부트스트랩 95% 신뢰구간 검증", "Nadeau-Bengio 분산 보정 t-test 및 Wilcoxon 비모수 검정"] },
+    { "dot": "rose", "title": "Delivery & Serving", "items": ["FastAPI 마이크로서비스 서빙 라우터 스캐폴딩", "NIA 공공 감리 5대 문서, 16:9 와이드스크린 PPTX 및 XLSX 산출물", "인터랙티브 웹 대시보드 및 단일 진실 공급원 감사 로그 JSON"] }
+  ]
+}
