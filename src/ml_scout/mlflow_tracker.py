@@ -5,6 +5,7 @@ Provides lightweight, zero-infra experiment tracking and hyperparameter influenc
 2. Metric, Parameter, and Artifact Freezing (models, feature manifests, SHAP plots)
 3. Parameter Importance Analytics (Which hyperparameters/feature counts drive peak performance?)
 4. Parallel Coordinates Plot & Parameter Importance Bar Chart Generation for Executive Decks
+5. ROC Curve, Confusion Matrix, Classification Report & Regression Scatter Plots (AutoML Best Practice)
 """
 import os
 import sys
@@ -291,6 +292,230 @@ class MLflowExperimentTracker:
                 f"가성비 스위트스팟(Lean Pareto) 구간에서 성능 저하 없이 레이턴시를 최소화함을 검증함."
             ),
             "runs_table": df_runs.to_dict(orient="records")
+        }
+
+    def generate_classification_report_charts(
+        self,
+        model: Any,
+        X: "pd.DataFrame",
+        y: "pd.Series",
+        model_name: str = "Champion",
+        class_names: Optional[List[str]] = None,
+        log_to_mlflow: bool = False,
+        run_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Generates AutoML-style evaluation charts for classification tasks:
+          1. ROC Curve (AUC) — binary classification only
+          2. Confusion Matrix heatmap
+          3. Classification Report heatmap (Precision / Recall / F1 per class)
+        Saves all charts to dist/charts/ and optionally logs as MLflow artifacts.
+
+        Inspired by Databricks AutoML best practices (blog: MicrosoftDataSchool 53일차).
+        """
+        from sklearn.metrics import (
+            roc_curve, auc, confusion_matrix,
+            classification_report, ConfusionMatrixDisplay
+        )
+
+        plt.rcParams["font.sans-serif"] = ["Malgun Gothic", "NanumGothic", "DejaVu Sans", "sans-serif"]
+        plt.rcParams["font.family"] = "sans-serif"
+        plt.rcParams["axes.unicode_minus"] = False
+
+        is_binary = len(np.unique(y)) == 2
+        y_pred = model.predict(X)
+        saved_paths = []
+        result_metrics = {}
+
+        # --- 1. ROC Curve (binary only) ---
+        if is_binary and hasattr(model, "predict_proba"):
+            try:
+                y_prob = model.predict_proba(X)[:, 1]
+                fpr, tpr, _ = roc_curve(y, y_prob)
+                roc_auc = auc(fpr, tpr)
+                result_metrics["roc_auc"] = round(float(roc_auc), 4)
+
+                fig, ax = plt.subplots(figsize=(7, 6), dpi=130)
+                fig.patch.set_facecolor("#F8FAFC")
+                ax.set_facecolor("#FFFFFF")
+                ax.plot(fpr, tpr, color="#3B82F6", lw=2.5,
+                        label=f"ROC Curve (AUC = {roc_auc:.4f})")
+                ax.plot([0, 1], [0, 1], "k--", lw=1.5, alpha=0.6, label="Random Classifier")
+                ax.fill_between(fpr, tpr, alpha=0.08, color="#3B82F6")
+                ax.set_xlim([0.0, 1.0])
+                ax.set_ylim([0.0, 1.05])
+                ax.set_xlabel("False Positive Rate (1 - Specificity)", fontsize=12, fontweight="bold")
+                ax.set_ylabel("True Positive Rate (Sensitivity)", fontsize=12, fontweight="bold")
+                ax.set_title(f"[{model_name}] ROC Curve — Binary Classification", fontsize=13, fontweight="bold", pad=14)
+                ax.legend(loc="lower right", fontsize=11)
+                ax.grid(linestyle=":", alpha=0.5)
+                plt.tight_layout()
+
+                roc_path = os.path.join(self.artifact_output_dir, f"roc_curve_{model_name.replace(' ', '_')}.png")
+                plt.savefig(roc_path, bbox_inches="tight")
+                plt.close()
+                saved_paths.append(roc_path)
+            except Exception as roc_err:
+                result_metrics["roc_error"] = str(roc_err)
+
+        # --- 2. Confusion Matrix ---
+        try:
+            cm = confusion_matrix(y, y_pred)
+            labels = class_names or [str(c) for c in sorted(np.unique(y))]
+
+            fig, ax = plt.subplots(figsize=(6, 5), dpi=130)
+            fig.patch.set_facecolor("#F8FAFC")
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+            disp.plot(ax=ax, colorbar=True, cmap="Blues", values_format="d")
+            ax.set_title(f"[{model_name}] Confusion Matrix", fontsize=13, fontweight="bold", pad=12)
+            plt.tight_layout()
+
+            cm_path = os.path.join(self.artifact_output_dir, f"confusion_matrix_{model_name.replace(' ', '_')}.png")
+            plt.savefig(cm_path, bbox_inches="tight")
+            plt.close()
+            saved_paths.append(cm_path)
+        except Exception as cm_err:
+            result_metrics["cm_error"] = str(cm_err)
+
+        # --- 3. Classification Report Heatmap ---
+        try:
+            labels = class_names or [str(c) for c in sorted(np.unique(y))]
+            report = classification_report(y, y_pred, target_names=labels, output_dict=True)
+            report_df = pd.DataFrame(report).T
+            # Keep only per-class rows (drop avg rows for clean heatmap)
+            per_class = report_df.loc[labels, ["precision", "recall", "f1-score"]]
+
+            fig, ax = plt.subplots(figsize=(8, max(3, len(labels) * 0.7 + 1.5)), dpi=130)
+            fig.patch.set_facecolor("#F8FAFC")
+            im = ax.imshow(per_class.values.astype(float), aspect="auto", cmap="RdYlGn", vmin=0, vmax=1)
+            ax.set_xticks([0, 1, 2])
+            ax.set_xticklabels(["Precision", "Recall", "F1-score"], fontsize=12, fontweight="bold")
+            ax.set_yticks(range(len(labels)))
+            ax.set_yticklabels(labels, fontsize=11)
+            for i in range(len(labels)):
+                for j, col in enumerate(["precision", "recall", "f1-score"]):
+                    val = float(per_class.iloc[i][col])
+                    ax.text(j, i, f"{val:.3f}", ha="center", va="center",
+                            fontsize=11, fontweight="bold",
+                            color="white" if val < 0.45 or val > 0.80 else "#1E293B")
+            plt.colorbar(im, ax=ax, fraction=0.04, pad=0.04)
+            ax.set_title(f"[{model_name}] Classification Report", fontsize=13, fontweight="bold", pad=12)
+            plt.tight_layout()
+
+            cr_path = os.path.join(self.artifact_output_dir, f"classification_report_{model_name.replace(' ', '_')}.png")
+            plt.savefig(cr_path, bbox_inches="tight")
+            plt.close()
+            saved_paths.append(cr_path)
+
+            # Store weighted avg metrics
+            result_metrics["precision"] = round(float(report["weighted avg"]["precision"]), 4)
+            result_metrics["recall"] = round(float(report["weighted avg"]["recall"]), 4)
+            result_metrics["f1_weighted"] = round(float(report["weighted avg"]["f1-score"]), 4)
+        except Exception as cr_err:
+            result_metrics["cr_error"] = str(cr_err)
+
+        # --- Optionally log to MLflow ---
+        if log_to_mlflow and HAS_MLFLOW and saved_paths:
+            try:
+                ctx = mlflow.start_run(run_id=run_id) if run_id else mlflow.start_run(
+                    run_name=f"eval_{model_name}"
+                )
+                with ctx:
+                    for k, v in result_metrics.items():
+                        if isinstance(v, (int, float)):
+                            mlflow.log_metric(k, float(v))
+                    for path in saved_paths:
+                        if os.path.exists(path):
+                            mlflow.log_artifact(path)
+            except Exception:
+                pass
+
+        return {
+            "chart_paths": saved_paths,
+            "metrics": result_metrics
+        }
+
+    def generate_regression_charts(
+        self,
+        model: Any,
+        X: "pd.DataFrame",
+        y: "pd.Series",
+        model_name: str = "Champion",
+        log_to_mlflow: bool = False,
+        run_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Generates AutoML-style evaluation charts for regression tasks:
+          1. Actual vs Predicted scatter plot with perfect-prediction diagonal
+          2. Residual distribution histogram
+        Saves to dist/charts/ and optionally logs as MLflow artifacts.
+        """
+        from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+
+        plt.rcParams["font.sans-serif"] = ["Malgun Gothic", "NanumGothic", "DejaVu Sans", "sans-serif"]
+        plt.rcParams["font.family"] = "sans-serif"
+        plt.rcParams["axes.unicode_minus"] = False
+
+        y_pred = model.predict(X)
+        r2 = round(float(r2_score(y, y_pred)), 4)
+        mae = round(float(mean_absolute_error(y, y_pred)), 4)
+        rmse = round(float(np.sqrt(mean_squared_error(y, y_pred))), 4)
+        saved_paths = []
+
+        # --- 1. Actual vs Predicted scatter ---
+        fig, axes = plt.subplots(1, 2, figsize=(13, 5.5), dpi=130)
+        fig.patch.set_facecolor("#F8FAFC")
+        for ax in axes:
+            ax.set_facecolor("#FFFFFF")
+
+        ax_scatter = axes[0]
+        ax_scatter.scatter(y, y_pred, alpha=0.35, s=12, color="#FF3621", edgecolors="none")
+        lims = [min(float(y.min()), float(y_pred.min())), max(float(y.max()), float(y_pred.max()))]
+        ax_scatter.plot(lims, lims, "k--", lw=1.5, alpha=0.6, label="Perfect Prediction")
+        ax_scatter.set_xlabel("Actual Value", fontsize=12, fontweight="bold")
+        ax_scatter.set_ylabel("Predicted Value", fontsize=12, fontweight="bold")
+        ax_scatter.set_title(f"[{model_name}] Actual vs Predicted", fontsize=12, fontweight="bold", pad=12)
+        ax_scatter.text(0.05, 0.92, f"R² = {r2:.4f}\nMAE = {mae:.4f}\nRMSE = {rmse:.4f}",
+                        transform=ax_scatter.transAxes, fontsize=10,
+                        bbox=dict(boxstyle="round,pad=0.4", facecolor="#EFF6FF", edgecolor="#3B82F6", alpha=0.85))
+        ax_scatter.legend(fontsize=10)
+        ax_scatter.grid(linestyle=":", alpha=0.5)
+
+        # --- 2. Residual histogram ---
+        residuals = np.array(y_pred) - np.array(y)
+        ax_res = axes[1]
+        ax_res.hist(residuals, bins=40, color="#8B5CF6", edgecolor="#6D28D9", alpha=0.8)
+        ax_res.axvline(0, color="#EF4444", lw=2, linestyle="--", label="Zero Error")
+        ax_res.set_xlabel("Residual (Predicted - Actual)", fontsize=12, fontweight="bold")
+        ax_res.set_ylabel("Count", fontsize=12, fontweight="bold")
+        ax_res.set_title(f"[{model_name}] Residual Distribution", fontsize=12, fontweight="bold", pad=12)
+        ax_res.legend(fontsize=10)
+        ax_res.grid(linestyle=":", alpha=0.5)
+
+        plt.tight_layout()
+        reg_path = os.path.join(self.artifact_output_dir, f"regression_eval_{model_name.replace(' ', '_')}.png")
+        plt.savefig(reg_path, bbox_inches="tight")
+        plt.close()
+        saved_paths.append(reg_path)
+
+        # --- Optionally log to MLflow ---
+        if log_to_mlflow and HAS_MLFLOW:
+            try:
+                ctx = mlflow.start_run(run_id=run_id) if run_id else mlflow.start_run(
+                    run_name=f"eval_{model_name}"
+                )
+                with ctx:
+                    mlflow.log_metric("r2", r2)
+                    mlflow.log_metric("mae", mae)
+                    mlflow.log_metric("rmse", rmse)
+                    if os.path.exists(reg_path):
+                        mlflow.log_artifact(reg_path)
+            except Exception:
+                pass
+
+        return {
+            "chart_paths": saved_paths,
+            "metrics": {"r2": r2, "mae": mae, "rmse": rmse}
         }
 
     def _generate_simulated_runs(self) -> List[Dict[str, Any]]:

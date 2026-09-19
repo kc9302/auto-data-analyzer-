@@ -568,6 +568,29 @@ class MLScoutEngine:
             feature_count=len(X_train.columns)
         )
 
+        # 9. AutoML-style Evaluation Charts (ROC, Confusion Matrix, Actual vs Predicted)
+        #    Inspired by Databricks AutoML best practices from industry blog references.
+        eval_charts = {}
+        try:
+            from src.ml_scout.mlflow_tracker import MLflowExperimentTracker
+            _tracker = MLflowExperimentTracker()
+            if task_type in ("Binary_Classification", "Multiclass_Classification"):
+                eval_charts = _tracker.generate_classification_report_charts(
+                    model=best_instance,
+                    X=X_train,
+                    y=y_train,
+                    model_name=self.best_model_name
+                )
+            elif task_type == "Regression":
+                eval_charts = _tracker.generate_regression_charts(
+                    model=best_instance,
+                    X=X_train,
+                    y=y_train,
+                    model_name=self.best_model_name
+                )
+        except Exception as chart_err:
+            eval_charts = {"error": str(chart_err)}
+
         return {
             "task_type": task_type,
             "primary_metric": primary_metric,
@@ -579,7 +602,8 @@ class MLScoutEngine:
             "xai": xai_summary,
             "imbalance_optimization": imbalance_report,
             "lift_analysis": lift_analysis,
-            "feasibility_gate": gate_report
+            "feasibility_gate": gate_report,
+            "eval_charts": eval_charts
         }
 
     def _compute_segment_slices(
