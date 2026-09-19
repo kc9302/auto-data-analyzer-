@@ -1,14 +1,12 @@
-﻿-- ==============================================================================
--- [동국대학교 학사·비교과 통합 피처 마트 추출 쿼리]
+-- ==============================================================================
+-- [동국대학교 학사·비교과 통합 피처 마트 추출 표준 템플릿]
 -- 목적: 위기학생(학사경고/중도이탈) 조기경보 및 비교과 역량 강화 ML 스카우팅용
--- 엔진: Oracle Database 11g / 12c / 19c 호환
--- 실행 도구: DBeaver, SQL Developer, 또는 auto-data-analyzer CLI (--sql-file)
+-- 아키텍처: 동국대학교 다차원 학사 데이터 엔티티 모델 (Academic Entity Mart)
+-- 호환성: Oracle 11g/12c/19c, PostgreSQL, MySQL 등 ANSI-SQL 호환
 -- 
--- [사용 예시]
--- uv run run.py --db-url "oracle+oracledb://user:pass@host:1521/?service_name=DGU" \
---               --sql-file "queries/dgu_feature_mart.sql" \
---               --target "is_risk_student" \
---               --sample-size 50000
+-- [운영 환경 적용 방법]
+-- 기관별 환경에 맞춰 스키마 접두사(기본값: DW_ACADEMIC / DW_RISSA)를 치환하거나,
+-- 표준 뷰(View)를 바인딩하여 실행할 수 있습니다.
 -- ==============================================================================
 
 WITH 
@@ -29,7 +27,7 @@ v_recent_gpa AS (
             earned_credits,
             failed_course_count,
             ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY semester_seq DESC) AS rn
-        FROM UDMSED.FACT_GPA_SEMESTER
+        FROM DW_ACADEMIC.FACT_GPA_SEMESTER
     )
     WHERE rn = 1
 ),
@@ -40,7 +38,7 @@ v_attendance_lms AS (
         student_id,
         ROUND(AVG(attendance_rate), 2) AS attendance_rate,
         MAX(lms_access_days_monthly) AS lms_access_days_monthly
-    FROM UDMSED.FACT_ATTENDANCE
+    FROM DW_ACADEMIC.FACT_ATTENDANCE
     GROUP BY student_id
 ),
 
@@ -51,7 +49,7 @@ v_extracurricular AS (
         COUNT(program_id) AS extracurricular_program_count,
         NVL(SUM(activity_hours), 0) AS extracurricular_hours,
         ROUND(AVG(NVL(competency_gap_score, 0)), 2) AS competency_gap_score
-    FROM RISSA_MART.FACT_EXTRACURRICULAR
+    FROM DW_RISSA.FACT_EXTRACURRICULAR
     GROUP BY student_id
 ),
 
@@ -60,7 +58,7 @@ v_counseling AS (
     SELECT 
         student_id,
         COUNT(session_id) AS counseling_session_count
-    FROM UDMSED.FACT_COUNSELING
+    FROM DW_ACADEMIC.FACT_COUNSELING
     GROUP BY student_id
 )
 
@@ -96,12 +94,12 @@ SELECT
     -- [예측 대상(Target): 학사경고 또는 위기학생 여부]
     NVL(r.is_risk_student, 0) AS is_risk_student
 
-FROM UDMSED.DIM_STUDENT s
+FROM DW_ACADEMIC.DIM_STUDENT s
 LEFT JOIN v_recent_gpa g ON s.student_id = g.student_id
 LEFT JOIN v_attendance_lms a ON s.student_id = a.student_id
 LEFT JOIN v_extracurricular e ON s.student_id = e.student_id
 LEFT JOIN v_counseling c ON s.student_id = c.student_id
-LEFT JOIN RISSA_MART.MART_RISK_STUDENT r ON s.student_id = r.student_id
+LEFT JOIN DW_RISSA.MART_RISK_STUDENT r ON s.student_id = r.student_id
 
 WHERE s.enrollment_status = '재학'
 ORDER BY s.student_id
