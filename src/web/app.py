@@ -123,7 +123,6 @@ with st.sidebar:
             "파일 소스 모드",
             options=[
                 "기본 고객 샘플 (sample_customers.csv)",
-                "🏛️ 동국대학교 학사·비교과 샘플 (dgu_student_features.csv)",
                 "직접 데이터 파일 업로드 (CSV/Parquet/Excel)"
             ],
             label_visibility="collapsed"
@@ -132,17 +131,6 @@ with st.sidebar:
             default_csv = os.path.join("data", "sample_customers.csv")
             db_url = default_csv
             st.info(f"💡 기본 5,000행 통신사 고객 이탈 샘플 데이터 (`{default_csv}`)")
-        elif file_mode == "🏛️ 동국대학교 학사·비교과 샘플 (dgu_student_features.csv)":
-            dgu_csv = os.path.join("data", "dgu_student_features.csv")
-            if not os.path.exists(dgu_csv):
-                from scripts.generate_dgu_dataset import generate_dgu_data
-                df_dgu = generate_dgu_data(n_samples=3500)
-                os.makedirs("data", exist_ok=True)
-                df_dgu.to_csv(dgu_csv, index=False, encoding="utf-8-sig")
-            db_url = dgu_csv
-            config_default_table = "dgu_student_features.csv"
-            config_default_target = "is_risk_student"
-            st.info(f"🏛️ 동국대 학사·비교과 3,500행 실전 모의 데이터 (`{dgu_csv}`)")
         else:
             uploaded_file = st.file_uploader("분석할 데이터 파일을 업로드하세요", type=["csv", "parquet", "xlsx", "xls", "json"])
             if uploaded_file is not None:
@@ -481,9 +469,8 @@ if "audit_data" in st.session_state:
     st.divider()
 
     # Tabs for Decks
-    tab_dgu, tab_career, tab1, tab_shap, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "🏛️ [동국대 AI] 맞춤형 추천 & 패턴 검증",
-        "💼 [직무/진로 AI] 정합성 감사 & 하이브리드 추천",
+    tab_career, tab1, tab_shap, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "💼 [도메인 프리셋 AI] 정합성 감사 & 하이브리드 추천",
         "📊 [DECK 1] 데이터 현황 진단",
         "🔬 [1차 피처 분석] XGBoost & TreeSHAP",
         "🛣️ [DECK 2] 피처 엔지니어링 여정",
@@ -493,197 +480,6 @@ if "audit_data" in st.session_state:
         "🔒 [재현성 관리자] 동결 데이터 & 감사 매니페스트",
         "🔍 [SSOT] 무결성 감사 로그 원문"
     ])
-
-    with tab_dgu:
-        st.markdown("### 🏛️ 동국대학교 맞춤형 AI 추천 시스템 & 데이터 패턴 검증기")
-        st.caption("비교 모델(통계/인기도/룰/데모그래픽 vs ML) 실측 벤치마크, 3대 추천 기능 및 16:9 발표 장표 다운로드")
-
-        # Top Download Section for DGU Deliverables
-        dgu_c1, dgu_c2, dgu_c3 = st.columns(3)
-        with dgu_c1:
-            p_pptx = os.path.join("dist", "dgu_executive_presentation.pptx")
-            if os.path.exists(p_pptx):
-                with open(p_pptx, "rb") as f:
-                    st.download_button(
-                        label="📽️ 동국대 16:9 발표 장표 (PPTX)",
-                        data=f.read(),
-                        file_name="dgu_executive_presentation.pptx",
-                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        type="primary",
-                        use_container_width=True
-                    )
-        with dgu_c2:
-            p_xls1 = os.path.join("dist", "dgu_recommendation_feature_journey.xlsx")
-            if os.path.exists(p_xls1):
-                with open(p_xls1, "rb") as f:
-                    st.download_button(
-                        label="📊 추천 기능별 피처 여정 & 비교모델 엑셀",
-                        data=f.read(),
-                        file_name="dgu_recommendation_feature_journey.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
-        with dgu_c3:
-            p_xls2 = os.path.join("dist", "dgu_data_landscape_and_api_wbs.xlsx")
-            if os.path.exists(p_xls2):
-                with open(p_xls2, "rb") as f:
-                    st.download_button(
-                        label="📑 전체 데이터 현황 & WBS 공수 (18.5 M/M) 엑셀",
-                        data=f.read(),
-                        file_name="dgu_data_landscape_and_api_wbs.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
-
-        st.divider()
-
-        # 3 Hidden Patterns Section
-        st.markdown("#### 🔍 동국대 학생 데이터에서 발굴한 3대 핵심 패턴")
-        col_p1, col_p2, col_p3 = st.columns(3)
-        with col_p1:
-            st.info("🔥 **[패턴 1] 비교과 역량 갭 x LMS 위험 임계점**\n\n"
-                    "• **위험도 6.4배 급증 (11.4% ➔ 73.2%)**\n"
-                    "• LMS 월 8일 이하 & 비교과 0시간 학생군은 학사경고 발생 확률이 폭증함.\n"
-                    "• *조치:* 복합 상호작용 피처 `crisis_interaction_idx` 합성 반영")
-        with col_p2:
-            st.info("🎓 **[패턴 2] 단과대/학년별 단절적 계층 수요**\n\n"
-                    "• **저학년(탐색 68%) vs 고학년(취업 74%)**\n"
-                    "• 1~2학년은 전공 탐색과 튜터링 수요 중심, 3~4학년은 캡스톤/산학실습 집중.\n"
-                    "• *조치:* 학년/단과대 계층화(Tiered RecSys) 1차 필터링 적용")
-        with col_p3:
-            st.info("📉 **[패턴 3] 학사경고 직전 학기의 미세 하락**\n\n"
-                    "• **경고 1학기 전 평점 -0.48점 급락 포착**\n"
-                    "• 학사경고자의 88.3%가 직전 학기에 이미 평점 급락 및 출석률 86% 이하로 전조.\n"
-                    "• *조치:* -0.5점 낙폭 감지 즉시 상담센터 튜터링 강제 매칭")
-
-        # Interactive Student Recommender Simulation
-        st.divider()
-        st.markdown("#### 🧪 동국대 학생 360도 맞춤형 추천 시뮬레이터")
-        sim_col1, sim_col2 = st.columns([1, 2.5])
-
-        with sim_col1:
-            st.markdown("##### 👤 학생 학번 선택")
-            sample_stds = [
-                {"id": "2024110001", "name": "김동국 (1학년, 컴퓨터인공지능전공)", "type": "학사위기 주의군 (LMS 6일, 출석 78%)"},
-                {"id": "2023110042", "name": "이혜화 (2학년, 경영정보학과)", "type": "비교과 취약군 (역량갭 68점, 0시간)"},
-                {"id": "2021110108", "name": "박필동 (4학년, 전자전기공학부)", "type": "취업/산학 준비군 (평점 3.92)"},
-            ]
-            chosen_std = st.selectbox(
-                "테스트 대상 학생 선택:",
-                options=sample_stds,
-                format_func=lambda x: f"{x['id']} - {x['name']}"
-            )
-            st.caption(f"**특성 요약:** {chosen_std['type']}")
-
-        with sim_col2:
-            st.markdown("##### 🎯 3대 기능별 1:1 맞춤형 추천 결과")
-            if chosen_std["id"] == "2024110001":
-                st.error("🚨 **[REC_03 학사위기 선제케어 경보]** 단계: **[경고 (Warning)]** (예측 위기 확률: 78.4%)")
-                st.markdown("• **선제 케어 처방:** 교무처 전담 튜터 1:1 학습클리닉 매칭 + 학생생활상담센터 필수 면담 3회 배정\n"
-                            "• **학사규칙 가드레일:** 차기 학기 수강 신청 상한 15학점 제한 룰 자동 발동")
-                st.markdown("• **REC_01 비교과 추천:** `[DreamPATH] 신입생 기초 SW 코딩 튜터링반 (역량 갭 +24.5점 보완)`")
-                st.markdown("• **REC_02 교과목 추천:** `기초인공지능수학 (선수과목 검증 통과, 난이도 보통, 3학점)`")
-            elif chosen_std["id"] == "2023110042":
-                st.warning("⚠️ **[REC_01 DreamPATH 비교과 역량 보완]** 핵심 취약: **[데이터분석 & 산학실무 역량]**")
-                st.markdown("• **Top-1 비교과:** `[DreamPATH] 빅데이터 실전 파이썬 프로젝트 캠프 (마일리지 30점 인정)`\n"
-                            "• **Top-2 비교과:** `[역량개발] 경영 데이터 시각화 워크숍 (온라인 15시간)`")
-                st.markdown("• **REC_02 교과목 추천:** `경영데이터베이스 (선수과목 이수 확인, 평점 기대치 3.7)`")
-            else:
-                st.success("🟢 **[우수 학생] REC_02 전공트랙 & 산학 맞춤 추천**")
-                st.markdown("• **Top-1 교과목:** `임베디드 인공지능 캡스톤디자인 (전공심화 3학점, 산학 연계)`\n"
-                            "• **Top-2 교과목:** `지능형 로봇제어공학 (수강 상한 21학점 특별 인출 가능)`")
-                st.markdown("• **REC_01 비교과 추천:** `[취업연계] 산학협력 인턴십 챌린지 12기`")
-
-        # Embedded SHAP Interaction Charts
-        st.divider()
-        st.markdown("#### 🔬 공식 SHAP 도식화 & 비선형 상호작용 의존성 (Dependence Plot)")
-        sh_c1, sh_c2 = st.columns(2)
-        p_dep = os.path.join("dist", "charts", "shap_dependence_top2.png")
-        p_bee = os.path.join("dist", "charts", "shap_beeswarm.png")
-        with sh_c1:
-            if os.path.exists(p_dep):
-                st.image(p_dep, caption="[공식 4번] 최상위 변수 간 SHAP Interaction & Dependence 플롯", use_container_width=True)
-            else:
-                st.info("SHAP Dependence 차트가 준비 중입니다.")
-        with sh_c2:
-            if os.path.exists(p_bee):
-                st.image(p_bee, caption="[공식 1번] SHAP Beeswarm Summary Plot (Red/Blue 방향성)", use_container_width=True)
-            else:
-                st.info("SHAP Beeswarm 차트가 준비 중입니다.")
-        # Real-time DQ Insight2 Gateway Live Test Section
-        st.divider()
-        st.markdown("#### ⚡ [Live Gateway 연동] dq-insight2-gateway 실시간 추론 & 설명력 테스트")
-        st.caption("개발 서버 게이트웨이(192.168.110.125:8090/18080)와 실시간 통신하여 위기학생 탐지(#304) 및 추천(#253)을 즉시 호출합니다.")
-
-        from src.connectors.gateway_client import DQInsightGatewayClient
-        gw_client = DQInsightGatewayClient()
-
-        gw_col1, gw_col2 = st.columns([1, 2])
-        with gw_col1:
-            gw_task = st.selectbox("게이트웨이 연동 기능 선택", ["위기학생 탐지 (config_id: 304)", "교과 추천 (config_id: 253)"])
-            default_std_id = "1995211382" if "304" in gw_task else "2025123009"
-            gw_std_id = st.text_input("조회 학번 (User ID)", value=default_std_id)
-            gw_call_btn = st.button("📡 게이트웨이 API 호출", use_container_width=True)
-
-        with gw_col2:
-            if gw_call_btn:
-                with st.spinner("게이트웨이 실시간 호출 중..."):
-                    if "304" in gw_task:
-                        res = gw_client.predict_at_risk_student(student_id=gw_std_id)
-                        if res.get("success"):
-                            is_r = res["is_risk"]
-                            prob = res["probability"]
-                            th = res["threshold"]
-                            factors = res.get("top_factors", [])
-
-                            from src.ml_scout.prescriptive_engine import StudentPrescriptionEngine
-                            rx = StudentPrescriptionEngine().prescribe(gw_std_id, prob, factors)
-
-                            if is_r:
-                                st.error(f"🚨 **[위기학생 판정: 위험군 (TRUE)]** 위험 확률: **{prob:.4f}** (임계치: {th:.4f})")
-                            else:
-                                st.success(f"🟢 **[위기학생 판정: 정상군 (FALSE)]** 위험 확률: **{prob:.4f}** (임계치: {th:.4f})")
-
-                            # Actionable Prescription Box
-                            st.markdown(f"""
-                            <div style="background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-                                <h5 style="margin-top:0; color:#1E293B;">🎯 1:1 맞춤형 선제 처방 ({rx['badge']})</h5>
-                                <p style="margin:4px 0;"><b>• 선제 개입 조치:</b> {rx['prescriptive_action']}</p>
-                                <p style="margin:4px 0;"><b>• 학사 규정 가드레일:</b> {rx['academic_guardrail']}</p>
-                                <p style="margin:4px 0;"><b>• 추천 연계 프로그램:</b> {rx['recommended_programs']}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-
-                            st.markdown("##### 🔬 게이트웨이 실시간 SHAP 기여 요인 (Top Factors):")
-                            if factors:
-                                f_df = pd.DataFrame(factors)
-                                f_df.columns = ["피처명 (Feature)", "SHAP 기여도 (Contribution)"]
-                                st.dataframe(f_df, use_container_width=True)
-                        else:
-                            st.error(f"게이트웨이 호출 실패: {res.get('error')}")
-                    else:
-                        res = gw_client.recommend_courses(student_id=gw_std_id, limit=5)
-                        if res.get("success"):
-                            st.success(f"✓ 교과 추천 {len(res.get('items', []))}건 수신 성공")
-                            items = res.get("items", [])
-                            if items:
-                                it_df = pd.DataFrame(items)[["course_id", "course_name", "score", "reason"]]
-                                it_df.columns = ["과목코드", "과목명", "추천 점수", "추천 사유"]
-                                st.dataframe(it_df, use_container_width=True)
-                        else:
-                            st.error(f"게이트웨이 호출 실패: {res.get('error')}")
-
-        # Enhanced recsys.yaml Download
-        p_recsys_yaml = os.path.join("dist", "dgu_analysis", "recsys_304_enhanced.yaml")
-        if os.path.exists(p_recsys_yaml):
-            with open(p_recsys_yaml, "r", encoding="utf-8") as yf:
-                st.download_button(
-                    label="📄 [dq-insight2용] 차기 고도화 recsys_304_enhanced.yaml 다운로드",
-                    data=yf.read(),
-                    file_name="recsys_304_enhanced.yaml",
-                    mime="text/yaml",
-                    use_container_width=True
-                )
 
     with tab_career:
         active_preset = st.session_state.get("current_preset", default_catalog.get_preset("job_recommendation"))
@@ -959,7 +755,7 @@ if "audit_data" in st.session_state:
 
         recommender = HybridCareerRecommender(weight_ml=0.35, weight_tree=0.30, weight_persona=0.20, weight_popularity=0.15)
         hybrid_res = recommender.recommend_and_explain(
-            student_id="DGU_2024_0042",
+            student_id="STD_2024_0042",
             persona="4학년 졸업반",
             ml_probabilities={"데이터 사이언티스트": 0.88, "백엔드 개발자": 0.62, "AI 로보틱스 연구원": 0.45},
             tree_scores={"데이터 사이언티스트": 0.92, "백엔드 개발자": 0.55, "AI 로보틱스 연구원": 0.50},
@@ -1558,7 +1354,7 @@ if "audit_data" in st.session_state:
                         risk_score=0.784,
                         risk_type="학사위기 주의군 (LMS 6일, 출석 78%)",
                         prescription="교무처 전담 튜터 1:1 학습클리닉 매칭 + 학생생활상담센터 필수 면담 3회 배정",
-                        student_name="김동국 (컴퓨터인공지능전공 1학년)"
+                        student_name="김한국 (컴퓨터인공지능전공 1학년)"
                     )
                     if res.get("status") == "success":
                         st.success("✓ 학생지원센터 및 상담센터 채널로 긴급 위기 알림이 전송되었습니다!")

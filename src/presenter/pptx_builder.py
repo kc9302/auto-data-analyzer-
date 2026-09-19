@@ -191,7 +191,7 @@ class PptxDeckBuilder:
         ap.font.color.rgb = RGBColor(0x92, 0x40, 0x0E)
 
         ap_sub = atf.add_paragraph()
-        ap_sub.text = "• [원천 DB]: 학사운영계(DEVDB.UDMSED) / 비교과운영계(DEVDB.STD_CDP)\n• [마트 물리테이블]: RISSA_MART (DIM_STUDENT, FACT_COURSE_RECORD, DIM_LECTURE_OFFERING, BRIDGE_CURRICULUM)\n• [분석용 VIEW]: 모델 학습용 사전 조인 뷰 (V_DGU_COURSE_INTERACTIONS_0813, V_DGU_COURSE_USERS_0813, V_DGU_COURSE_ITEMS_0813)"
+        ap_sub.text = "• [원천 DB / DW]: 운영계 OLTP (트랜잭션/로그) & 데이터 레이크하우스(ODS)\n• [마트 물리테이블]: Enterprise Data Mart (DIM/FACT 집계 마트 & 브릿지 관계 테이블)\n• [분석용 VIEW]: 모델 학습용 사전 조인 뷰 (V_MODEL_INTERACTIONS, V_MODEL_USERS, V_MODEL_ITEMS)"
         ap_sub.font.size = Pt(8.5)
         ap_sub.font.color.rgb = self.c_text_dark
         ap2 = atf.add_paragraph()
@@ -873,7 +873,7 @@ class PptxDeckBuilder:
         pl1.font.color.rgb = self.c_text_dark
 
         pl2 = tf_leg.add_paragraph()
-        pl2.text = "• 알고리즘 계열: 협업 필터링 (과거 수강 이력 기반 동시출현 유사도)\n• 투입 피처: 단순 상호작용 이력 단일 정보\n• 서빙 레이턴시: 약 7.5 ms (단순 행렬 연산으로 고속)\n• ⚠️ 치명적 한계: 신규 입학생(이력 전무) 및 신설 강좌에 대한 추천 불가(Cold-Start 사각지대 발생)\n• 설명 가능성: 단순 유사도 수치만 제공하여 추천 사유 설명 불가"
+        pl2.text = f"• 알고리즘 계열: {legacy_name} (단순 통계 / 협업 필터링 계열)\n• 투입 피처: 단순 집계 또는 상호작용 단일 정보\n• 서빙 레이턴시: 약 7.5 ms (단순 연산으로 고속)\n• ⚠️ 치명적 한계: 신규 사용자 및 신규 아이템에 대한 추론 불가(Cold-Start 사각지대 발생)\n• 설명 가능성: 단순 점수만 제공하여 판단/추천 사유 설명 불가"
         pl2.font.size = Pt(8.5)
         pl2.font.color.rgb = self.c_text_muted
 
@@ -899,7 +899,7 @@ class PptxDeckBuilder:
         pc1.font.color.rgb = RGBColor(0x06, 0x5F, 0x46)
 
         pc2 = tf_champ.add_paragraph()
-        pc2.text = f"• 알고리즘 계열: GBDT 부스팅 트리 + Item-CF 스코어 피처화 (시너지 하이브리드)\n• 투입 피처: 절제 실험으로 엄선된 정예 {final_k}개 피처 (과적합 리스크 0%)\n• 서빙 레이턴시: 약 45.5 ms (실시간 API SLA 100ms 이내 완벽 안착)\n• 🚀 핵심 차별성: 학생 학년/전공 및 과목 메타 속성 결합으로 신규 유저/과목 즉시 추론(사각지대 0%)\n• 설명 가능성: TreeSHAP 기반 각 추천 강좌별 기여도 및 선정 사유 완벽 제시"
+        pc2.text = f"• 알고리즘 계열: GBDT 부스팅 트리 + 복합 시그널 피처화 (고도화 머신러닝)\n• 투입 피처: 절제 실험으로 엄선된 정예 {final_k}개 피처 (과적합 리스크 0%)\n• 서빙 레이턴시: 약 45.5 ms (실시간 API SLA 100ms 이내 완벽 안착)\n• 🚀 핵심 차별성: 핵심 메타 속성 결합으로 신규 엔티티 즉시 추론(사각지대 0%)\n• 설명 가능성: TreeSHAP 기반 각 추천/예측별 기여도 및 선정 사유 완벽 제시"
         pc2.font.size = Pt(8.5)
         pc2.font.color.rgb = self.c_text_dark
 
@@ -922,8 +922,8 @@ class PptxDeckBuilder:
         b7p_sub.text = (
             f"\"기존에 선정하여 검토 중이던 [{legacy_name}] 방식 대비, 엄선된 {final_k}개 정예 피처를 탑재한 "
             f"[{champ_name}] 모델을 적용한 결과 검증 F1 성능이 +{lift_pct:.2f}% 유의미하게 향상되었습니다. "
-            f"특히 기존 Item-CF의 구조적 한계인 '신규 입학생 및 신설 강좌 콜드스타트' 사각지대를 완전히 해소하였고, "
-            f"실시간 50ms 미만 서빙 안정성이 검증되었으므로 최종 운영 추천 엔진으로 [{champ_name} + 정예 {final_k}개 피처]를 "
+            f"특히 기존 베이스라인의 구조적 한계인 '신규 사용자 및 신규 아이템 콜드스타트' 사각지대를 완전히 해소하였고, "
+            f"실시간 50ms 미만 서빙 안정성이 검증되었으므로 최종 운영 엔진으로 [{champ_name} + 정예 {final_k}개 피처]를 "
             f"공식 채택하여 도입 및 배포할 것을 승인 제안합니다.\""
         )
         b7p_sub.font.size = Pt(8.5)

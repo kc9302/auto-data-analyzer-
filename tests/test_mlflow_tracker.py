@@ -114,4 +114,4 @@ def test_excel_and_pptx_mlflow_sheet_embedding(tmp_path):
 
     from pptx import Presentation
     prs = Presentation(out_pptx)
-    assert len(prs.slides) == 6  # Total 6 slides with MLflow
+    assert len(prs.slides) == 7  # Total 7 slides including MLflow and Decision Proposal

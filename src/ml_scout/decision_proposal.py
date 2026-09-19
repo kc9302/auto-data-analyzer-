@@ -5,7 +5,7 @@ Orchestrates:
 2. Benchmark comparison against legacy / baseline model (기준 대조군 대비 1:1 정밀 비교 및 Lift)
 3. Formal Executive Proposal (최종 모델 및 피처 확정 적용 제안서)
 
-Supports domain-specific inheritance (e.g. DguCourseDecisionProposalEngine for Dongguk Univ).
+Supports domain-specific inheritance and custom proposal engines.
 """
 import time
 from typing import Dict, Any, List, Optional
@@ -20,7 +20,7 @@ class BaseDecisionProposalEngine:
     [범용 베이스 의사결정 제안 엔진]
     - 임의의 데이터셋에서 K개 피처 순차 Ablation 평가 및 수렴점 도출
     - 베이스라인 또는 사용자 지정 레거시 모델과의 1:1 비교
-    - 도메인 특화 서브클래스(DguCourseDecisionProposalEngine 등)의 기본 기반 클래스
+    - 도메인 특화 서브클래스 생성을 지원하는 범용 기반 클래스
     """
 
     def synthesize_proposal(
@@ -306,20 +306,7 @@ def get_proposal_engine(
     legacy_model: Optional[str] = None
 ) -> BaseDecisionProposalEngine:
     """
-    Factory Function: Returns domain-specialized subclass (e.g. DguCourseDecisionProposalEngine)
-    if domain matches, otherwise returns universal BaseDecisionProposalEngine.
+    Factory Function: Returns domain-specialized subclass if registered/available,
+    otherwise returns universal BaseDecisionProposalEngine.
     """
-    is_dgu = (
-        (domain and ("dgu" in domain.lower() or "course" in domain.lower())) or
-        (table_name and "course" in table_name.lower()) or
-        (legacy_model and ("item_cf" in legacy_model.lower() or "warming" in legacy_model.lower()))
-    )
-
-    if is_dgu:
-        try:
-            from src.domains.dgu.course_proposal import DguCourseDecisionProposalEngine
-            return DguCourseDecisionProposalEngine()
-        except ImportError:
-            pass
-
     return BaseDecisionProposalEngine()

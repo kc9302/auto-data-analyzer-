@@ -13,7 +13,7 @@ class AutoRecSysAdapter:
     Transforms auto-data-analyzer outputs into dq-insight2 canonical recsys.yaml.
     """
 
-    def __init__(self, domain: str = "university", project_name: str = "dgu-atrisk-detect"):
+    def __init__(self, domain: str = "university", project_name: str = "student-atrisk-detect"):
         self.domain = domain
         self.project_name = project_name
 
@@ -23,8 +23,8 @@ class AutoRecSysAdapter:
         id_field: str = "STD_NO",
         target_field: str = "LABEL",
         positive_value: int = 1,
-        source_ref: str = "dgu_rissa_mart",
-        user_source: str = "v_dgu_atrisk_users",
+        source_ref: str = "edumart_db",
+        user_source: str = "v_atrisk_users",
         item_source: str = "DIM_DEPARTMENT",
         segment_fields: Optional[List[str]] = None,
         task_type: str = "classification"

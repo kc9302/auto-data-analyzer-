@@ -1,6 +1,6 @@
 # ==============================================================================
 # Domain Recipe: University Student Personalized Recommendation & Academic Care
-# Target Customer: 동국대학교 등 고등교육기관 교무처/학생지원처/상담센터
+# Target Customer: 고등교육기관 교무처/학생지원처/상담센터
 # ==============================================================================
 domain_id: "university_student"
 domain_name: "대학 학사 맞춤형 추천 & 학생 위기 선제 케어"

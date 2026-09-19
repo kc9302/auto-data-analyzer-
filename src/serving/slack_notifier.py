@@ -184,7 +184,7 @@ class SlackNotifier:
             {
                 "type": "context",
                 "elements": [
-                    {"type": "mrkdwn", "text": "🏛️ 동국대학교 AI 학생케어 센터 | 수신처: 학생지원처/상담센터"}
+                    {"type": "mrkdwn", "text": "🎓 고등교육기관 AI 학생케어 센터 | 수신처: 학생지원처/상담센터"}
                 ]
             }
         ]

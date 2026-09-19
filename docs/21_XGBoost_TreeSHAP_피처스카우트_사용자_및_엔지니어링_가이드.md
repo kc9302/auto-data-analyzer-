@@ -77,8 +77,8 @@ graph LR
 # 1. 고객 샘플 데이터셋으로 실행
 uv run run.py --db-url data/sample_customers.csv --target churn
 
-# 2. 동국대학교 학사·비교과 데이터셋으로 실행
-uv run run.py --db-url data/dgu_student_features.csv --target is_risk_student --out-dir dist/dgu_run
+# 2. 대학 학사·학생 케어 데이터셋으로 실행
+uv run run.py --db-url data/university_student_features.csv --target is_risk_student --out-dir dist/university_run
 ```
 
 ### 4.2 Python SDK 모드 (Jupyter Notebook / Google Colab)
@@ -88,7 +88,7 @@ uv run run.py --db-url data/dgu_student_features.csv --target is_risk_student --
 import pandas as pd
 from src.sdk import AutoDataAnalyzer
 
-df = pd.read_csv("data/dgu_student_features.csv")
+df = pd.read_csv("data/university_student_features.csv")
 
 analyzer = AutoDataAnalyzer(output_dir="dist")
 result = analyzer.analyze_dataframe(df, target_col="is_risk_student")

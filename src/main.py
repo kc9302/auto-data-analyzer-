@@ -302,7 +302,7 @@ def main():
     parser.add_argument("--sql-file", type=str, default=None, help="Path to .sql File Containing Read-Only Query")
     parser.add_argument("--out-dir", type=str, default=None, help="Output Directory")
     parser.add_argument("--sample-size", type=int, default=None, help="Adaptive Sampling Threshold")
-    parser.add_argument("--domain", type=str, default=None, help="Domain specification (e.g. dgu_course, general)")
+    parser.add_argument("--domain", type=str, default=None, help="Domain specification (e.g. university_student, ecommerce, general)")
     parser.add_argument("--legacy-model", type=str, default=None, help="Previously selected/benchmark model to compare against (e.g. item_cf, baseline)")
 
     args = parser.parse_args()

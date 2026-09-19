@@ -21,11 +21,11 @@ def test_list_recipes(recipe_mgr):
 
 
 def test_load_recipe(recipe_mgr):
-    dgu_recipe = recipe_mgr.load_recipe("university_student")
-    assert dgu_recipe["domain_id"] == "university_student"
-    assert dgu_recipe["target_column"] == "academic_crisis"
-    assert dgu_recipe["weights"]["crisis_care"] == 0.40
-    assert len(dgu_recipe["key_features"]) >= 3
+    univ_recipe = recipe_mgr.load_recipe("university_student")
+    assert univ_recipe["domain_id"] == "university_student"
+    assert univ_recipe["target_column"] == "academic_crisis"
+    assert univ_recipe["weights"]["crisis_care"] == 0.40
+    assert len(univ_recipe["key_features"]) >= 3
 
 
 def test_validate_guardrail_university(recipe_mgr):

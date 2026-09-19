@@ -175,12 +175,12 @@ def test_deck_and_html_generation_with_shap(classification_data, tmp_path):
         }
     }
 
-    # Test PPTX Deck Builder (6 Slides)
+    # Test PPTX Deck Builder (7 Slides)
     pptx_path = os.path.join(out_dir, "test_deck.pptx")
     deck_builder = PptxDeckBuilder()
     deck_builder.build_deck(audit_data, pptx_path)
     assert os.path.exists(pptx_path)
-    assert len(deck_builder.prs.slides) == 6
+    assert len(deck_builder.prs.slides) == 7
 
     # Test HTML Report Builder
     html_path = os.path.join(out_dir, "test_report.html")

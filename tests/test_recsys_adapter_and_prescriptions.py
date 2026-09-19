@@ -22,7 +22,7 @@ from src.connectors.gateway_client import DQInsightGatewayClient
 
 
 def test_auto_recsys_adapter_generation(tmp_path):
-    adapter = AutoRecSysAdapter(domain="university", project_name="dgu-atrisk-detect")
+    adapter = AutoRecSysAdapter(domain="university", project_name="student-atrisk-detect")
     features = [
         "gpa_drop_amount", "attendance_rate", "lms_access_days_monthly",
         "extracurricular_hours", "competency_gap_score", "is_risk_student"  # target included
@@ -40,7 +40,7 @@ def test_auto_recsys_adapter_generation(tmp_path):
     with open(exported_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    assert "project: dgu-atrisk-detect" in content
+    assert "project: student-atrisk-detect" in content
     assert "gpa_drop_amount" in content
     assert "lms_access_days_monthly" in content
     # Target and ID should be excluded from profile_fields

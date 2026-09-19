@@ -68,11 +68,11 @@ def test_notify_crisis_detected():
         risk_score=0.784,
         risk_type="학사위기 주의군 (LMS 6일)",
         prescription="교무처 전담 튜터 1:1 학습클리닉 매칭",
-        student_name="김동국"
+        student_name="김한국"
     )
     assert res["status"] == "mocked"
     payload = res["payload"]
-    assert "김동국" in payload["text"]
+    assert "김한국" in payload["text"]
     assert "78.4%" in payload["text"]
     assert any("수강 상한 15학점" in f["text"] for f in payload["blocks"][1]["fields"])
 
