@@ -11,12 +11,13 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Antigravity%20Ready-8A2BE2?style=for-the-badge&logo=probot&logoColor=white)](#-use-as-an-ai-agent-skill-agentic-workflow)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Tests Passing](https://img.shields.io/badge/Tests-23%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 
 <br/>
 
-**[ 🇰🇷 한국어 설명서 (Korean Documentation) ](README.ko.md)** • **[ 📖 Full Architecture Specs ](docs/24_데이터분석_파이프라인_도식_및_벤치마크.md)**
+**[ 🇰🇷 한국어 설명서 (Korean Documentation) ](README.ko.md)** • **[ 🤖 Agent Skill Runbook ](.agents/skills/auto-data-analyzer/SKILL.md)** • **[ 📖 Architecture Specs ](docs/24_데이터분석_파이프라인_도식_및_벤치마크.md)**
 
 </div>
 
@@ -61,6 +62,22 @@ uv run run.py --db-url "data/sample_customers.csv" --target "churn"
 # Profile a live PostgreSQL table safely
 uv run python src/main.py --config configs/db_config_postgres.yaml --table "customer_retention_mart" --target "is_churn"
 ```
+
+---
+
+## 🤖 Use as an AI Agent Skill (Agentic Workflow)
+
+Auto Data Analyzer is natively designed to be invoked by **AI Coding Agents** (such as Google Antigravity, Claude Code, Cursor, and custom LLM agents):
+
+```
+.agents/skills/auto-data-analyzer/
+└── SKILL.md    # Pre-configured agent runbook for autonomous data analysis
+```
+
+When activated, you can simply ask your AI agent in natural language:
+> *"Analyze the customer dataset at `data/sample_customers.csv`, find the champion classification model for `churn`, and generate an executive PPTX deck along with a production FastAPI service."*
+
+The agent reads [SKILL.md](.agents/skills/auto-data-analyzer/SKILL.md), executes the zero-write pipeline autonomously, and delivers all artifact links directly into your conversation.
 
 ---
 

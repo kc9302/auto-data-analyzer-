@@ -4,6 +4,7 @@ DB나 CSV 파일을 Read-Only로 연결하면, 피처 엔지니어링부터 모�
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Antigravity%20Ready-8A2BE2?style=flat&logo=probot&logoColor=white)](.agents/skills/auto-data-analyzer/SKILL.md)
 [![Tests Passing](https://img.shields.io/badge/Tests-23%20Passed-brightgreen.svg)](tests/)
 
 ---
@@ -88,6 +89,11 @@ uv run pytest -v
 # 모델 재현성 검증
 uv run python dist/export_pipeline/reproduce.py
 ```
+
+### 🤖 AI 코딩 에이전트 스킬로 실행 (Agentic Workflow)
+Google Antigravity, Claude Code 등 AI 코딩 에이전트와 대화 중 채팅창에 다음과 같이 자연어로 명령하면 에이전트가 자체적으로 파이프라인을 구동하고 산출물을 연결해 줍니다:
+> *"우리 `data/sample_customers.csv` 파일 분석해서 `churn` 예측 모델이랑 임원 보고용 PPTX 장표, FastAPI 서빙 코드 만들어줘."*
+- 스킬 명세서: [`.agents/skills/auto-data-analyzer/SKILL.md`](.agents/skills/auto-data-analyzer/SKILL.md)
 
 ---
 
